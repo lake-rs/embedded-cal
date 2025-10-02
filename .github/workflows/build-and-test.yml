@@ -1,0 +1,55 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+    tags: '*'
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  GIT_CONFIG_PARAMETERS: 'color.ui=always'
+
+jobs:
+  fmt:
+    name: Check rustfmt
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v5
+    - name: Check if code is well formatted
+      run: cargo fmt --check
+
+  lint:
+    name: Rust various Rust lints
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v5
+    - name: run `cargo check`
+      run: RUSTFLAGS="-D warnings" cargo check
+    - name: run `cargo clippy`
+      run: cargo clippy -- --deny clippy::all
+    - name: run `cargo doc`
+      run: RUSTDOCFLAGS="-D warnings" cargo doc
+
+  generate-fstar:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout lakers
+      uses: actions/checkout@v4
+
+    - name: Install hax and F* (Fstar)
+      uses: hacspec/hax-actions@main
+
+    - name: Hax extract into F* (Fstar)
+      run: |
+        cargo-hax -C \; into fstar
+
+    - name: Typecheck
+      working-directory: ./shared/proofs/fstar/extraction
+      run: |
+        curl -o Makefile https://gist.githubusercontent.com/W95Psp/4c304132a1f85c5af4e4959dd6b356c3/raw/Makefile
+        make verify
