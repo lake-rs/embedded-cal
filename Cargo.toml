@@ -1,11 +1,11 @@
-[package]
-name = "embedded-cal"
+[workspace]
+members = ["embedded-cal"]
+
+[workspace.package]
 edition = "2024"
 license = "BSD-3-Clause"
-description = "A Cryptographic Abstraction Layer (CAL) for embedded systems"
-repository = "https://github.com/lake-rs/embedded-cal.git"
 readme = "README.md"
+repository = "https://github.com/lake-rs/embedded-cal.git"
 keywords = ["iot", "security", "crypto", "embedded"]
 categories = ["cryptography", "hardware-support", "embedded", "no-std::no-alloc"]
 version = "0.1.0"
-
