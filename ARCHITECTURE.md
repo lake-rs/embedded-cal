@@ -57,3 +57,23 @@ At any rate, a provider of cryptographic primitives can offer any subset of them
     * TLS (no concrete implementation planned)
 
 Providing high-level COSE operations is an optional goal outside of the immediate scope of the trait.
+
+## Implementation
+
+The interface is implemented by a family of traits,
+which reside in [`embedded_cal`](./embedded-cal/src/lib.rs).
+
+Currently, a subset of the primitives is implemented there,
+but adhering to all the generic principles.
+
+## Usage
+
+Practical use requires setting up an Cal instances;
+the one currently provided is [`embedded_cal_rustcrypto::RustcryptoCal`](./embedded-cal-rustcrypto/src/lib.rs).
+While that instance can be constructed at any point,
+hardware based instances will come with their own non-trivial `::new()` function,
+and will best be used augmented by (i.e., wrapped in) the formally verified implementation.
+
+Once an exclusive reference to such an object exists,
+its methods guide its use;
+the test vectors have an [example of how to use hashing](./testvectors/src/lib.rs).
