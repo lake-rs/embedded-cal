@@ -44,6 +44,10 @@ pub trait HashProvider {
 ///
 /// While const traits are not stable yet, implementers should prepare for the constructors and
 /// other methods to be `const` functions.
+#[allow(
+    clippy::len_without_is_empty,
+    reason = "Lint only makes sense when length can reasonably be zero, which is not the case here."
+)]
 // FIXME: Are all of those requirements good?
 pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     /// Output length of .
