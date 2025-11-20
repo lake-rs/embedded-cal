@@ -1,5 +1,5 @@
 [workspace]
-members = ["embedded-cal"]
+members = ["embedded-cal", "testvectors"]
 resolver = "3"
 
 [workspace.package]

@@ -1,0 +1,13 @@
+[package]
+name = "testvectors"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[dependencies]
+embedded-cal.path = "../embedded-cal/"
+hexlit = "0.5.5"
