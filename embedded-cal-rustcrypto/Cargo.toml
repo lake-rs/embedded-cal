@@ -1,0 +1,15 @@
+[package]
+name = "embedded-cal-rustcrypto"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[dependencies]
+digest = "0.10.7"
+embedded-cal.path = "../embedded-cal"
+sha2 = { version = "0.10.9", default-features = false }
+testvectors.path = "../testvectors"

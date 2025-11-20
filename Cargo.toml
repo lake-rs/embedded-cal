@@ -1,5 +1,5 @@
 [workspace]
-members = ["embedded-cal", "testvectors"]
+members = ["embedded-cal", "embedded-cal-rustcrypto", "testvectors"]
 resolver = "3"
 
 [workspace.package]
