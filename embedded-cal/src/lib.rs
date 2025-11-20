@@ -8,8 +8,10 @@ pub trait HashProvider {
     ///
     /// As construction is not fallible, this can not be a handle into a limited pool.
     ///
-    /// FIXME: Do we anticpate hardware that can *not* store its state in RAM, and thus needs to
-    /// run from init through update into finalize without being preempted by another operation?
+    /// If hardware exists that an only hash efficiently in an internal state, this needs to be an
+    /// encapsulation of that state, as construction is not fallible. As this is likely a costly
+    /// process, such implementations are encourated to implement [`Self::hash`] in an optimized
+    /// way. (Also, if such a hardware actually exists, please open an issue about it).
     type HashState: Sized;
     type HashResult: AsRef<[u8]>;
 
@@ -22,8 +24,15 @@ pub trait HashProvider {
     // algorithm?
     fn finalize(&mut self, instance: Self::HashState) -> Self::HashResult;
 
-    // Some convenience functions probably make sense
-
+    /// Hash contiguous in-memory data in a single pass.
+    ///
+    /// This method is provided, but implementations are encouraged to provide optimized versions
+    /// if an actual speed-up can be gained; conversely, users are encouraged to use this if data
+    /// is already present in this form.
+    ///
+    /// Optimized versions are expected to be rare, though, so don't go out of your way using it:
+    /// Only buffer the full data, or create special cases for when there actually is just one item
+    /// in an iterator, without testing and possibly consulting with the back-end authors first.
     fn hash(&mut self, algorithm: Self::Algorithm, data: &[u8]) -> Self::HashResult {
         let mut state = self.init(algorithm);
         self.update(&mut state, data);
