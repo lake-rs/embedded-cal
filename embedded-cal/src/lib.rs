@@ -1,5 +1,7 @@
 #![no_std]
 
+pub trait Cal: HashProvider {}
+
 pub trait HashProvider {
     type Algorithm: HashAlgorithm;
     /// State in which is carried between rounds of feeding data.
@@ -22,7 +24,7 @@ pub trait HashProvider {
 
     // Some convenience functions probably make sense
 
-    fn full_pass(&mut self, algorithm: Self::Algorithm, data: &[u8]) -> Self::HashResult {
+    fn hash(&mut self, algorithm: Self::Algorithm, data: &[u8]) -> Self::HashResult {
         let mut state = self.init(algorithm);
         self.update(&mut state, data);
         self.finalize(state)
@@ -51,7 +53,10 @@ pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     /// of a i65 (the sign is in the data type); inlining will take care of systems not *actually*
     /// materializing any i128 comparisons, let alone arithmetic.
     #[inline]
-    #[allow(unused_variables, reason = "Argument names are part of the documentation")]
+    #[allow(
+        unused_variables,
+        reason = "Argument names are part of the documentation"
+    )]
     fn from_cose_number(number: impl Into<i128>) -> Option<Self> {
         None
     }
@@ -65,7 +70,10 @@ pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     /// 0..=63 excluding the reserved 32; implementations must return None for values outside this
     /// range.
     #[inline]
-    #[allow(unused_variables, reason = "Argument names are part of the documentation")]
+    #[allow(
+        unused_variables,
+        reason = "Argument names are part of the documentation"
+    )]
     fn from_ni_id(number: u8) -> Option<Self> {
         None
     }
@@ -75,7 +83,10 @@ pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     ///
     /// <https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg>
     #[inline]
-    #[allow(unused_variables, reason = "Argument names are part of the documentation")]
+    #[allow(
+        unused_variables,
+        reason = "Argument names are part of the documentation"
+    )]
     fn from_ni_name(name: &str) -> Option<Self> {
         None
     }
