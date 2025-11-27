@@ -207,7 +207,9 @@ dependencies = [
  "defmt",
  "defmt-rtt",
  "defmt-test",
+ "embedded-cal",
  "panic-probe",
+ "testvectors",
 ]
 
 [[package]]

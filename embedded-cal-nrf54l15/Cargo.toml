@@ -21,6 +21,8 @@ cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
 defmt = "1.0"
 defmt-rtt = "1.0"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
+embedded-cal.path = "../embedded-cal"
+testvectors.path = "../testvectors"
 
 [dev-dependencies]
 defmt-test = "0.4"
