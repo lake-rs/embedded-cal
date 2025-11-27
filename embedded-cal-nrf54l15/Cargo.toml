@@ -1,0 +1,26 @@
+[package]
+name = "embedded-cal-nrf54l15"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[lib]
+test = false
+doc = false
+
+[[test]]
+name = "integration"
+harness = false
+
+[dependencies]
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+
+[dev-dependencies]
+defmt-test = "0.4"
