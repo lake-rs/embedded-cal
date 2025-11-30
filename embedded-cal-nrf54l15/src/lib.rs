@@ -157,8 +157,8 @@ fn sha256_padding(msg_len: usize, out: &mut [u8; 128]) -> usize {
         64 + 56 - mod_len
     };
 
-    for i in 1..=zero_pad_len {
-        out[i] = 0;
+    for addr in out.iter_mut().take(zero_pad_len + 1).skip(1) {
+        *addr = 0;
     }
 
     // append 64-bit length (big endian)
@@ -166,9 +166,7 @@ fn sha256_padding(msg_len: usize, out: &mut [u8; 128]) -> usize {
     let be = bit_len.to_be_bytes();
 
     let length_pos = 1 + zero_pad_len;
-    for i in 0..8 {
-        out[length_pos + i] = be[i];
-    }
+    out[length_pos..(8 + length_pos)].copy_from_slice(&be);
 
     1 + zero_pad_len + 8
 }
@@ -190,7 +188,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
     fn update(&mut self, instance: &mut Self::HashState, data: &[u8]) {
         // Case 1: data fits entirely inside the current block
-        if data.len() <= (BLOCK_SIZE - instance.block_bytes_used) as usize {
+        if data.len() <= (BLOCK_SIZE - instance.block_bytes_used) {
             instance.block[instance.block_bytes_used..instance.block_bytes_used + data.len()]
                 .copy_from_slice(data);
             instance.block_bytes_used += data.len();
@@ -270,7 +268,6 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
         let data_left = data.len() - bytes_from_data;
         instance.block[0..data_left].copy_from_slice(&data[bytes_from_data..]);
         instance.block_bytes_used += data_left;
-        ()
     }
 
     fn finalize(&mut self, instance: Self::HashState) -> Self::HashResult {
