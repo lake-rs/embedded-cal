@@ -75,7 +75,7 @@ pub struct HashState {
     algorithm: HashAlgorithm,
     state: Option<[u8; 32]>,
     block: [u8; BLOCK_SIZE],
-    block_bytes_left: usize,
+    block_bytes_used: usize,
     processed_bytes: usize,
 }
 
@@ -184,25 +184,24 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
             state: None,
             block: [0; BLOCK_SIZE],
             processed_bytes: 0,
-            block_bytes_left: BLOCK_SIZE,
+            block_bytes_used: 0,
         }
     }
 
     fn update(&mut self, instance: &mut Self::HashState, data: &[u8]) {
-        let block_bytes_used = BLOCK_SIZE - instance.block_bytes_left;
-
         // Case 1: data fits entirely inside the current block
-        if data.len() <= instance.block_bytes_left as usize {
-            instance.block[block_bytes_used..block_bytes_used + data.len()].copy_from_slice(data);
-            instance.block_bytes_left -= data.len();
+        if data.len() <= (BLOCK_SIZE - instance.block_bytes_used) as usize {
+            instance.block[instance.block_bytes_used..instance.block_bytes_used + data.len()]
+                .copy_from_slice(data);
+            instance.block_bytes_used += data.len();
 
             return;
         }
 
         // Case 2: data does NOT fit
-        let total = block_bytes_used + data.len();
+        let total = instance.block_bytes_used + data.len();
         let next_full_boundary = total & !(BLOCK_SIZE - 1); // round down to nearest multiple of BLOCK_SIZE
-        let bytes_from_data = next_full_boundary.saturating_sub(block_bytes_used);
+        let bytes_from_data = next_full_boundary.saturating_sub(instance.block_bytes_used);
 
         let dma = self.p.global_cracencore_s.cryptmstrdma();
 
@@ -227,7 +226,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
         let mut data_desc = Descriptor {
             addr: instance.block.as_ptr() as *mut u8,
             next: &mut pad_desc,
-            sz: block_bytes_used as u32,
+            sz: instance.block_bytes_used as u32,
             dmatag: 3,
         };
 
@@ -261,25 +260,27 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
         while dma.status().read().pushbusy().bit_is_set() {}
 
         instance.state = Some(new_state);
-        instance.processed_bytes += block_bytes_used + bytes_from_data;
+        instance.processed_bytes += instance.block_bytes_used + bytes_from_data;
 
         // reset buffer
         instance.block = [0u8; BLOCK_SIZE];
-        instance.block_bytes_left = BLOCK_SIZE;
+        instance.block_bytes_used = 0;
 
         // copy leftover bytes into empty buffer
         let data_left = data.len() - bytes_from_data;
         instance.block[0..data_left].copy_from_slice(&data[bytes_from_data..]);
-        instance.block_bytes_left -= data_left;
+        instance.block_bytes_used += data_left;
         ()
     }
 
     fn finalize(&mut self, instance: Self::HashState) -> Self::HashResult {
-        let block_bytes_used = BLOCK_SIZE - instance.block_bytes_left;
         let dma = self.p.global_cracencore_s.cryptmstrdma();
 
         let mut pad: [u8; 128] = [0x00; 128];
-        let padding_size = sha256_padding(instance.processed_bytes + block_bytes_used, &mut pad);
+        let padding_size = sha256_padding(
+            instance.processed_bytes + instance.block_bytes_used,
+            &mut pad,
+        );
 
         let mut out: [u8; 32] = [0x00; 32];
 
@@ -311,8 +312,8 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
                 data_desc.addr = instance.block.as_ptr() as *mut u8;
                 data_desc.next = LAST_DESC_PTR;
-                data_desc.sz = sz(block_bytes_used);
-                data_desc.dmatag = dmatag_for(block_bytes_used);
+                data_desc.sz = sz(instance.block_bytes_used);
+                data_desc.dmatag = dmatag_for(instance.block_bytes_used);
             }
             Some(state) => {
                 // Incremental hash, the input is formatted as
@@ -329,7 +330,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
                 data_desc.addr = instance.block.as_ptr() as *mut u8;
                 data_desc.next = &mut padding_desc;
-                data_desc.sz = block_bytes_used as u32;
+                data_desc.sz = instance.block_bytes_used as u32;
                 data_desc.dmatag = 3;
 
                 padding_desc.addr = pad.as_ptr() as *mut u8;
