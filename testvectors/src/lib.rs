@@ -1,16 +1,5 @@
 #![no_std]
-use hexlit::hex;
-
-pub const SHA256HASHES: &[(&[u8], [u8; 32])] = &[
-    (
-        b"",
-        hex!("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
-    ),
-    (
-        b"hello world",
-        hex!("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"),
-    ),
-];
+mod tv;
 
 pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal) {
     // Equivalence with other constructors can be handled via
@@ -21,7 +10,7 @@ pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal
 
     use embedded_cal::HashAlgorithm;
 
-    for (tv_data, tv_result) in SHA256HASHES {
+    for (tv_data, tv_result) in tv::SHA256HASHES {
         assert_eq!(
             cal.hash(sha256.clone(), tv_data).as_ref(),
             tv_result,
