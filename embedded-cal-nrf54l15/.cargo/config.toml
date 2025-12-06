@@ -1,5 +1,5 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-runner = ["probe-rs", "run", "--chip", "nRF54L15", "--log-format=oneline", "--allow-erase-all"]
+runner = ["probe-rs", "run", "--chip", "nRF54L15", "--log-format=oneline", "--allow-erase-all", "--verify"]
 
 rustflags = [
   "-C", "linker=flip-link",
