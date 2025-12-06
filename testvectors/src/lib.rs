@@ -34,6 +34,35 @@ pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal
     }
 }
 
+pub fn test_hash_algorithm_sha384<Cal: embedded_cal::HashProvider>(cal: &mut Cal) {
+    let sha384 = Cal::Algorithm::from_ni_id(7).unwrap();
+
+    use embedded_cal::HashAlgorithm;
+
+    for (tv_data, tv_result) in tv::SHA384HASHES {
+        assert_eq!(
+            cal.hash(sha384.clone(), tv_data).as_ref(),
+            tv_result,
+            "Hash values mismatch"
+        );
+
+        let mut hash = cal.init(sha384.clone());
+        let mid = tv_data.len() / 2;
+        let postmid = mid + 1;
+        if tv_data.len() < postmid {
+            continue;
+        }
+        cal.update(&mut hash, &tv_data[..mid]);
+        cal.update(&mut hash, &tv_data[mid..postmid]);
+        cal.update(&mut hash, &tv_data[postmid..]);
+        assert_eq!(
+            &cal.finalize(hash).as_ref(),
+            tv_result,
+            "Hash values mismatch when input is fed in chunks"
+        );
+    }
+}
+
 pub fn test_hash_algorithm_sha512<Cal: embedded_cal::HashProvider>(cal: &mut Cal) {
     let sha512 = Cal::Algorithm::from_ni_id(8).unwrap();
 

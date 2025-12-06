@@ -44,6 +44,16 @@ pub enum HashAlgorithm {
     Sha512 = 0x20,
 }
 
+impl HashAlgorithm {
+    fn internal_state_len(&self) -> usize {
+        match self {
+            HashAlgorithm::Sha256 => 32,
+            HashAlgorithm::Sha384 => 64,
+            HashAlgorithm::Sha512 => 64,
+        }
+    }
+}
+
 impl embedded_cal::HashAlgorithm for HashAlgorithm {
     fn len(&self) -> usize {
         match self {
@@ -189,12 +199,12 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
         let header: [u8; 4] = [instance.algorithm as u8, 0x00, 0x00, 0x00];
 
-        let algo_len = embedded_cal::HashAlgorithm::len(&instance.algorithm);
+        let state_len = instance.algorithm.internal_state_len();
 
         let mut out_desc = Descriptor {
             addr: new_state.as_mut_ptr(),
             next: LAST_DESC_PTR,
-            sz: sz(algo_len),
+            sz: sz(state_len),
             dmatag: 32,
         };
 
@@ -211,7 +221,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
             descriptors.push(Descriptor {
                 addr: state.as_ptr() as *mut u8,
                 next: core::ptr::null_mut(),
-                sz: sz(algo_len),
+                sz: sz(state_len),
                 dmatag: 99,
             });
         }
@@ -284,6 +294,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
         };
 
         let algo_len = embedded_cal::HashAlgorithm::len(&instance.algorithm);
+        let state_len = instance.algorithm.internal_state_len();
 
         let mut out: [u8; 64] = [0x00; 64];
 
@@ -309,7 +320,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
             descriptors.push(Descriptor {
                 addr: state.as_ptr() as *mut u8,
                 next: core::ptr::null_mut(),
-                sz: sz(algo_len),
+                sz: sz(state_len),
                 dmatag: 99,
             });
         }

@@ -29,10 +29,12 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_algorithm_sha384(state: &mut super::TestState) {
+        testvectors::test_hash_algorithm_sha384(&mut state.cal);
+    }
+
+    #[test]
     fn test_hash_algorithm_sha512(state: &mut super::TestState) {
-        // embedded_cal::test_hash_algorithm_sha512::<
-        //     <Nrf54l15Cal as embedded_cal::HashProvider>::Algorithm,
-        // >();
         testvectors::test_hash_algorithm_sha512(&mut state.cal);
     }
 }
