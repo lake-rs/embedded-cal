@@ -1,3 +1,4 @@
+#![no_std]
 use hexlit::hex;
 
 pub const SHA256HASHES: &[(&[u8], [u8; 32])] = &[
