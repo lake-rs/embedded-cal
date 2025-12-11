@@ -1,15 +1,5 @@
-use hexlit::hex;
-
-pub const SHA256HASHES: &[(&[u8], [u8; 32])] = &[
-    (
-        b"",
-        hex!("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
-    ),
-    (
-        b"hello world",
-        hex!("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"),
-    ),
-];
+#![no_std]
+mod tv;
 
 pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal) {
     // Equivalence with other constructors can be handled via
@@ -20,7 +10,7 @@ pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal
 
     use embedded_cal::HashAlgorithm;
 
-    for (tv_data, tv_result) in SHA256HASHES {
+    for (tv_data, tv_result) in tv::SHA256HASHES {
         assert_eq!(
             cal.hash(sha256.clone(), tv_data).as_ref(),
             tv_result,
@@ -28,6 +18,64 @@ pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal
         );
 
         let mut hash = cal.init(sha256.clone());
+        let mid = tv_data.len() / 2;
+        let postmid = mid + 1;
+        if tv_data.len() < postmid {
+            continue;
+        }
+        cal.update(&mut hash, &tv_data[..mid]);
+        cal.update(&mut hash, &tv_data[mid..postmid]);
+        cal.update(&mut hash, &tv_data[postmid..]);
+        assert_eq!(
+            &cal.finalize(hash).as_ref(),
+            tv_result,
+            "Hash values mismatch when input is fed in chunks"
+        );
+    }
+}
+
+pub fn test_hash_algorithm_sha384<Cal: embedded_cal::HashProvider>(cal: &mut Cal) {
+    let sha384 = Cal::Algorithm::from_ni_id(7).unwrap();
+
+    use embedded_cal::HashAlgorithm;
+
+    for (tv_data, tv_result) in tv::SHA384HASHES {
+        assert_eq!(
+            cal.hash(sha384.clone(), tv_data).as_ref(),
+            tv_result,
+            "Hash values mismatch"
+        );
+
+        let mut hash = cal.init(sha384.clone());
+        let mid = tv_data.len() / 2;
+        let postmid = mid + 1;
+        if tv_data.len() < postmid {
+            continue;
+        }
+        cal.update(&mut hash, &tv_data[..mid]);
+        cal.update(&mut hash, &tv_data[mid..postmid]);
+        cal.update(&mut hash, &tv_data[postmid..]);
+        assert_eq!(
+            &cal.finalize(hash).as_ref(),
+            tv_result,
+            "Hash values mismatch when input is fed in chunks"
+        );
+    }
+}
+
+pub fn test_hash_algorithm_sha512<Cal: embedded_cal::HashProvider>(cal: &mut Cal) {
+    let sha512 = Cal::Algorithm::from_ni_id(8).unwrap();
+
+    use embedded_cal::HashAlgorithm;
+
+    for (tv_data, tv_result) in tv::SHA512HASHES {
+        assert_eq!(
+            cal.hash(sha512.clone(), tv_data).as_ref(),
+            tv_result,
+            "Hash values mismatch"
+        );
+
+        let mut hash = cal.init(sha512.clone());
         let mid = tv_data.len() / 2;
         let postmid = mid + 1;
         if tv_data.len() < postmid {
