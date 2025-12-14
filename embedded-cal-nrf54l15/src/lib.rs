@@ -38,6 +38,9 @@ impl Drop for Nrf54l15Cal {
 
 #[repr(u8)]
 #[derive(PartialEq, Eq, Debug, Clone, Copy, defmt::Format)]
+/// Choice of a supported hash algorithm.
+///
+/// Enum values currently represent the first byte of the engine header.
 pub enum HashAlgorithm {
     Sha256 = 0x08,
     Sha384 = 0x10,
