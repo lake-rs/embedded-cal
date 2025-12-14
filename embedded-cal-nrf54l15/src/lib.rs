@@ -11,6 +11,8 @@ const _: () = {
     assert!(BLOCK_SIZE.is_power_of_two());
 };
 pub struct Nrf54l15Cal {
+    // TODO: No need to enable and take ownership of everything
+    // it's possible to have a more granular ownership
     p: nrf54l15_app_pac::Peripherals,
 }
 
