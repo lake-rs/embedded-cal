@@ -4,7 +4,12 @@ mod descriptor;
 use descriptor::{Descriptor, DescriptorChain, LAST_DESC_PTR};
 
 const BLOCK_SIZE: usize = 128;
-
+// Compile-time check: BLOCK_SIZE must be a power of two
+// and the size must be greater or eq than one hash block
+const _: () = {
+    assert!(BLOCK_SIZE >= 128);
+    assert!(BLOCK_SIZE.is_power_of_two());
+};
 pub struct Nrf54l15Cal {
     p: nrf54l15_app_pac::Peripherals,
 }
@@ -36,6 +41,9 @@ impl Drop for Nrf54l15Cal {
 #[repr(u8)]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 /// Choice of a supported hash algorithm.
+///
+/// Values taken from:
+/// https://github.com/nrfconnect/sdk-nrf/blob/8dd452357395abad28a4c2310d6c8d9560016881/subsys/nrf_security/src/drivers/cracen/sxsymcrypt/src/hash.c#L31-L48
 ///
 /// Enum values currently represent the first byte of the engine header.
 pub enum HashAlgorithm {
