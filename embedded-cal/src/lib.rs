@@ -2,6 +2,7 @@
 
 pub trait Cal: HashProvider {}
 
+/// Interfaces for hashing a byte stream.
 pub trait HashProvider {
     type Algorithm: HashAlgorithm;
     /// State in which is carried between rounds of feeding data.
@@ -109,6 +110,40 @@ pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
         reason = "Argument names are part of the documentation"
     )]
     fn from_ni_name(name: &str) -> Option<Self> {
+        None
+    }
+
+    /// Selects a **block-only** hash algorithm from its COSE number.
+    ///
+    /// (See [`Self::from_cose_number()`] for general properties).
+    ///
+    /// The resulting algorithm is **limited** in that it only operates in "full blocks".
+    /// Algorithms created this way may expect the caller to only feed data in chunks in integer
+    /// multiples of the block size, including the last one. (I.e., the caller is responsible for
+    /// any required padding).
+    ///
+    /// What constitutes a block is not specified in general -- it is a concept introduced in this
+    /// library to allow combinging typical hardware implementations a common software wrapper. A
+    /// block, for the purpose of the API of algorithms created through this function, is:
+    ///
+    /// * For the SHA-2 family, it is the block size as defined in [RFC6234], eg.
+    ///   `SHA224_Message_Block_Size = 64`.
+    ///
+    /// (Likely, most algorithms will either have a trivial block size that applies, or that there
+    /// is no point in using this interface anyway; nonetheless, the block sizes are spelled out
+    /// here to be precise.)
+    ///
+    /// [RFC6234]: https://www.rfc-editor.org/rfc/rfc6234
+    ///
+    /// No equivalent `.fullblock_from_ni_name()` constructor is provided, because any adapter
+    /// would recognize both names anyway, and there are currently no algorithms listed above that
+    /// have a NI but no COSE entry.
+    #[inline]
+    #[allow(
+        unused_variables,
+        reason = "Argument names are part of the documentation"
+    )]
+    fn fullblock_from_cose_number(number: impl Into<i128>) -> Option<Self> {
         None
     }
 }
