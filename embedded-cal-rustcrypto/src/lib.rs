@@ -14,10 +14,9 @@ impl embedded_cal::HashAlgorithm for HashAlgorithm {
         }
     }
 
-    // FIXME: See from_cose_number definition
     fn from_cose_number(number: impl Into<i128>) -> Option<Self> {
         match number.into() {
-            -10 => Some(HashAlgorithm::Sha256),
+            -16 => Some(HashAlgorithm::Sha256),
             _ => None,
         }
     }

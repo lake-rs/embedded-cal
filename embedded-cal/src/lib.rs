@@ -58,10 +58,6 @@ pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     /// The algorithm number comes from the ["COSE Algorithms"
     /// registry](https://www.iana.org/assignments/cose/cose.xhtml#algorithms) maintained by IANA.
     ///
-    /// FIXME: Do they really have matching COSE algorithm numbers? OSCORE and EDHOC use -10 for
-    /// SHA-256, but that may be a stretch. Maybe this should also be
-    /// `from_algorithm_underlying_cose_directhkdf_number()`?
-    ///
     /// This works from `Into<i128>` because the numeric range of CBOR integers is effectively that
     /// of a i65 (the sign is in the data type); inlining will take care of systems not *actually*
     /// materializing any i128 comparisons, let alone arithmetic.
@@ -108,7 +104,7 @@ pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
 // FIXME: Should we introduce a feature to no build those all the time?
 pub fn test_hash_algorithm_sha256<HA: HashAlgorithm>() {
     // FIXME see from_cose_number comment
-    let cose_neg10 = HA::from_cose_number(-10);
+    let cose_neg10 = HA::from_cose_number(-16);
     let ni_1 = HA::from_ni_id(1);
     let ni_named = HA::from_ni_name("sha-256");
 
