@@ -6,13 +6,25 @@ pub trait HashProvider {
     type Algorithm: HashAlgorithm;
     /// State in which is carried between rounds of feeding data.
     ///
-    /// As construction is not fallible, this can not be a handle into a limited pool.
+    /// As construction is not fallible, this can not be a handle into a limited pool. (Cf.
+    /// architecture requirements: "Incomplete operations should not block the system").
     ///
     /// If hardware exists that an only hash efficiently in an internal state, this needs to be an
     /// encapsulation of that state, as construction is not fallible. As this is likely a costly
     /// process, such implementations are encourated to implement [`Self::hash`] in an optimized
     /// way. (Also, if such a hardware actually exists, please open an issue about it).
+    // FIXME: Link to stable FAQ position once that is more website/documentation shape and not
+    // just a GitHub Markdown document.
     type HashState: Sized;
+    /// Output of a hashing operation.
+    ///
+    /// This needs to be sufficiently large to contain any selected hash's output. When collecting
+    /// multiple hash results of the same algorithm in limited space (i.e., in situations when it
+    /// makes sense to store 8 SHA-512 outputs or 16 SHA-256 outputs), it can make sense to copy
+    /// data out rather than storing the `HashResult` type to free the space. (See also project FAQ
+    /// on output sizes).
+    // FIXME: Link to stable FAQ position once that is more website/documentation shape and not
+    // just a GitHub Markdown document.
     type HashResult: AsRef<[u8]>;
 
     // Spitballing here to convey the idea and check whether ownership and lifetimes can work this
