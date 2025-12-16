@@ -76,6 +76,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-cal-software"
+version = "0.1.0"
+dependencies = [
+ "embedded-cal",
+ "testvectors",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

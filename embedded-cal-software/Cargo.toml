@@ -1,0 +1,15 @@
+[package]
+name = "embedded-cal-software"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[dependencies]
+embedded-cal = { version = "0.1.0", path = "../embedded-cal" }
+
+[dev-dependencies]
+testvectors.path = "../testvectors"
