@@ -4,7 +4,7 @@
     clippy::manual_dangling_ptr,
     reason = "nRF54L15 uses 1 as last-descriptor sentinel"
 )]
-pub(crate) const LAST_DESC_PTR: *mut Descriptor = 1 as *mut Descriptor;
+const LAST_DESC_PTR: *mut Descriptor = 1 as *mut Descriptor;
 /// Single EasyDMA scatter-gather job entry.
 ///
 /// This structure maps directly to one hardware “job entry” consumed by the
@@ -14,21 +14,21 @@ pub(crate) const LAST_DESC_PTR: *mut Descriptor = 1 as *mut Descriptor;
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 
-pub(crate) struct Descriptor {
+struct Descriptor {
     /// Start address of the memory region for this DMA job.
     ///
     /// Must be DMA-accessible memory.
-    pub(crate) addr: *mut u8,
+    addr: *mut u8,
     /// Pointer to the next descriptor in the scatter-gather job list.
     ///
     /// Should be LAST_DESC_PTR in case of the last descriptor of the chain.
-    pub(crate) next: *mut Descriptor,
+    next: *mut Descriptor,
     // FIXME: Improve documentation, explain the magic number 0x2000_0000
     /// Length, in bytes, of the memory region described by `addr`.
-    pub(crate) sz: u32,
+    sz: u32,
     // FIXME: Improve documentation, enum all possible tags.
     /// DMA attribute / tag field.
-    pub(crate) dmatag: u32,
+    dmatag: u32,
 }
 
 impl Descriptor {
@@ -40,6 +40,15 @@ impl Descriptor {
             dmatag: 0,
         }
     }
+
+    fn new(addr: *mut u8, sz: u32, dmatag: u32) -> Self {
+        Self {
+            addr,
+            next: core::ptr::null_mut(),
+            sz,
+            dmatag,
+        }
+    }
 }
 
 /// Fixed-capacity scatter-gather descriptor chain.
@@ -49,21 +58,19 @@ impl Descriptor {
 ///
 /// DescriptorChain also make sure they are linked like a linked-list
 /// and the last Descriptor.next is always LAST_DESC_PTR
-// There is no reason the value is 4, it was just because it was the biggest chain used on HASH example.
-// This can be generic.
-pub(crate) struct DescriptorChain {
-    descs: [Descriptor; 4],
+pub(crate) struct DescriptorChain<const N: usize> {
+    descs: [Descriptor; N],
     count: usize,
 }
 
-impl DescriptorChain {
+impl<const N: usize> DescriptorChain<N> {
     /// Creates an empty `DescriptorChain`.
     ///
     /// The chain is initialized with all descriptors zero-filled and contains
     /// no active entries.
     pub(crate) fn new() -> Self {
         Self {
-            descs: [Descriptor::empty(); 4],
+            descs: [Descriptor::empty(); N],
             count: 0,
         }
     }
@@ -88,8 +95,9 @@ impl DescriptorChain {
     /// - All descriptors in the chain must describe DMA-accessible memory.
     /// - The chain must not be mutated after being handed to the EasyDMA
     ///   hardware until the END or ERROR event is observed.
-    pub(crate) fn push(&mut self, desc: Descriptor) {
-        assert!(self.count < 4);
+    pub(crate) fn push(&mut self, addr: *mut u8, sz: u32, dmatag: u32) {
+        assert!(self.count < N);
+        let desc = Descriptor::new(addr, sz, dmatag);
 
         let idx = self.count;
         self.descs[idx] = desc;
@@ -104,18 +112,11 @@ impl DescriptorChain {
         self.descs[idx].next = LAST_DESC_PTR;
     }
 
-    /// Returns a mutable pointer to the first descriptor in the chain.
+    /// Returns an address to the first descriptor in the chain.
     ///
     /// This pointer is intended to be written to the EasyDMA input/output pointer
     /// register to start a scatter-gather transfer.
-    ///
-    /// If the chain is empty, this function returns a null pointer, indicating
-    /// that no DMA jobs are configured.
-    pub(crate) fn first(&mut self) -> *mut Descriptor {
-        if self.count == 0 {
-            core::ptr::null_mut()
-        } else {
-            &mut self.descs[0]
-        }
+    pub(crate) fn first(&mut self) -> u32 {
+        &mut self.descs[0] as *mut Descriptor as u32
     }
 }

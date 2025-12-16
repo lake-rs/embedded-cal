@@ -1,7 +1,7 @@
 #![no_std]
 mod descriptor;
 
-use descriptor::{Descriptor, DescriptorChain, LAST_DESC_PTR};
+use descriptor::DescriptorChain;
 
 const BLOCK_SIZE: usize = 128;
 // Compile-time check: BLOCK_SIZE must be a power of two
@@ -217,52 +217,36 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
         let state_len = instance.algorithm.internal_state_len();
 
-        let mut out_desc = Descriptor {
-            addr: new_state.as_mut_ptr(),
-            next: LAST_DESC_PTR,
-            sz: sz(state_len),
-            dmatag: 32,
-        };
+        let mut output_descriptors = DescriptorChain::<1>::new();
+        output_descriptors.push(new_state.as_mut_ptr(), sz(state_len), 32);
 
-        let mut descriptors = DescriptorChain::new();
+        let mut input_descriptors = DescriptorChain::<4>::new();
 
-        descriptors.push(Descriptor {
-            addr: header.as_ptr() as *mut u8,
-            next: core::ptr::null_mut(),
-            sz: sz(4),
-            dmatag: 19,
-        });
+        input_descriptors.push(header.as_ptr() as *mut u8, sz(4), 19);
 
         if let Some(state) = &instance.state {
-            descriptors.push(Descriptor {
-                addr: state.as_ptr() as *mut u8,
-                next: core::ptr::null_mut(),
-                sz: sz(state_len),
-                dmatag: 99,
-            });
+            input_descriptors.push(state.as_ptr() as *mut u8, sz(state_len), 99);
         }
 
         if instance.block_bytes_used > 0 {
-            descriptors.push(Descriptor {
-                addr: instance.block.as_ptr() as *mut u8,
-                next: core::ptr::null_mut(),
-                sz: instance.block_bytes_used as u32,
-                dmatag: 3,
-            });
+            input_descriptors.push(
+                instance.block.as_ptr() as *mut u8,
+                instance.block_bytes_used as u32,
+                3,
+            );
         }
 
-        descriptors.push(Descriptor {
-            addr: data.as_ptr() as *mut u8,
-            next: core::ptr::null_mut(),
-            sz: 0x2000_0000 | bytes_from_data as u32,
-            dmatag: 35,
-        });
+        input_descriptors.push(
+            data.as_ptr() as *mut u8,
+            0x2000_0000 | bytes_from_data as u32,
+            35,
+        );
 
         dma.fetchaddrlsb()
-            .write(|w| unsafe { w.bits(descriptors.first() as u32) });
+            .write(|w| unsafe { w.bits(input_descriptors.first() as u32) });
 
         dma.pushaddrlsb()
-            .write(|w| unsafe { w.bits((&mut out_desc) as *mut _ as u32) });
+            .write(|w| unsafe { w.bits(output_descriptors.first() as u32) });
 
         dma.config().write(|w| {
             w.fetchctrlindirect().set_bit();
@@ -314,54 +298,38 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
         let mut out: [u8; 64] = [0x00; 64];
 
-        let mut out_desc = Descriptor {
-            addr: out.as_mut_ptr(),
-            next: LAST_DESC_PTR,
-            sz: sz(algo_len),
-            dmatag: 32,
-        };
+        let mut output_descriptors = DescriptorChain::<4>::new();
+        output_descriptors.push(out.as_mut_ptr(), sz(algo_len), 32);
 
         let header: [u8; 4] = [instance.algorithm as u8, 0x04, 0x00, 0x00];
 
-        let mut descriptors = DescriptorChain::new();
+        let mut input_descriptors = DescriptorChain::<4>::new();
 
-        descriptors.push(Descriptor {
-            addr: header.as_ptr() as *mut u8,
-            next: core::ptr::null_mut(),
-            sz: sz(4),
-            dmatag: 19,
-        });
+        input_descriptors.push(header.as_ptr() as *mut u8, sz(4), 19);
 
         if let Some(state) = &instance.state {
-            descriptors.push(Descriptor {
-                addr: state.as_ptr() as *mut u8,
-                next: core::ptr::null_mut(),
-                sz: sz(state_len),
-                dmatag: 99,
-            });
+            input_descriptors.push(state.as_ptr() as *mut u8, sz(state_len), 99);
         }
 
-        descriptors.push(Descriptor {
-            addr: instance.block.as_ptr() as *mut u8,
-            next: core::ptr::null_mut(),
-            sz: instance.block_bytes_used as u32,
-            dmatag: 3,
-        });
+        input_descriptors.push(
+            instance.block.as_ptr() as *mut u8,
+            instance.block_bytes_used as u32,
+            3,
+        );
 
-        descriptors.push(Descriptor {
-            addr: pad.as_ptr() as *mut u8,
-            next: core::ptr::null_mut(),
-            sz: 0x2000_0000 | padding_size as u32,
-            dmatag: 35,
-        });
+        input_descriptors.push(
+            pad.as_ptr() as *mut u8,
+            0x2000_0000 | padding_size as u32,
+            35,
+        );
 
         // Configure DMA source
         dma.fetchaddrlsb()
-            .write(|w| unsafe { w.bits(descriptors.first() as u32) });
+            .write(|w| unsafe { w.bits(input_descriptors.first() as u32) });
 
         // Configure DMA sink
         dma.pushaddrlsb()
-            .write(|w| unsafe { w.bits((&mut out_desc) as *mut _ as u32) });
+            .write(|w| unsafe { w.bits(output_descriptors.first() as u32) });
 
         dma.config().write(|w| {
             w.fetchctrlindirect().set_bit();
