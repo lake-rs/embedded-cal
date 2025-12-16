@@ -14,9 +14,12 @@ mod tests {
 
     #[init]
     fn init() -> super::TestState {
-        let p = nrf54l15_app_pac::Peripherals::take().unwrap();
+        // Safety: These peripherals are taken exactly once during initialization
+        // This guarantees exclusive ownership of the underlying registers for the lifetime of the test
+        let cracen = unsafe { nrf54l15_app_pac::GlobalCracenS::steal() };
+        let cracen_core = unsafe { nrf54l15_app_pac::GlobalCracencoreS::steal() };
 
-        let cal = embedded_cal_nrf54l15::Nrf54l15Cal::new(p);
+        let cal = embedded_cal_nrf54l15::Nrf54l15Cal::new(cracen, cracen_core);
 
         super::TestState { cal }
     }

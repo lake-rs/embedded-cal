@@ -13,26 +13,33 @@ const _: () = {
 pub struct Nrf54l15Cal {
     // TODO: No need to enable and take ownership of everything
     // it's possible to have a more granular ownership
-    p: nrf54l15_app_pac::Peripherals,
+    cracen: nrf54l15_app_pac::GlobalCracenS,
+    cracen_core: nrf54l15_app_pac::GlobalCracencoreS,
 }
 
 impl Nrf54l15Cal {
-    pub fn new(p: nrf54l15_app_pac::Peripherals) -> Self {
+    pub fn new(
+        cracen: nrf54l15_app_pac::GlobalCracenS,
+        cracen_core: nrf54l15_app_pac::GlobalCracencoreS,
+    ) -> Self {
         // Enable cryptomaster
-        p.global_cracen_s.enable().write(|w| {
+        cracen.enable().write(|w| {
             w.cryptomaster().set_bit();
             w.rng().set_bit();
             w.pkeikg().set_bit()
         });
 
-        Self { p }
+        Self {
+            cracen,
+            cracen_core,
+        }
     }
 }
 
 impl Drop for Nrf54l15Cal {
     fn drop(&mut self) {
         // Disable cryptomaster on drop
-        self.p.global_cracen_s.enable().write(|w| {
+        self.cracen.enable().write(|w| {
             w.cryptomaster().clear_bit();
             w.rng().clear_bit();
             w.pkeikg().clear_bit()
@@ -202,7 +209,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
         let next_full_boundary = total & !(BLOCK_SIZE - 1); // round down to nearest multiple of BLOCK_SIZE
         let bytes_from_data = next_full_boundary.saturating_sub(instance.block_bytes_used);
 
-        let dma = self.p.global_cracencore_s.cryptmstrdma();
+        let dma = self.cracen_core.cryptmstrdma();
 
         let mut new_state: [u8; 64] = [0x00; 64];
 
@@ -287,7 +294,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
     }
 
     fn finalize(&mut self, instance: Self::HashState) -> Self::HashResult {
-        let dma = self.p.global_cracencore_s.cryptmstrdma();
+        let dma = self.cracen_core.cryptmstrdma();
 
         let mut pad: [u8; 256] = [0x00; 256];
 
