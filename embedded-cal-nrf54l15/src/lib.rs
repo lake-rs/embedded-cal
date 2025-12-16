@@ -189,7 +189,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
     fn update(&mut self, instance: &mut Self::HashState, data: &[u8]) {
         // Case 1: data fits entirely inside the current block
-        if data.len() <= (BLOCK_SIZE - instance.block_bytes_used) {
+        if data.len() < (BLOCK_SIZE - instance.block_bytes_used) {
             instance.block[instance.block_bytes_used..instance.block_bytes_used + data.len()]
                 .copy_from_slice(data);
             instance.block_bytes_used += data.len();
