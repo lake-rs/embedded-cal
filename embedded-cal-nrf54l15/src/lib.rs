@@ -4,6 +4,7 @@ mod descriptor;
 use descriptor::DescriptorChain;
 
 const BLOCK_SIZE: usize = 128;
+const MAX_DESCRIPTOR_CHAIN_LEN: usize = 4;
 // Compile-time check: BLOCK_SIZE must be a power of two
 // and the size must be greater or eq than one hash block
 const _: () = {
@@ -209,18 +210,16 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
         let next_full_boundary = total & !(BLOCK_SIZE - 1); // round down to nearest multiple of BLOCK_SIZE
         let bytes_from_data = next_full_boundary.saturating_sub(instance.block_bytes_used);
 
-        let dma = self.cracen_core.cryptmstrdma();
-
         let mut new_state: [u8; 64] = [0x00; 64];
 
         let header: [u8; 4] = [instance.algorithm as u8, 0x00, 0x00, 0x00];
 
         let state_len = instance.algorithm.internal_state_len();
 
-        let mut output_descriptors = DescriptorChain::<1>::new();
+        let mut output_descriptors = DescriptorChain::<MAX_DESCRIPTOR_CHAIN_LEN>::new();
         output_descriptors.push(new_state.as_mut_ptr(), sz(state_len), 32);
 
-        let mut input_descriptors = DescriptorChain::<4>::new();
+        let mut input_descriptors = DescriptorChain::<MAX_DESCRIPTOR_CHAIN_LEN>::new();
 
         input_descriptors.push(header.as_ptr() as *mut u8, sz(4), 19);
 
@@ -242,27 +241,7 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
             35,
         );
 
-        dma.fetchaddrlsb()
-            .write(|w| unsafe { w.bits(input_descriptors.first() as u32) });
-
-        dma.pushaddrlsb()
-            .write(|w| unsafe { w.bits(output_descriptors.first() as u32) });
-
-        dma.config().write(|w| {
-            w.fetchctrlindirect().set_bit();
-            w.pushctrlindirect().set_bit();
-            w.fetchstop().clear_bit();
-            w.pushstop().clear_bit();
-            w.softrst().clear_bit()
-        });
-
-        dma.start().write(|w| {
-            w.startfetch().set_bit();
-            w.startpush().set_bit()
-        });
-
-        while dma.status().read().fetchbusy().bit_is_set() {}
-        while dma.status().read().pushbusy().bit_is_set() {}
+        self.execute_cryptomaster_dma(&mut input_descriptors, &mut output_descriptors);
 
         instance.state = Some(new_state);
         instance.processed_bytes += instance.block_bytes_used + bytes_from_data;
@@ -278,8 +257,6 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
     }
 
     fn finalize(&mut self, instance: Self::HashState) -> Self::HashResult {
-        let dma = self.cracen_core.cryptmstrdma();
-
         let mut pad: [u8; 256] = [0x00; 256];
 
         let padding_size = match instance.algorithm {
@@ -298,12 +275,12 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
 
         let mut out: [u8; 64] = [0x00; 64];
 
-        let mut output_descriptors = DescriptorChain::<4>::new();
+        let mut output_descriptors = DescriptorChain::<MAX_DESCRIPTOR_CHAIN_LEN>::new();
         output_descriptors.push(out.as_mut_ptr(), sz(algo_len), 32);
 
         let header: [u8; 4] = [instance.algorithm as u8, 0x04, 0x00, 0x00];
 
-        let mut input_descriptors = DescriptorChain::<4>::new();
+        let mut input_descriptors = DescriptorChain::<MAX_DESCRIPTOR_CHAIN_LEN>::new();
 
         input_descriptors.push(header.as_ptr() as *mut u8, sz(4), 19);
 
@@ -323,6 +300,35 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
             35,
         );
 
+        self.execute_cryptomaster_dma(&mut input_descriptors, &mut output_descriptors);
+
+        match instance.algorithm {
+            HashAlgorithm::Sha256 => {
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(&out[..32]);
+                HashResult::Sha256(arr)
+            }
+            HashAlgorithm::Sha384 => {
+                let mut arr = [0u8; 48];
+                arr.copy_from_slice(&out[..48]);
+                HashResult::Sha384(arr)
+            }
+            HashAlgorithm::Sha512 => {
+                let mut arr = [0u8; 64];
+                arr.copy_from_slice(&out[..64]);
+                HashResult::Sha512(arr)
+            }
+        }
+    }
+}
+
+impl Nrf54l15Cal {
+    fn execute_cryptomaster_dma<const N: usize>(
+        &mut self,
+        input_descriptors: &mut DescriptorChain<N>,
+        output_descriptors: &mut DescriptorChain<N>,
+    ) -> () {
+        let dma = self.cracen_core.cryptmstrdma();
         // Configure DMA source
         dma.fetchaddrlsb()
             .write(|w| unsafe { w.bits(input_descriptors.first() as u32) });
@@ -348,23 +354,5 @@ impl embedded_cal::HashProvider for Nrf54l15Cal {
         // Wait
         while dma.status().read().fetchbusy().bit_is_set() {}
         while dma.status().read().pushbusy().bit_is_set() {}
-
-        match instance.algorithm {
-            HashAlgorithm::Sha256 => {
-                let mut arr = [0u8; 32];
-                arr.copy_from_slice(&out[..32]);
-                HashResult::Sha256(arr)
-            }
-            HashAlgorithm::Sha384 => {
-                let mut arr = [0u8; 48];
-                arr.copy_from_slice(&out[..48]);
-                HashResult::Sha384(arr)
-            }
-            HashAlgorithm::Sha512 => {
-                let mut arr = [0u8; 64];
-                arr.copy_from_slice(&out[..64]);
-                HashResult::Sha512(arr)
-            }
-        }
     }
 }
