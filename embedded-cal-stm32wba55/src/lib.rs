@@ -121,32 +121,26 @@ impl embedded_cal::HashProvider for Stm32wba55 {
         instance.block[instance.block_bytes_used..block_size]
             .copy_from_slice(&data[..data_bytes_used]);
 
-        let mut pointer = 0;
-
-        for chunk_id in 0..block_size / 4 {
-            let fst_byte = instance.block[chunk_id * 4];
-            let snd_byte = instance.block[(chunk_id * 4) + 1];
-            let trd_byte = instance.block[(chunk_id * 4) + 2];
-            let fth_byte = instance.block[(chunk_id * 4) + 3];
-            let word = u32::from_le_bytes([fst_byte, snd_byte, trd_byte, fth_byte]);
+        for chunk in instance.block[..block_size].chunks_exact(4) {
+            let mut bytes = [0u8; 4];
+            bytes.copy_from_slice(chunk);
+            let word = u32::from_be_bytes(bytes);
 
             self.hash
                 .hash_din()
                 .write(|w| unsafe { w.datain().bits(word) });
         }
 
-        pointer += data_bytes_used;
-
         let data_full_blocks = (data.len() - data_bytes_used) / 64;
         let data_words = data_full_blocks * 64 / 4;
 
         if data_full_blocks > 0 {
-            for chunk_id in 0..data_words {
-                let fst_byte = data[pointer + chunk_id * 4];
-                let snd_byte = data[pointer + (chunk_id * 4) + 1];
-                let trd_byte = data[pointer + (chunk_id * 4) + 2];
-                let fth_byte = data[pointer + (chunk_id * 4) + 3];
-                let word = u32::from_le_bytes([fst_byte, snd_byte, trd_byte, fth_byte]);
+            let bytes = &data[data_bytes_used..data_bytes_used + data_words * 4];
+
+            for chunk in bytes.chunks_exact(4) {
+                let mut buf = [0u8; 4];
+                buf.copy_from_slice(chunk);
+                let word = u32::from_be_bytes(buf);
 
                 self.hash
                     .hash_din()
@@ -173,14 +167,11 @@ impl embedded_cal::HashProvider for Stm32wba55 {
         if !instance.first_block {
             self.restore_context(&instance);
         }
-        let mut hash_res_words: [u32; 8] = [0; 8];
 
-        for chunk_id in 0..=((instance.block_bytes_used - 1) / 4) {
-            let fst_byte = instance.block[chunk_id * 4];
-            let snd_byte = instance.block[(chunk_id * 4) + 1];
-            let trd_byte = instance.block[(chunk_id * 4) + 2];
-            let fth_byte = instance.block[(chunk_id * 4) + 3];
-            let word = u32::from_le_bytes([fst_byte, snd_byte, trd_byte, fth_byte]);
+        for chunk in instance.block[..instance.block_bytes_used].chunks(4) {
+            let mut bytes = [0u8; 4];
+            bytes[..chunk.len()].copy_from_slice(chunk);
+            let word = u32::from_be_bytes(bytes);
 
             self.hash
                 .hash_din()
@@ -195,6 +186,7 @@ impl embedded_cal::HashProvider for Stm32wba55 {
         self.hash.hash_str().write(|w| w.dcal().set_bit());
 
         self.wait_busy();
+        let mut hash_res_words: [u32; 8] = [0; 8];
         self.read_digest(&mut hash_res_words);
 
         let mut hash_result = [0u8; 32];
@@ -228,7 +220,7 @@ impl Stm32wba55 {
             w.mode().clear_bit(); // hash mode
             w.dmae().clear_bit();
             w.algo().b_0x3(); // SHA2-256
-            w.datatype().b_0x2() // 8-bit input
+            w.datatype().b_0x0()
         });
         // Ensure INIT = 0 before we manually set it
 
@@ -252,7 +244,7 @@ impl Stm32wba55 {
                 w.mode().clear_bit(); // hash mode
                 w.dmae().clear_bit();
                 w.algo().b_0x3(); // SHA2-256
-                w.datatype().b_0x2();
+                w.datatype().b_0x0();
                 w.init().set_bit()
             }),
         };
