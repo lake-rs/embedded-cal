@@ -107,10 +107,8 @@ impl embedded_cal::HashProvider for Stm32wba55 {
         self.hash.hash_cr().write(|w| {
             w.mode().clear_bit(); // hash mode
             w.dmae().clear_bit();
-            unsafe {
-                w.algo().bits(0b11); // SHA2-256
-                w.datatype().bits(0b10); // 8-bit input
-            }
+            w.algo().b_0x3(); // SHA2-256
+            w.datatype().b_0x2(); // 8-bit input
             w.init().set_bit() // launch new context
         });
 
@@ -118,7 +116,7 @@ impl embedded_cal::HashProvider for Stm32wba55 {
             self.restore_context(&instance);
         }
         let block_size = if instance.first_block { 68 } else { 64 };
-        if data.len() <= (block_size - instance.block_bytes_used) {
+        if data.len() < (block_size - instance.block_bytes_used) {
             instance.block[instance.block_bytes_used..instance.block_bytes_used + data.len()]
                 .copy_from_slice(data);
             instance.block_bytes_used += data.len();
@@ -130,6 +128,8 @@ impl embedded_cal::HashProvider for Stm32wba55 {
         instance.block[instance.block_bytes_used..block_size]
             .copy_from_slice(&data[..data_bytes_used]);
 
+        let mut pointer = 0;
+
         for chunk_id in 0..block_size / 4 {
             let fst_byte = instance.block[chunk_id * 4];
             let snd_byte = instance.block[(chunk_id * 4) + 1];
@@ -140,6 +140,24 @@ impl embedded_cal::HashProvider for Stm32wba55 {
             });
         }
 
+        pointer += data_bytes_used;
+
+        let data_full_blocks = (data.len() - data_bytes_used) / 64;
+        let data_words = data_full_blocks * 64 / 4;
+
+        if data_full_blocks > 0 {
+            for chunk_id in 0..data_words {
+                let fst_byte = data[pointer + chunk_id * 4];
+                let snd_byte = data[pointer + (chunk_id * 4) + 1];
+                let trd_byte = data[pointer + (chunk_id * 4) + 2];
+                let fth_byte = data[pointer + (chunk_id * 4) + 3];
+                self.hash.hash_din().write(|w| unsafe {
+                    w.bits(u32::from_le_bytes([fst_byte, snd_byte, trd_byte, fth_byte]))
+                });
+            }
+        }
+
+        let data_bytes_used = data_bytes_used + data_full_blocks * 64;
         instance.block[..data.len() - data_bytes_used].copy_from_slice(&data[data_bytes_used..]);
         instance.block_bytes_used = data.len() - data_bytes_used;
         instance.first_block = false;
@@ -156,10 +174,8 @@ impl embedded_cal::HashProvider for Stm32wba55 {
         self.hash.hash_cr().write(|w| {
             w.mode().clear_bit(); // hash mode
             w.dmae().clear_bit();
-            unsafe {
-                w.algo().bits(0b11); // SHA2-256
-                w.datatype().bits(0b10); // 8-bit input
-            }
+            w.algo().b_0x3(); // SHA2-256
+            w.datatype().b_0x2(); // 8-bit input
             w.init().set_bit() // launch new context
         });
         if !instance.first_block {
@@ -217,11 +233,8 @@ impl Stm32wba55 {
         self.hash.hash_cr().write(|w| {
             w.mode().clear_bit(); // hash mode
             w.dmae().clear_bit();
-            unsafe {
-                w.algo().bits(0b11); // SHA2-256
-                w.datatype().bits(0b10) // 8-bit input
-            }
-            // w.init().set_bit() // launch new context
+            w.algo().b_0x3(); // SHA2-256
+            w.datatype().b_0x2() // 8-bit input
         });
         // Ensure INIT = 0 before we manually set it
 
