@@ -2,6 +2,9 @@
 
 use stm32wba::stm32wba55 as stm32wba55_pac;
 
+const SHA256_BLOCK_SIZE: usize = 64;
+const WORD_SIZE: usize = 4;
+
 pub struct Stm32wba55 {
     hash: stm32wba55_pac::HASH,
 }
@@ -51,14 +54,25 @@ impl embedded_cal::HashAlgorithm for HashAlgorithm {
 
 pub struct HashState {
     algorithm: HashAlgorithm,
+
+    /// HASH context swap registers (HASH_CSR0 - HASH_CSR53)
     csr: [u32; 54],
+    /// HASH start register (HASH_STR)
     str: u32,
+    /// HASH interrupt enable register (HASH_IMR)
     imr: u32,
+    /// HASH control register (HASH_CR)
     cr: u32,
 
-    block: [u8; 68],
+    /// Buffer for pending input. SHA-256 requires feeding complete NBWE-sized
+    /// blocks to the hardware, so this stores leftover bytes when the caller
+    /// provides data that does not align to a full block.
+    block: [u8; SHA256_BLOCK_SIZE + WORD_SIZE],
+
+    /// Number of bytes currently stored in `block`.
     block_bytes_used: usize,
 
+    /// Indicates whether the next block to process is the first SHA-256 block.
     first_block: bool,
 }
 
@@ -93,16 +107,23 @@ impl embedded_cal::HashProvider for Stm32wba55 {
     }
 
     fn update(&mut self, instance: &mut HashState, data: &[u8]) {
-        // Reset HASH state
+        // Reinitialize the HASH peripheral before processing new input
         self.hash.hash_cr().write(|w| w.init().set_bit());
         while self.hash.hash_cr().read().init().bit_is_set() {}
-
         self.configure_and_reset_context(instance.algorithm);
 
+        // Restore the previously saved intermediate state for non-initial blocks.
         if !instance.first_block {
             self.restore_context(&instance);
         }
-        let block_size = if instance.first_block { 68 } else { 64 };
+
+        // Hardware can only pause hashing after exactly NBWE (Number of words expected) words have been written.
+        // For SHA-256 this corresponds to 17 words for the first block, and 16 words for all subsequent blocks.
+        // Equivalent value available at: self.hash.hash_sr().read().nbwe().bits()
+        let block_size = SHA256_BLOCK_SIZE + if instance.first_block { WORD_SIZE } else { 0 };
+
+        // Case 1: the provided data fits entirely in the current partial block.
+        // Buffer it and return, leaving the block incomplete for later continuation.
         if data.len() < (block_size - instance.block_bytes_used) {
             instance.block[instance.block_bytes_used..instance.block_bytes_used + data.len()]
                 .copy_from_slice(data);
@@ -110,13 +131,16 @@ impl embedded_cal::HashProvider for Stm32wba55 {
 
             return;
         }
+
+        // Case 2: the incoming data exceeds the remaining space in the current block.
+        // First, fill the block + data until one full block.
         let data_bytes_used = block_size - instance.block_bytes_used;
 
         instance.block[instance.block_bytes_used..block_size]
             .copy_from_slice(&data[..data_bytes_used]);
 
-        for chunk in instance.block[..block_size].chunks_exact(4) {
-            let mut bytes = [0u8; 4];
+        for chunk in instance.block[..block_size].chunks_exact(WORD_SIZE) {
+            let mut bytes = [0u8; WORD_SIZE];
             bytes.copy_from_slice(chunk);
             let word = u32::from_be_bytes(bytes);
 
@@ -125,14 +149,16 @@ impl embedded_cal::HashProvider for Stm32wba55 {
                 .write(|w| unsafe { w.datain().bits(word) });
         }
 
-        let data_full_blocks = (data.len() - data_bytes_used) / 64;
-        let data_words = data_full_blocks * 64 / 4;
+        // Still on case 2, if data left doesn't fully fit on the block,
+        // continue feeding as many full SHA-256 blocks as possible.
+        let data_full_blocks = (data.len() - data_bytes_used) / SHA256_BLOCK_SIZE;
+        let data_words = data_full_blocks * SHA256_BLOCK_SIZE / WORD_SIZE;
 
         if data_full_blocks > 0 {
-            let bytes = &data[data_bytes_used..data_bytes_used + data_words * 4];
+            let bytes = &data[data_bytes_used..data_bytes_used + data_words * WORD_SIZE];
 
-            for chunk in bytes.chunks_exact(4) {
-                let mut buf = [0u8; 4];
+            for chunk in bytes.chunks_exact(WORD_SIZE) {
+                let mut buf = [0u8; WORD_SIZE];
                 buf.copy_from_slice(chunk);
                 let word = u32::from_be_bytes(buf);
 
@@ -142,7 +168,9 @@ impl embedded_cal::HashProvider for Stm32wba55 {
             }
         }
 
-        let data_bytes_used = data_bytes_used + data_full_blocks * 64;
+        // After consuming whole blocks, the remaining bytes will always fit within a single block.
+        // Buffer the remainder, update the internal state, and save the hardware context.
+        let data_bytes_used = data_bytes_used + data_full_blocks * SHA256_BLOCK_SIZE;
         instance.block[..data.len() - data_bytes_used].copy_from_slice(&data[data_bytes_used..]);
         instance.block_bytes_used = data.len() - data_bytes_used;
         instance.first_block = false;
@@ -158,12 +186,13 @@ impl embedded_cal::HashProvider for Stm32wba55 {
         // Configure SHA-256
         self.configure_and_reset_context(instance.algorithm);
 
+        // Restore the previously saved intermediate state for non-initial blocks.
         if !instance.first_block {
             self.restore_context(&instance);
         }
 
-        for chunk in instance.block[..instance.block_bytes_used].chunks(4) {
-            let mut bytes = [0u8; 4];
+        for chunk in instance.block[..instance.block_bytes_used].chunks(WORD_SIZE) {
+            let mut bytes = [0u8; WORD_SIZE];
             bytes[..chunk.len()].copy_from_slice(chunk);
             let word = u32::from_be_bytes(bytes);
 
@@ -172,7 +201,7 @@ impl embedded_cal::HashProvider for Stm32wba55 {
                 .write(|w| unsafe { w.datain().bits(word) });
         }
 
-        let number_bytes_last_chunk = instance.block_bytes_used % 4;
+        let number_bytes_last_chunk = instance.block_bytes_used % WORD_SIZE;
 
         self.hash
             .hash_str()
@@ -185,7 +214,7 @@ impl embedded_cal::HashProvider for Stm32wba55 {
 
         let mut hash_result = [0u8; 32];
         for (i, w) in hash_res_words.iter().enumerate() {
-            hash_result[i * 4..(i + 1) * 4].copy_from_slice(&w.to_be_bytes());
+            hash_result[i * WORD_SIZE..(i + 1) * WORD_SIZE].copy_from_slice(&w.to_be_bytes());
         }
 
         HashResult::Sha256(hash_result.into())
@@ -193,10 +222,14 @@ impl embedded_cal::HashProvider for Stm32wba55 {
 }
 
 impl Stm32wba55 {
+    /// As documented in the HASH suspend/resume procedure.
+    /// Used to suspend processing of the current message.
+    /// https://www.st.com/resource/en/reference_manual/rm0493-multiprotocol-wireless-bluetooth-lowenergy-armbased-32bit-mcu-stmicroelectronics.pdf
     fn save_context(&mut self, instance: &mut HashState) {
         // BUSY must be 0
         while self.hash.hash_sr().read().busy().bit_is_set() {}
 
+        // Save IMR + STR + CR registers
         instance.imr = self.hash.hash_imr().read().bits();
         instance.str = self.hash.hash_str().read().bits();
         instance.cr = self.hash.hash_cr().read().bits();
@@ -207,9 +240,12 @@ impl Stm32wba55 {
         }
     }
 
+    /// As documented in the HASH suspend/resume procedure.
+    /// Used to resume processing of an interrupted message.
+    /// https://www.st.com/resource/en/reference_manual/rm0493-multiprotocol-wireless-bluetooth-lowenergy-armbased-32bit-mcu-stmicroelectronics.pdf
     fn restore_context(&mut self, ctx: &HashState) {
         self.hash.hash_cr().write(|w| w.init().clear_bit());
-        // 1. Restore IMR, STR, CR (with INIT=0!)
+        // 1. Restore IMR, STR, CR (with INIT=0)
         self.hash.hash_imr().write(|w| unsafe { w.bits(ctx.imr) });
         self.hash.hash_str().write(|w| unsafe { w.bits(ctx.str) });
         self.hash.hash_cr().write(|w| {
@@ -218,7 +254,6 @@ impl Stm32wba55 {
             w.algo().b_0x3(); // SHA2-256
             w.datatype().b_0x0()
         });
-        // Ensure INIT = 0 before we manually set it
 
         // 2. Set INIT to reload STR/CR context into hardware
         self.hash.hash_cr().modify(|_, w| w.init().set_bit());
@@ -257,6 +292,7 @@ impl Stm32wba55 {
         out[7] = self.hash.hash_hr7().read().bits();
     }
 
+    // FIXME: Use a macro to make it easier to read.
     fn read_csr(&mut self, idx: usize) -> u32 {
         match idx {
             0 => self.hash.hash_csr0().read().bits(),
@@ -317,6 +353,7 @@ impl Stm32wba55 {
         }
     }
 
+    // FIXME: Use a macro to make it easier to read.
     fn write_csr(&mut self, idx: usize, value: u32) {
         match idx {
             0 => self.hash.hash_csr0().write(|w| unsafe { w.bits(value) }),
