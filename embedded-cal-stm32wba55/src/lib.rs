@@ -1,7 +1,5 @@
 #![no_std]
 
-use defmt_rtt as _;
-use panic_probe as _;
 use stm32wba::stm32wba55 as stm32wba55_pac;
 
 pub struct Stm32wba55 {
@@ -17,7 +15,7 @@ impl Stm32wba55 {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy, defmt::Format)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum HashAlgorithm {
     Sha256,
 }
@@ -51,7 +49,6 @@ impl embedded_cal::HashAlgorithm for HashAlgorithm {
     }
 }
 
-#[derive(defmt::Format)]
 pub struct HashState {
     algorithm: HashAlgorithm,
     csr: [u32; 54],

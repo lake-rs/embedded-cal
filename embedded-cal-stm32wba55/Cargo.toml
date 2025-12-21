@@ -21,11 +21,10 @@ embedded-cal.path = "../embedded-cal"
 testvectors.path = "../testvectors"
 stm32wba = { git = "https://github.com/ElsaLopez133/stm32wba55-pac.git", version = "0.1.0", features = ["rt", "critical-section", "stm32wba55"] }
 
+[dev-dependencies]
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
 cortex-m-rt = { version = "0.7", features = ["device"] }
 defmt = "1.0"
 defmt-rtt = "1.0"
-panic-probe = { version = "1.0", features = ["print-defmt"] }
-
-[dev-dependencies]
 defmt-test = "0.4"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
