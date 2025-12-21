@@ -27,7 +27,7 @@ jobs:
     - name: run `cargo doc`
       run: RUSTDOCFLAGS="-D warnings" cargo doc
     - name: run `cargo test`
-      run: cargo test --all
+      run: cargo test
 
   generate-fstar:
     runs-on: ubuntu-latest
