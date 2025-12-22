@@ -1,0 +1,30 @@
+[package]
+name = "embedded-cal-stm32wba55"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[lib]
+test = false
+doc = false
+
+[[test]]
+name = "integration"
+harness = false
+
+[dependencies]
+embedded-cal.path = "../embedded-cal"
+testvectors.path = "../testvectors"
+stm32-metapac = { version = "18.0", features = ["stm32wba55cg", "rt"] }
+
+[dev-dependencies]
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
+cortex-m-rt = { version = "0.7", features = ["device"] }
+defmt = "1.0"
+defmt-rtt = "1.0"
+defmt-test = "0.4"
+panic-probe = { version = "1.0", features = ["print-defmt"] }

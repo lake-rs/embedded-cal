@@ -1,5 +1,16 @@
 [workspace]
-members = ["embedded-cal", "embedded-cal-rustcrypto", "testvectors"]
+members = [
+    "embedded-cal",
+    "embedded-cal-rustcrypto",
+    "embedded-cal-stm32wba55",
+    "testvectors"
+]
+
+default-members = [
+    "embedded-cal",
+    "embedded-cal-rustcrypto",
+    "testvectors"
+]
 resolver = "3"
 
 [workspace.package]
