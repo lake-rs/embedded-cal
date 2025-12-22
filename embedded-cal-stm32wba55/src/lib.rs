@@ -4,6 +4,7 @@ use stm32_metapac::{hash, rcc};
 
 const SHA256_BLOCK_SIZE: usize = 64;
 const WORD_SIZE: usize = 4;
+const CSR_REGS_LEN: usize = 54;
 
 pub struct Stm32wba55 {
     hash: hash::Hash,
@@ -56,7 +57,7 @@ pub struct HashState {
     algorithm: HashAlgorithm,
 
     /// HASH context swap registers (HASH_CSR0 - HASH_CSR53)
-    csr: [u32; 54],
+    csr: [u32; CSR_REGS_LEN],
     /// HASH start register (HASH_STR)
     str: hash::regs::Str,
     /// HASH interrupt enable register (HASH_IMR)
@@ -96,11 +97,11 @@ impl embedded_cal::HashProvider for Stm32wba55 {
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::HashState {
         Self::HashState {
             algorithm: algorithm,
-            csr: [0; 54],
+            csr: [0; CSR_REGS_LEN],
             str: hash::regs::Str(0),
             imr: hash::regs::Imr(0),
             cr: hash::regs::Cr(0),
-            block: [0; 68],
+            block: [0; SHA256_BLOCK_SIZE + WORD_SIZE],
             block_bytes_used: 0,
             first_block: true,
         }
@@ -144,9 +145,6 @@ impl embedded_cal::HashProvider for Stm32wba55 {
             bytes.copy_from_slice(chunk);
             let word = u32::from_be_bytes(bytes);
 
-            // self.hash
-            //     .hash_din()
-            //     .write(|w| unsafe { w.datain().bits(word) });
             self.hash.din().write_value(word);
         }
 
@@ -163,9 +161,6 @@ impl embedded_cal::HashProvider for Stm32wba55 {
                 buf.copy_from_slice(chunk);
                 let word = u32::from_be_bytes(buf);
 
-                // self.hash
-                //     .hash_din()
-                //     .write(|w| unsafe { w.datain().bits(word) });
                 self.hash.din().write_value(word);
             }
         }
@@ -198,17 +193,11 @@ impl embedded_cal::HashProvider for Stm32wba55 {
             bytes[..chunk.len()].copy_from_slice(chunk);
             let word = u32::from_be_bytes(bytes);
 
-            // self.hash
-            //     .hash_din()
-            //     .write(|w| unsafe { w.datain().bits(word) });
             self.hash.din().write_value(word);
         }
 
         let number_bytes_last_chunk = instance.block_bytes_used % WORD_SIZE;
 
-        // self.hash
-        //     .hash_str()
-        //     .write(|w| unsafe { w.nblw().bits(number_bytes_last_chunk as u8 * 8) });
         self.hash
             .str()
             .write(|w| w.set_nblw((number_bytes_last_chunk as u8) * 8));
@@ -241,8 +230,8 @@ impl Stm32wba55 {
         instance.cr = self.hash.cr().read();
 
         // Save CSR registers (0..37 always; 38..53 only for HMAC)
-        for i in 0..54 {
-            instance.csr[i] = self.read_csr(i);
+        for i in 0..CSR_REGS_LEN {
+            instance.csr[i] = self.hash.csr(i).read();
         }
     }
 
@@ -266,8 +255,8 @@ impl Stm32wba55 {
         while self.hash.cr().read().init() {}
 
         // 3. Restore CSR registers AFTER INIT has reinitialized the core
-        for i in 0..54 {
-            self.write_csr(i, ctx.csr[i]);
+        for i in 0..CSR_REGS_LEN {
+            self.hash.csr(i).write_value(ctx.csr[i])
         }
     }
     fn wait_busy(&mut self) {
@@ -291,15 +280,5 @@ impl Stm32wba55 {
         for i in 0..8 {
             out[i] = self.hash.hr(i).read();
         }
-    }
-
-    // FIXME: Use a macro to make it easier to read.
-    fn read_csr(&mut self, idx: usize) -> u32 {
-        self.hash.csr(idx).read()
-    }
-
-    // FIXME: Use a macro to make it easier to read.
-    fn write_csr(&mut self, idx: usize, value: u32) {
-        self.hash.csr(idx).write_value(value)
     }
 }
