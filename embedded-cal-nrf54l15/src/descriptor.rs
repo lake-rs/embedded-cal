@@ -119,3 +119,9 @@ impl<const N: usize> DescriptorChain<N> {
         &mut self.descs[0] as *mut Descriptor as u32
     }
 }
+
+pub(crate) fn sz(n: usize) -> u32 {
+    const DMA_REALIGN: usize = 0x2000_0000;
+    let group_end = (n.saturating_sub(1) / 4 + 1) * 4;
+    (group_end | DMA_REALIGN) as u32
+}

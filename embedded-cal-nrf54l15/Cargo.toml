@@ -19,6 +19,7 @@ harness = false
 [dependencies]
 embedded-cal.path = "../embedded-cal"
 testvectors.path = "../testvectors"
+embedded-cal-software.path = "../embedded-cal-software"
 nrf-pac = { version = "0.2.0", features = ["nrf54l15-app", "rt"] }
 
 [dev-dependencies]
