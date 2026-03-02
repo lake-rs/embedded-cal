@@ -10,10 +10,16 @@ use embedded_cal::{
     plumbing::hash::{SHA2SHORT_BLOCK_SIZE, Sha2Short, Sha2ShortVariant},
 };
 
-trait ExtenderConfig {
+pub trait ExtenderConfig {
     const IMPLEMENT_SHA2SHORT: bool;
 
     type Base: Cal + Plumbing;
+}
+
+impl<EC: ExtenderConfig> Extender<EC> {
+    pub fn new(base: EC::Base) -> Self {
+        Self(base)
+    }
 }
 
 pub struct Extender<EC: ExtenderConfig>(EC::Base);
