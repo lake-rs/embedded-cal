@@ -14,7 +14,7 @@ pub enum Sha2ShortVariant {
 ///   sent at finalization.
 /// * All those decisions are known at build time, and expressed in constants.
 pub trait Sha2Short {
-    /// Whether this trait is actually supported. See [`Plumbing`][super::Plumbing] docs for
+    /// Whether this trait is actually supported. See [`Plumbing`][super::super::Plumbing] docs for
     /// rationale..
     const SUPPORTED: bool;
 
@@ -31,7 +31,7 @@ pub trait Sha2Short {
 
     /// State containing an ongoing operation.
     ///
-    /// Analogous to [`crate::Hash::State`].
+    /// Analogous to [`crate::HashProvider::HashState`].
     type State: Sized;
 
     /// Initiates a [`Self::State`] according to the selected algorithm.

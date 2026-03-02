@@ -17,7 +17,7 @@ pub const SHA2SHORT_BLOCK_SIZE: usize = 64;
 /// because const methods do not work in stable Rust.
 ///
 /// This can be 0 if all the back-ends can take arbitrary slices, or if none are supported.
-/// Implementations that create something equivalent to a [`heapless::Vec`] out of this and don't
+/// Implementations that create something equivalent to a `heapless::Vec` out of this and don't
 /// need some minimal buffer internally will suffer some small per-state overhead (an unused size
 /// field in their struct). They could avoid this by applying some clever tricks with putting the
 /// buffer in a possibly-zero-sized array if that is really an issue.
