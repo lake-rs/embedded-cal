@@ -102,13 +102,14 @@ impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15Cal {
             _ => todo!("Unsupported variant"),
         };
 
-        Self::State {
-            state: None,
-        }
+        Self::State { state: None }
     }
 
     fn update(&mut self, instance: &mut Self::State, data: &[u8]) {
-        debug_assert!(data.len() % 64 == 0, "Chunking requirements laid out in Self::FIRST_CHUNK_SIZE not upheld.");
+        debug_assert!(
+            data.len() % 64 == 0,
+            "Chunking requirements laid out in Self::FIRST_CHUNK_SIZE not upheld."
+        );
 
         let mut new_state: [u8; 32] = [0x00; 32];
 
@@ -139,7 +140,10 @@ impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15Cal {
     }
 
     fn finalize(&mut self, instance: Self::State, last_chunk: &[u8], target: &mut [u8]) {
-        debug_assert!(last_chunk.is_empty(), "Self::SEND_PADDING=true requires user not to send any last chunk");
+        debug_assert!(
+            last_chunk.is_empty(),
+            "Self::SEND_PADDING=true requires user not to send any last chunk"
+        );
 
         target.copy_from_slice(&instance.state.unwrap());
     }
