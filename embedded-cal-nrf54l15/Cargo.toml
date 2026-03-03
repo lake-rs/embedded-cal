@@ -1,0 +1,33 @@
+[package]
+name = "embedded-cal-nrf54l15"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[lib]
+# While the crate is already excluded from the workspace's defaults, setting
+# this also means that when `cargo test` is run in here, cargo reaches into the
+# local .cargo that sets up target and runner.
+test = false
+
+[[test]]
+name = "integration"
+harness = false
+
+[dependencies]
+embedded-cal.path = "../embedded-cal"
+nrf-pac = { version = "0.2.0", features = ["nrf54l15-app", "rt"] }
+
+[dev-dependencies]
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
+cortex-m-rt = { version = "0.7", features = ["device"] }
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+defmt-test = "0.4"
+embedded-cal-software.path = "../embedded-cal-software"
+testvectors.path = "../testvectors"

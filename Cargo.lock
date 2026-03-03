@@ -200,6 +200,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-cal-nrf54l15"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "defmt-test",
+ "embedded-cal",
+ "embedded-cal-software",
+ "nrf-pac",
+ "panic-probe",
+ "testvectors",
+]
+
+[[package]]
 name = "embedded-cal-rustcrypto"
 version = "0.1.0"
 dependencies = [
@@ -353,6 +369,16 @@ name = "nb"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d5439c4ad607c3c23abf66de8c8bf57ba8adcd1f129e699851a6e43935d339d"
+
+[[package]]
+name = "nrf-pac"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae76c372d1838abeccf1d397688cd4bd90fe3213410c51cb74c6769fdf075067"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+]
 
 [[package]]
 name = "num-bigint"
