@@ -214,6 +214,14 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
             _ => None,
         }
     }
+
+    #[inline]
+    fn from_ni_name(name: &str) -> Option<Self> {
+        match name {
+            "sha-256" => Self::from_cose_number(-16),
+            _ => None,
+        }
+    }
 }
 
 pub enum HashState<EC: ExtenderConfig> {
