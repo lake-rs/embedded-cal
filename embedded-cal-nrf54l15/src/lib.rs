@@ -1,13 +1,10 @@
 #![no_std]
 mod descriptor;
 
-use descriptor::DescriptorChain;
+use descriptor::{DescriptorChain, Input, Output};
 use nrf_pac::{cracen, cracencore};
 
-use crate::descriptor::sz;
-
 const MAX_DESCRIPTOR_CHAIN_LEN: usize = 4;
-const INTERNAL_STATE_LEN: usize = 32;
 
 pub struct Nrf54l15Cal {
     // FIXME: No need to enable and take ownership of everything
@@ -115,24 +112,20 @@ impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15Cal {
 
         let header: [u8; 4] = [0x08, 0x00, 0x00, 0x00];
 
-        let state_len = INTERNAL_STATE_LEN;
+        let mut output_descriptors: DescriptorChain<Output, MAX_DESCRIPTOR_CHAIN_LEN> =
+            DescriptorChain::new();
+        output_descriptors.push(&mut new_state, 32);
 
-        let mut output_descriptors = DescriptorChain::<MAX_DESCRIPTOR_CHAIN_LEN>::new();
-        output_descriptors.push(new_state.as_mut_ptr(), sz(state_len), 32);
+        let mut input_descriptors: DescriptorChain<Input, MAX_DESCRIPTOR_CHAIN_LEN> =
+            DescriptorChain::new();
 
-        let mut input_descriptors = DescriptorChain::<MAX_DESCRIPTOR_CHAIN_LEN>::new();
-
-        input_descriptors.push(header.as_ptr() as *mut u8, sz(4), 19);
+        input_descriptors.push(&header, 19);
 
         if let Some(state) = &instance.state {
-            input_descriptors.push(state.as_ptr() as *mut u8, sz(state_len), 99);
+            input_descriptors.push(state, 99);
         }
 
-        input_descriptors.push(
-            data.as_ptr() as *mut u8,
-            0x2000_0000 | data.len() as u32,
-            35,
-        );
+        input_descriptors.push(data, 35);
 
         self.execute_cryptomaster_dma(&mut input_descriptors, &mut output_descriptors);
 
@@ -152,34 +145,36 @@ impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15Cal {
 impl Nrf54l15Cal {
     fn execute_cryptomaster_dma<const N: usize>(
         &mut self,
-        input_descriptors: &mut DescriptorChain<N>,
-        output_descriptors: &mut DescriptorChain<N>,
+        input_descriptors: &mut DescriptorChain<Input, N>,
+        output_descriptors: &mut DescriptorChain<Output, N>,
     ) -> () {
-        let dma = self.cracen_core.cryptmstrdma();
-        // Configure DMA source
-        dma.fetchaddrlsb()
-            .write_value(input_descriptors.first() as u32);
+        input_descriptors.with_first_pointer(|input_ptr| {
+            output_descriptors.with_first_pointer(|output_ptr| {
+                let dma = self.cracen_core.cryptmstrdma();
+                // Configure DMA source
+                dma.fetchaddrlsb().write_value(input_ptr);
 
-        // Configure DMA sink
-        dma.pushaddrlsb()
-            .write_value(output_descriptors.first() as u32);
+                // Configure DMA sink
+                dma.pushaddrlsb().write_value(output_ptr);
 
-        dma.config().write(|w| {
-            w.set_fetchctrlindirect(true);
-            w.set_pushctrlindirect(true);
-            w.set_fetchstop(false);
-            w.set_pushstop(false);
-            w.set_softrst(false)
+                dma.config().write(|w| {
+                    w.set_fetchctrlindirect(true);
+                    w.set_pushctrlindirect(true);
+                    w.set_fetchstop(false);
+                    w.set_pushstop(false);
+                    w.set_softrst(false)
+                });
+
+                // Start DMA
+                dma.start().write(|w| {
+                    w.set_startfetch(true);
+                    w.set_startpush(true)
+                });
+
+                // Wait
+                while dma.status().read().fetchbusy() {}
+                while dma.status().read().pushbusy() {}
+            });
         });
-
-        // Start DMA
-        dma.start().write(|w| {
-            w.set_startfetch(true);
-            w.set_startpush(true)
-        });
-
-        // Wait
-        while dma.status().read().fetchbusy() {}
-        while dma.status().read().pushbusy() {}
     }
 }
