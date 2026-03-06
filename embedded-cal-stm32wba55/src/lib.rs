@@ -77,19 +77,16 @@ impl embedded_cal::plumbing::hash::Sha2Short for Stm32wba55Cal {
     }
 
     fn update(&mut self, instance: &mut HashState, data: &[u8]) {
-        // Reinitialize the HASH peripheral before processing new input
-        self.hash.cr().write(|w| w.set_init(true));
-        while self.hash.cr().read().init() {}
-        self.configure_and_reset_context(HashAlgorithm::Sha256);
+        debug_assert_eq!(
+            data.len(),
+            self.hash.sr().read().nbwe() as usize * WORD_SIZE,
+            "data length must match NBWE words expected by the hardware"
+        );
 
-        // Restore the previously saved intermediate state for non-initial blocks.
-        if let Some(context) = &instance.context {
-            self.restore_context(context);
-        }
+        self.reinit_and_restore(&instance.context);
 
         // Hardware can only pause hashing after exactly NBWE (Number of words expected) words have been written.
         // For SHA-256 this corresponds to 17 words for the first block, and 16 words for all subsequent blocks.
-        // Equivalent value available at: self.hash.sr().read().nbwe().bits()
         for chunk in data.chunks_exact(WORD_SIZE) {
             let mut bytes = [0u8; WORD_SIZE];
             bytes.copy_from_slice(chunk);
@@ -102,17 +99,7 @@ impl embedded_cal::plumbing::hash::Sha2Short for Stm32wba55Cal {
     }
 
     fn finalize(&mut self, instance: Self::State, last_chunk: &[u8], target: &mut [u8]) {
-        // Reset HASH state
-        self.hash.cr().write(|w| w.set_init(true));
-        while self.hash.cr().read().init() {}
-
-        // Configure SHA-256
-        self.configure_and_reset_context(HashAlgorithm::Sha256);
-
-        // Restore the previously saved intermediate state for non-initial blocks.
-        if let Some(context) = &instance.context {
-            self.restore_context(context);
-        }
+        self.reinit_and_restore(&instance.context);
 
         for chunk in last_chunk.chunks(WORD_SIZE) {
             let mut bytes = [0u8; WORD_SIZE];
@@ -143,6 +130,18 @@ impl embedded_cal::plumbing::hash::Sha2Short for Stm32wba55Cal {
 }
 
 impl Stm32wba55Cal {
+    /// Reinitializes the HASH peripheral, configures it for SHA-256, and restores
+    /// any previously saved intermediate context.
+    fn reinit_and_restore(&mut self, context: &Option<Context>) {
+        self.hash.cr().write(|w| w.set_init(true));
+        while self.hash.cr().read().init() {}
+        self.configure_and_reset_context(HashAlgorithm::Sha256);
+
+        if let Some(ctx) = context {
+            self.restore_context(ctx);
+        }
+    }
+
     /// As documented in the HASH suspend/resume procedure.
     /// Used to suspend processing of the current message.
     /// https://www.st.com/resource/en/reference_manual/rm0493-multiprotocol-wireless-bluetooth-lowenergy-armbased-32bit-mcu-stmicroelectronics.pdf
