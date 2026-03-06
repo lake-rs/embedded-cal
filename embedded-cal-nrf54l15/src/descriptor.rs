@@ -50,6 +50,11 @@ impl Descriptor {
     }
 }
 
+/// Marker type for a descriptor chain that feeds data into the DMA engine (reads from memory).
+pub(crate) struct Input;
+/// Marker type for a descriptor chain that receives data from the DMA engine (writes to memory).
+pub(crate) struct Output;
+
 /// Fixed-capacity scatter-gather descriptor chain.
 ///
 /// This type owns a small array of `Descriptor`s and tracks how many entries
@@ -57,12 +62,16 @@ impl Descriptor {
 ///
 /// DescriptorChain also make sure they are linked like a linked-list
 /// and the last Descriptor.next is always LAST_DESC_PTR
-pub(crate) struct DescriptorChain<const N: usize> {
+///
+/// `Direction` is either [`Input`] or [`Output`], distinguishing read-from-memory and
+/// write-to-memory chains at the type level.
+pub(crate) struct DescriptorChain<Direction, const N: usize> {
     descs: [Descriptor; N],
     count: usize,
+    _dir: core::marker::PhantomData<Direction>,
 }
 
-impl<const N: usize> DescriptorChain<N> {
+impl<Direction, const N: usize> DescriptorChain<Direction, N> {
     /// Creates an empty `DescriptorChain`.
     ///
     /// The chain is initialized with all descriptors zero-filled and contains
@@ -71,32 +80,17 @@ impl<const N: usize> DescriptorChain<N> {
         Self {
             descs: [Descriptor::empty(); N],
             count: 0,
+            _dir: core::marker::PhantomData,
         }
     }
 
-    /// Appends a descriptor to the end of the chain.
-    ///
-    /// This method:
-    /// - Stores `desc` in the next free slot.
-    /// - Updates the `next` pointer of the previous descriptor to point to the
-    ///   newly added one.
-    /// - Ensures the newly added descriptor’s `next` pointer is set to
-    ///   `LAST_DESC_PTR`, marking it as the terminal job entry.
+    /// Links a new [`Descriptor`] into the chain.
     ///
     /// # Panics
     ///
     /// Panics if the chain is already at full capacity.
-    ///
-    /// # Safety / Correctness requirements
-    ///
-    /// - The descriptor and all previously pushed descriptors must remain
-    ///   valid and unmodified while a DMA transfer is in progress.
-    /// - All descriptors in the chain must describe DMA-accessible memory.
-    /// - The chain must not be mutated after being handed to the EasyDMA
-    ///   hardware until the END or ERROR event is observed.
-    pub(crate) fn push(&mut self, addr: *mut u8, sz: u32, dmatag: u32) {
+    fn push_descriptor(&mut self, desc: Descriptor) {
         assert!(self.count < N);
-        let desc = Descriptor::new(addr, sz, dmatag);
 
         let idx = self.count;
         self.descs[idx] = desc;
@@ -104,8 +98,7 @@ impl<const N: usize> DescriptorChain<N> {
 
         // update links
         if idx > 0 {
-            let prev = idx - 1;
-            self.descs[prev].next = &mut self.descs[idx];
+            self.descs[idx - 1].next = &mut self.descs[idx];
         }
 
         self.descs[idx].next = LAST_DESC_PTR;
@@ -120,9 +113,43 @@ impl<const N: usize> DescriptorChain<N> {
     }
 }
 
+impl<const N: usize> DescriptorChain<Input, N> {
+    /// Appends an input (read) buffer to the chain.
+    ///
+    /// The DMA engine will read from `data` during the transfer.
+    ///
+    /// # Safety / Correctness requirements
+    ///
+    /// - `data` must be DMA-accessible memory.
+    /// - The chain must not be mutated after being handed to the EasyDMA
+    ///   hardware until the END or ERROR event is observed.
+    pub(crate) fn push(&mut self, data: &[u8], dmatag: u32) {
+        self.push_descriptor(Descriptor::new(
+            data.as_ptr() as *mut u8,
+            sz(data.len()),
+            dmatag,
+        ));
+    }
+}
+
+impl<const N: usize> DescriptorChain<Output, N> {
+    /// Appends an output (write) buffer to the chain.
+    ///
+    /// The DMA engine will write into `data` during the transfer.
+    ///
+    /// # Safety / Correctness requirements
+    ///
+    /// - `data` must be DMA-accessible memory.
+    /// - The chain must not be mutated after being handed to the EasyDMA
+    ///   hardware until the END or ERROR event is observed.
+    pub(crate) fn push(&mut self, data: &mut [u8], dmatag: u32) {
+        self.push_descriptor(Descriptor::new(data.as_mut_ptr(), sz(data.len()), dmatag));
+    }
+}
+
 /// Asserts that size is a multiple of 4, and ORs in the DMA_REALIGN constant.
 #[inline]
-pub(crate) const fn sz(n: usize) -> u32 {
+const fn sz(n: usize) -> u32 {
     const DMA_REALIGN: usize = 0x2000_0000;
     debug_assert!(
         n % 4 == 0,
