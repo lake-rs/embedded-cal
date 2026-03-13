@@ -54,13 +54,16 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
                 buffer,
                 instance,
             } => {
-                let mut written_in_buffer = *written;
                 // In the common case of this also being 64, the compiler has all it needs to fold
                 // this in with the line after it.
-                if written_in_buffer > <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE {
-                    written_in_buffer -= <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE;
-                }
-                written_in_buffer %= SHA2SHORT_BLOCK_SIZE;
+                let mut written_in_buffer = if *written < <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE
+                {
+                    // First chunk not yet sent to hardware; all bytes are still buffered.
+                    *written
+                } else {
+                    // First chunk already sent; remaining bytes cycle through SHA2SHORT_BLOCK_SIZE blocks.
+                    (*written - <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE) % SHA2SHORT_BLOCK_SIZE
+                };
 
                 // Not trying to be efficient here: This is a demo implementation.
                 // In particular, this does *not* test sending more than a single buffer multiple in;
@@ -102,12 +105,14 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
                 buffer,
                 instance,
             } => {
-                let mut written_in_buffer = written;
                 // FIXME: deduplicate with update
-                if written_in_buffer > <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE {
-                    written_in_buffer -= <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE;
-                }
-                written_in_buffer %= SHA2SHORT_BLOCK_SIZE;
+                let mut written_in_buffer = if written < <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE {
+                    // First chunk not yet sent to hardware; all bytes are still buffered.
+                    written
+                } else {
+                    // First chunk already sent; remaining bytes cycle through SHA2SHORT_BLOCK_SIZE blocks.
+                    (written - <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE) % SHA2SHORT_BLOCK_SIZE
+                };
                 // END FIXME
 
                 let (instance, buffer) = if <EC::Base as Sha2Short>::SEND_PADDING {
