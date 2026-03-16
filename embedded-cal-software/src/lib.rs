@@ -422,4 +422,11 @@ mod tests {
 
         testvectors::test_hash_algorithm_sha256(&mut cal);
     }
+
+    #[test]
+    fn test_hmac_sha256_on_dummy() {
+        let mut cal = Extender::<ImplementSha256Short>(dummy_sha256::DummySha256);
+
+        testvectors::test_hmac_sha256(&mut cal);
+    }
 }
