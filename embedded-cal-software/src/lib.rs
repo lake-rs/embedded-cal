@@ -5,7 +5,7 @@
 #![no_std]
 
 use embedded_cal::{
-    Cal, HashProvider, HmacProvider,
+    HashProvider, HmacProvider,
     plumbing::Plumbing,
     plumbing::hash::{SHA2SHORT_BLOCK_SIZE, Sha2Short, Sha2ShortVariant},
 };
@@ -13,7 +13,7 @@ use embedded_cal::{
 pub trait ExtenderConfig {
     const IMPLEMENT_SHA2SHORT: bool;
 
-    type Base: Cal + Plumbing;
+    type Base: HashProvider + Plumbing;
 }
 
 impl<EC: ExtenderConfig> Extender<EC> {
