@@ -1,22 +1,110 @@
 #![no_std]
 
-use stm32_metapac::{hash, rcc};
+use stm32_metapac::{
+    hash,
+    rcc::{self, vals::Rngsel},
+    rng::{
+        self,
+        vals::{Clkdiv, Htcfg, Nistc, RngConfig1, RngConfig2, RngConfig3},
+    },
+};
+mod try_rng;
 
 const WORD_SIZE: usize = 4;
 const CSR_REGS_LEN: usize = 54;
 
 pub struct Stm32wba55Cal {
     hash: hash::Hash,
+    rcc: rcc::Rcc,
+    rng: rng::Rng,
 }
 
 impl embedded_cal::Cal for Stm32wba55Cal {}
 
 impl Stm32wba55Cal {
-    pub fn new(hash: hash::Hash, rcc: &rcc::Rcc) -> Self {
-        // Enable HASH clock
-        rcc.ahb2enr().modify(|w| w.set_hashen(true));
+    pub fn new(hash: hash::Hash, rcc: rcc::Rcc, rng: rng::Rng) -> Self {
+        // Select HSI as the RNG kernel clock source (default is LSE which may not be running)
+        rcc.ccipr2().modify(|w| w.set_rngsel(Rngsel::HSI));
 
-        Self { hash }
+        // Enable HASH and RNG clocks
+        rcc.ahb2enr().modify(|w| {
+            w.set_hashen(true);
+            w.set_rngen(true);
+        });
+
+        let mut cal = Self { hash, rcc, rng };
+        cal.init_rng().expect("RNG init failed");
+        cal
+    }
+
+    /// Initialize the RNG peripheral using the rng_v3 conditioning sequence.
+    ///
+    /// Must be called once after enabling the RNG clock, and again on seed error recovery.
+    /// Uses NIST config A (certifiable). The HTCR magic number must precede any HTCR write
+    /// per the RM0493 requirement.
+    fn init_rng(&mut self) -> Result<(), try_rng::RngError> {
+        // Enter conditioning reset with NIST config A settings
+        self.rng.cr().write(|w| {
+            w.set_condrst(true);
+            w.set_nistc(Nistc::CUSTOM);
+            w.set_rng_config1(RngConfig1::CONFIG_A);
+            w.set_clkdiv(Clkdiv::NO_DIV);
+            w.set_rng_config2(RngConfig2::CONFIG_A_B);
+            w.set_rng_config3(RngConfig3::CONFIG_A);
+            w.set_ced(true); // disable clock error detection during conditioning
+            w.set_ie(false);
+            w.set_rngen(true);
+        });
+
+        // Wait for conditioning reset to take effect
+        wait_for(|| self.rng.cr().read().condrst())?;
+
+        // Write health test config: magic number must immediately precede the actual value
+        self.rng.htcr().write(|w| w.set_htcfg(Htcfg::MAGIC));
+        self.rng.htcr().write(|w| w.set_htcfg(Htcfg::RECOMMENDED));
+
+        // Clear conditioning reset and re-enable clock error detection
+        self.rng.cr().modify(|w| {
+            w.set_condrst(false);
+            w.set_ced(false); // re-enable clock error detection (was disabled during conditioning)
+        });
+
+        // Wait for conditioning reset to deassert (RM0493 requires waiting for both assert and deassert)
+        wait_for(|| !self.rng.cr().read().condrst())?;
+
+        // Clear any latched seed error from the reset
+        self.rng.sr().modify(|w| w.set_seis(false));
+
+        // Discard the first output word (required after every reset per RM0493).
+        // Also unblock on seis so a seed error during conditioning doesn't hang forever.
+        wait_for(|| {
+            let sr = self.rng.sr().read();
+            sr.drdy() || sr.seis()
+        })?;
+        if self.rng.sr().read().seis() {
+            return Err(try_rng::RngError::HardwareFailure);
+        }
+        let _ = self.rng.dr().read();
+
+        Ok(())
+    }
+}
+
+fn wait_for(mut condition: impl FnMut() -> bool) -> Result<(), try_rng::RngError> {
+    for _ in 0..1000 {
+        if condition() {
+            return Ok(());
+        }
+        core::hint::spin_loop();
+    }
+    Err(try_rng::RngError::HardwareFailure)
+}
+
+impl Drop for Stm32wba55Cal {
+    fn drop(&mut self) {
+        // Disable HASH clock
+        self.rcc.ahb2enr().modify(|w| w.set_hashen(false));
+        self.rng.cr().modify(|w| w.set_rngen(false));
     }
 }
 
