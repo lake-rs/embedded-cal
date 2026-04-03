@@ -36,4 +36,9 @@ mod tests {
         >();
         testvectors::test_hash_algorithm_sha256(&mut state.cal);
     }
+
+    #[test]
+    fn test_tryrng(state: &mut super::TestState) {
+        embedded_cal::test_tryrng(&mut state.cal);
+    }
 }

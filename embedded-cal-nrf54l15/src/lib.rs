@@ -1,5 +1,6 @@
 #![no_std]
 mod descriptor;
+mod try_rng;
 
 use descriptor::DescriptorChain;
 use nrf_pac::{cracen, cracencore};
@@ -27,6 +28,16 @@ impl Nrf54l15Cal {
             w.set_pkeikg(true)
         });
 
+        // Enable the NDRNG; it stays on until Drop.
+        cracen_core
+            .rngcontrol()
+            .control()
+            .modify(|w| w.set_enable(true));
+
+        // Discard the first FIFO word produced after the startup conditioning period
+        while cracen_core.rngcontrol().fifolevel().read() == 0 {}
+        let _ = cracen_core.rngcontrol().fifo(0).read();
+
         Self {
             cracen,
             cracen_core,
@@ -36,6 +47,12 @@ impl Nrf54l15Cal {
 
 impl Drop for Nrf54l15Cal {
     fn drop(&mut self) {
+        // Disable NDRNG
+        self.cracen_core
+            .rngcontrol()
+            .control()
+            .modify(|w| w.set_enable(false));
+
         // Disable cryptomaster on drop
         self.cracen.enable().write(|w| {
             w.set_cryptomaster(false);
