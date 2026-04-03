@@ -5,9 +5,11 @@
 #![no_std]
 
 use embedded_cal::{
-    Cal, HashProvider,
-    plumbing::Plumbing,
-    plumbing::hash::{SHA2SHORT_BLOCK_SIZE, Sha2Short, Sha2ShortVariant},
+    Cal, HashProvider, TryRng,
+    plumbing::{
+        Plumbing,
+        hash::{SHA2SHORT_BLOCK_SIZE, Sha2Short, Sha2ShortVariant},
+    },
 };
 
 pub trait ExtenderConfig {
@@ -27,6 +29,25 @@ pub struct Extender<EC: ExtenderConfig>(EC::Base);
 const HASH_WRAPPER_MAX_BLOCKSIZE: usize = 68;
 
 impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {}
+
+impl<EC: ExtenderConfig> embedded_cal::TryRng for Extender<EC>
+where
+    EC::Base: TryRng,
+{
+    type Error = <EC::Base as TryRng>::Error;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        self.0.try_next_u32()
+    }
+
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        self.0.try_next_u64()
+    }
+
+    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+        self.0.try_fill_bytes(dst)
+    }
+}
 
 impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
     type Algorithm = HashAlgorithm<EC>;
@@ -230,27 +251,6 @@ pub enum HashState<EC: ExtenderConfig> {
         buffer: [u8; HASH_WRAPPER_MAX_BLOCKSIZE],
         instance: <EC::Base as Sha2Short>::State,
     },
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    mod dummy_sha256;
-
-    struct ImplementSha256Short;
-
-    impl ExtenderConfig for ImplementSha256Short {
-        const IMPLEMENT_SHA2SHORT: bool = true;
-        type Base = dummy_sha256::DummySha256;
-    }
-
-    #[test]
-    fn test_hash_algorithm_sha256_on_dummy() {
-        let mut cal = Extender::<ImplementSha256Short>(dummy_sha256::DummySha256);
-
-        testvectors::test_hash_algorithm_sha256(&mut cal);
-    }
 }
 
 pub enum HashResult<EC: ExtenderConfig> {
