@@ -232,27 +232,6 @@ pub enum HashState<EC: ExtenderConfig> {
     },
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    mod dummy_sha256;
-
-    struct ImplementSha256Short;
-
-    impl ExtenderConfig for ImplementSha256Short {
-        const IMPLEMENT_SHA2SHORT: bool = true;
-        type Base = dummy_sha256::DummySha256;
-    }
-
-    #[test]
-    fn test_hash_algorithm_sha256_on_dummy() {
-        let mut cal = Extender::<ImplementSha256Short>(dummy_sha256::DummySha256);
-
-        testvectors::test_hash_algorithm_sha256(&mut cal);
-    }
-}
-
 pub enum HashResult<EC: ExtenderConfig> {
     Sha256([u8; 32]),
     Direct(<EC::Base as HashProvider>::HashResult),
@@ -301,4 +280,24 @@ fn sha2_padding(
     out[start..start + length_bytes].copy_from_slice(&len_bytes_be[(16 - length_bytes)..]);
 
     1 + zero_pad + length_bytes
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    mod dummy_sha256;
+
+    struct ImplementSha256Short;
+
+    impl ExtenderConfig for ImplementSha256Short {
+        const IMPLEMENT_SHA2SHORT: bool = true;
+        type Base = dummy_sha256::DummySha256;
+    }
+
+    #[test]
+    fn test_hash_algorithm_sha256_on_dummy() {
+        let mut cal = Extender::<ImplementSha256Short>(dummy_sha256::DummySha256);
+
+        testvectors::test_hash_algorithm_sha256(&mut cal);
+    }
 }

@@ -23,7 +23,7 @@ jobs:
     - name: run `cargo check`
       run: RUSTFLAGS="-D warnings" cargo check
     - name: run `cargo clippy`
-      run: cargo clippy -- --deny clippy::all
+      run: cargo clippy --workspace -- --deny clippy::all
     - name: run `cargo doc`
       run: RUSTDOCFLAGS="-D warnings" cargo doc
     - name: run `cargo test`

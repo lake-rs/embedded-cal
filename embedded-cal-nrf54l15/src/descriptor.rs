@@ -125,7 +125,7 @@ impl<const N: usize> DescriptorChain<N> {
 pub(crate) const fn sz(n: usize) -> u32 {
     const DMA_REALIGN: usize = 0x2000_0000;
     debug_assert!(
-        n % 4 == 0,
+        n.is_multiple_of(4),
         "Sizes passed through this function need to be in multiples of the word size"
     );
     (n | DMA_REALIGN) as u32

@@ -33,7 +33,7 @@ impl embedded_cal::HashProvider for DummySha256 {
         match algorithm {}
     }
 
-    fn update(&mut self, instance: &mut Self::HashState, data: &[u8]) {
+    fn update(&mut self, instance: &mut Self::HashState, _data: &[u8]) {
         match *instance {}
     }
 
@@ -73,7 +73,7 @@ impl embedded_cal::plumbing::hash::Sha2Short for DummySha256 {
         assert!(data.len() == 64, "Not feeding exactly 512bit");
 
         let mut w: [u32; 64] = [0; _]; // or uninit
-        for (i, chunkword) in data.as_chunks::<4>().0.into_iter().enumerate() {
+        for (i, chunkword) in data.as_chunks::<4>().0.iter().enumerate() {
             w[i] = u32::from_be_bytes(*chunkword);
         }
 

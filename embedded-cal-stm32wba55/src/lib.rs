@@ -156,8 +156,8 @@ impl Stm32wba55Cal {
 
         // Save CSR registers (0..37 always; 38..53 only for HMAC)
         let mut csr = [0u32; CSR_REGS_LEN];
-        for i in 0..CSR_REGS_LEN {
-            csr[i] = self.hash.csr(i).read();
+        for (i, slot) in csr.iter_mut().enumerate().take(CSR_REGS_LEN) {
+            *slot = self.hash.csr(i).read();
         }
         instance.context = Some(Context { csr, str, imr });
     }
@@ -205,8 +205,8 @@ impl Stm32wba55Cal {
     }
 
     fn read_digest(&mut self, out: &mut [u32; 8]) {
-        for i in 0..8 {
-            out[i] = self.hash.hr(i).read();
+        for (i, slot) in out.iter_mut().enumerate().take(8) {
+            *slot = self.hash.hr(i).read();
         }
     }
 }
