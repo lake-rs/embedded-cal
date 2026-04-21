@@ -16,6 +16,18 @@ impl Stm32wba55Cal {
         // Enable HASH clock
         rcc.ahb2enr().modify(|w| w.set_hashen(true));
 
+        Self::new_with_hash_clock_enabled(hash)
+    }
+
+    /// Creates an instance based on a hash peripheral, provided that the hash clock has been
+    /// enabled by prior code.
+    ///
+    /// This is useful when initializing in a situation in which the `RCC` peripheral is not
+    /// accessible (eg. becuase it is managed by an unrelated component).
+    ///
+    /// Most methods of this new instance will just block indefinitely if the precondition is not
+    /// met.
+    pub fn new_with_hash_clock_enabled(hash: hash::Hash) -> Self {
         Self { hash }
     }
 }

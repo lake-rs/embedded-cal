@@ -1,3 +1,5 @@
+#![no_std]
+
 use digest::Digest;
 
 pub struct RustcryptoCal;
@@ -51,6 +53,8 @@ impl AsRef<[u8]> for HashResult {
         }
     }
 }
+
+impl embedded_cal::Cal for RustcryptoCal {}
 
 impl embedded_cal::HashProvider for RustcryptoCal {
     type Algorithm = HashAlgorithm;

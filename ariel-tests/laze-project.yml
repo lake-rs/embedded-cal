@@ -1,0 +1,20 @@
+imports:
+  - git:
+      url: https://github.com/ariel-os/ariel-os
+      tag: v0.4.0
+    dldir: ariel-os
+
+apps:
+  - name: ariel-tests
+    selects:
+      - ?embedded-cal-impl-hardware
+
+modules:
+  - name: embedded-cal-impl-stm32wb55
+    provides_unique: [embedded-cal-impl-hardware]
+    context:
+      - stm32wba55cg
+    env:
+      global:
+        FEATURES:
+          - embedded-cal-ariel-tests/embedded-cal-stm32wba55
