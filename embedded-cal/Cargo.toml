@@ -1,0 +1,21 @@
+[package]
+name = "embedded-cal"
+description = "Cryptographic Abstraction Layer for embedded systems — batteries-included facade"
+
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[features]
+nrf54l15 = ["dep:embedded-cal-nrf54l15", "dep:embedded-cal-software"]
+stm32wba55cg = ["dep:embedded-cal-stm32wba55", "dep:embedded-cal-software"]
+
+[dependencies]
+embedded-cal-core = { path = "../embedded-cal-core" }
+embedded-cal-software = { path = "../embedded-cal-software", optional = true }
+embedded-cal-nrf54l15 = { path = "../embedded-cal-nrf54l15", optional = true }
+embedded-cal-stm32wba55 = { path = "../embedded-cal-stm32wba55", optional = true }

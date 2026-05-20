@@ -135,6 +135,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-cal"
+version = "0.1.0"
+dependencies = [
+ "embedded-cal-core",
+ "embedded-cal-software",
+ "embedded-cal-stm32wba55",
+]
+
+[[package]]
 name = "embedded-cal-core"
 version = "0.1.0"
 dependencies = [
@@ -152,6 +161,7 @@ dependencies = [
 name = "embedded-cal-stm32wba55"
 version = "0.1.0"
 dependencies = [
+ "defmt",
  "embedded-cal-core",
  "embedded-cal-software",
  "stm32-metapac",
@@ -561,9 +571,7 @@ dependencies = [
  "cortex-m-rt",
  "defmt",
  "defmt-rtt",
- "embedded-cal-core",
- "embedded-cal-software",
- "embedded-cal-stm32wba55",
+ "embedded-cal",
  "hexlit",
  "panic-probe",
  "stm32-metapac",

@@ -1,5 +1,6 @@
 [package]
 name = "embedded-cal-nrf54l15"
+publish = false
 edition.workspace = true
 license.workspace = true
 readme.workspace = true

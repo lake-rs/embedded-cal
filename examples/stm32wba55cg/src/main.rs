@@ -6,7 +6,7 @@ use embedded_cal::HashAlgorithm;
 use embedded_cal::HashProvider;
 use embedded_cal::HmacAlgorithm;
 use embedded_cal::HmacProvider;
-use embedded_cal_stm32wba55::Stm32wba55Cal;
+use embedded_cal::Stm32wba55Cal;
 use hexlit::hex;
 use {defmt_rtt as _, panic_probe as _, stm32_metapac as _};
 

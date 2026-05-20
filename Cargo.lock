@@ -193,6 +193,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-cal"
+version = "0.1.0"
+dependencies = [
+ "embedded-cal-core",
+ "embedded-cal-nrf54l15",
+ "embedded-cal-software",
+ "embedded-cal-stm32wba55",
+]
+
+[[package]]
 name = "embedded-cal-core"
 version = "0.1.0"
 dependencies = [

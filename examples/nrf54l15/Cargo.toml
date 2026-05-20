@@ -13,6 +13,4 @@ defmt-rtt = "1.0.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 nrf-pac = { version = "0.2.0", features = ["nrf54l15-app", "rt"] }
 hexlit = "0.5.5"
-embedded-cal-core = { path = "../../embedded-cal-core/" }
-embedded-cal-nrf54l15 = { path = "../../embedded-cal-nrf54l15" }
-embedded-cal-software = { path = "../../embedded-cal-software" }
+embedded-cal = { path = "../../embedded-cal", features = ["nrf54l15"] }
