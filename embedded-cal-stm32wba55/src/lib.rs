@@ -41,19 +41,19 @@ impl embedded_cal_core::HashProvider for Stm32wba55Cal {
 }
 
 impl embedded_cal_core::HmacProvider for Stm32wba55Cal {
-    type Algorithm = embedded_cal_software::HmacAlgorithm;
-    type HmacState = embedded_cal_software::HmacState<DefaultConfig>;
-    type HmacResult = embedded_cal_software::HmacResult;
+    type Algorithm = inner::HmacAlgorithm;
+    type HmacState = inner::HmacState;
+    type HmacResult = inner::HmacResult;
 
     fn init(&mut self, algorithm: Self::Algorithm, key: &[u8]) -> Self::HmacState {
-        embedded_cal_core::HmacProvider::init(&mut self.0, algorithm, key)
+        embedded_cal_core::HmacProvider::init(self.0.base_mut(), algorithm, key)
     }
 
     fn update(&mut self, state: &mut Self::HmacState, data: &[u8]) {
-        embedded_cal_core::HmacProvider::update(&mut self.0, state, data)
+        embedded_cal_core::HmacProvider::update(self.0.base_mut(), state, data)
     }
 
     fn finalize(&mut self, state: Self::HmacState) -> Self::HmacResult {
-        embedded_cal_core::HmacProvider::finalize(&mut self.0, state)
+        embedded_cal_core::HmacProvider::finalize(self.0.base_mut(), state)
     }
 }

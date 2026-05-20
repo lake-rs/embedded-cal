@@ -20,6 +20,10 @@ impl<EC: ExtenderConfig> Extender<EC> {
     pub fn new(base: EC::Base) -> Self {
         Self(base)
     }
+
+    pub fn base_mut(&mut self) -> &mut EC::Base {
+        &mut self.0
+    }
 }
 
 pub struct Extender<EC: ExtenderConfig>(EC::Base);
