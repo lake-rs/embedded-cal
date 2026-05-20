@@ -146,6 +146,7 @@ name = "embedded-cal-nrf54l15"
 version = "0.1.0"
 dependencies = [
  "embedded-cal",
+ "embedded-cal-software",
  "nrf-pac",
 ]
 

@@ -6,49 +6,30 @@ use embedded_cal::HashAlgorithm;
 use embedded_cal::HashProvider;
 use embedded_cal::HmacAlgorithm;
 use embedded_cal::HmacProvider;
-use embedded_cal_software::{Extender, ExtenderConfig};
 use embedded_cal_stm32wba55::Stm32wba55Cal;
 use hexlit::hex;
 use {defmt_rtt as _, panic_probe as _, stm32_metapac as _};
-struct Config;
-
-impl ExtenderConfig for Config {
-    const IMPLEMENT_SHA2SHORT: bool = true;
-    type Base = Stm32wba55Cal;
-}
 
 #[entry]
 fn main() -> ! {
-    let base = embedded_cal_stm32wba55::Stm32wba55Cal::new(
-        stm32_metapac::HASH,
-        &stm32_metapac::RCC,
-        // stm32_metapac::RNG,
-    );
-
-    let mut cal = embedded_cal_software::Extender::<Config>::new(base);
+    let mut cal = Stm32wba55Cal::new(stm32_metapac::HASH, &stm32_metapac::RCC);
 
     defmt::info!("Running SHA-256...");
     sha256(&mut cal);
 
-    let mut raw =
-        embedded_cal_stm32wba55::Stm32wba55Cal::new(stm32_metapac::HASH, &stm32_metapac::RCC);
     defmt::info!("Running HMAC-SHA-256...");
-    hmac_sha256(&mut raw);
-
-    // let mut dst = [0u8; 1];
-    // cal.try_fill_bytes(&mut dst).unwrap();
-    // defmt::info!("{},", dst[0]);
+    hmac_sha256(&mut cal);
 
     loop {
         cortex_m::asm::nop();
     }
 }
 
-fn sha256(cal: &mut Extender<Config>) {
+fn sha256(cal: &mut Stm32wba55Cal) {
     let data = b"Hello world";
-    let alg = <Extender<Config> as HashProvider>::Algorithm::from_cose_number(-16i32).unwrap();
-    // let alg = <Extender<Config> as HashProvider>::Algorithm::from_ni_name("sha-256").unwrap();
-    // let alg = <Extender<Config> as HashProvider>::Algorithm::from_ni_id(1).unwrap();
+    let alg = <Stm32wba55Cal as HashProvider>::Algorithm::from_cose_number(-16i32).unwrap();
+    // let alg = <Stm32wba55Cal as HashProvider>::Algorithm::from_ni_name("sha-256").unwrap();
+    // let alg = <Stm32wba55Cal as HashProvider>::Algorithm::from_ni_id(1).unwrap();
 
     let result = cal.hash(alg.clone(), data);
 

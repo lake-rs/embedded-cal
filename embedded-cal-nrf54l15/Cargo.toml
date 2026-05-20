@@ -20,6 +20,7 @@ harness = false
 
 [dependencies]
 embedded-cal.path = "../embedded-cal"
+embedded-cal-software.path = "../embedded-cal-software"
 nrf-pac = { version = "0.2.0", features = ["nrf54l15-app", "rt"] }
 
 [dev-dependencies]
@@ -29,5 +30,4 @@ defmt = "1.0"
 defmt-rtt = "1.0"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 defmt-test = "0.4"
-embedded-cal-software.path = "../embedded-cal-software"
 testvectors.path = "../testvectors"

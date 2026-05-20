@@ -153,6 +153,7 @@ name = "embedded-cal-stm32wba55"
 version = "0.1.0"
 dependencies = [
  "embedded-cal",
+ "embedded-cal-software",
  "stm32-metapac",
 ]
 

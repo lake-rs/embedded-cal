@@ -7,21 +7,12 @@ use embedded_cal::HashProvider;
 use embedded_cal::HmacAlgorithm;
 use embedded_cal::HmacProvider;
 use embedded_cal_nrf54l15::Nrf54l15Cal;
-use embedded_cal_software::{Extender, ExtenderConfig};
 use hexlit::hex;
 use {defmt_rtt as _, panic_probe as _};
 
-struct Config;
-
-impl ExtenderConfig for Config {
-    const IMPLEMENT_SHA2SHORT: bool = true;
-    type Base = Nrf54l15Cal;
-}
-
 #[entry]
 fn main() -> ! {
-    let base = Nrf54l15Cal::new(nrf_pac::CRACEN_S, nrf_pac::CRACENCORE_S);
-    let mut cal = Extender::<Config>::new(base);
+    let mut cal = Nrf54l15Cal::new(nrf_pac::CRACEN_S, nrf_pac::CRACENCORE_S);
 
     defmt::info!("Running SHA-256...");
     sha256(&mut cal);
@@ -29,19 +20,15 @@ fn main() -> ! {
     defmt::info!("Running HMAC-SHA-256...");
     hmac_sha256(&mut cal);
 
-    // let mut dst = [0u8; 1];
-    // cal.try_fill_bytes(&mut dst).unwrap();
-    // defmt::info!("{},", dst[0]);
-
     loop {
         cortex_m::asm::nop();
     }
 }
 
-fn sha256(cal: &mut Extender<Config>) {
-    let alg = <Extender<Config> as HashProvider>::Algorithm::from_cose_number(-16i32).unwrap();
-    // let alg = <Extender<Config> as HashProvider>::Algorithm::from_ni_name("sha-256").unwrap();
-    // let alg = <Extender<Config> as HashProvider>::Algorithm::from_ni_id(1).unwrap();
+fn sha256(cal: &mut Nrf54l15Cal) {
+    let alg = <Nrf54l15Cal as HashProvider>::Algorithm::from_cose_number(-16i32).unwrap();
+    // let alg = <Nrf54l15Cal as HashProvider>::Algorithm::from_ni_name("sha-256").unwrap();
+    // let alg = <Nrf54l15Cal as HashProvider>::Algorithm::from_ni_id(1).unwrap();
 
     let result = cal.hash(alg.clone(), b"Hello world");
 
