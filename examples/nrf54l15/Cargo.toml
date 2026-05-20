@@ -1,0 +1,18 @@
+[package]
+name = "nrf54l15"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }
+cortex-m-rt = { version = "0.7.1", features = ["device"] }
+defmt = "1.0.1"
+defmt-rtt = "1.0.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+nrf-pac = { version = "0.2.0", features = ["nrf54l15-app", "rt"] }
+hexlit = "0.5.5"
+embedded-cal = { path = "../../embedded-cal/" }
+embedded-cal-nrf54l15 = { path = "../../embedded-cal-nrf54l15" }
+embedded-cal-software = { path = "../../embedded-cal-software" }

@@ -1,0 +1,18 @@
+[package]
+name = "stm32wba55cg"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
+cortex-m-rt = { version = "0.7", features = ["device"] }
+defmt = "1.0"
+defmt-rtt = "1.0"
+hexlit = "0.5.5"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+stm32-metapac = { version = "18.0", features = ["stm32wba55cg", "rt"] }
+embedded-cal = { path = "../../embedded-cal/" }
+embedded-cal-stm32wba55 = { path = "../../embedded-cal-stm32wba55" }
+embedded-cal-software = { path = "../../embedded-cal-software" }

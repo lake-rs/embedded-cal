@@ -1,0 +1,8 @@
+[build]
+target = "thumbv8m.main-none-eabihf"
+
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+runner = ["probe-rs", "run", "--chip", "nRF54L15", "--log-format=oneline", "--allow-erase-all", "--verify"]
+
+[env]
+DEFMT_LOG = "trace"
