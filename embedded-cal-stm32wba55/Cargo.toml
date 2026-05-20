@@ -19,7 +19,7 @@ name = "integration"
 harness = false
 
 [dependencies]
-embedded-cal.path = "../embedded-cal"
+embedded-cal-core.path = "../embedded-cal-core"
 embedded-cal-software.path = "../embedded-cal-software"
 stm32-metapac = { version = "18.0", features = ["stm32wba55cg", "rt"] }
 

@@ -10,6 +10,6 @@ version.workspace = true
 
 [dependencies]
 digest = "0.10.7"
-embedded-cal.path = "../embedded-cal"
+embedded-cal-core.path = "../embedded-cal-core"
 sha2 = { version = "0.10.9", default-features = false }
 testvectors.path = "../testvectors"

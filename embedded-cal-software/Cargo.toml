@@ -9,7 +9,7 @@ categories.workspace = true
 version.workspace = true
 
 [dependencies]
-embedded-cal = { version = "0.1.0", path = "../embedded-cal" }
+embedded-cal-core = { version = "0.1.0", path = "../embedded-cal-core" }
 
 [dev-dependencies]
 testvectors.path = "../testvectors"

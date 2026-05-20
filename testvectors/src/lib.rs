@@ -86,8 +86,8 @@ pub const HMAC_SHA256: &[(&[u8], &[u8], [u8; 32])] = &[
     ),
 ];
 
-pub fn test_hmac_sha256<Cal: embedded_cal::HmacProvider>(cal: &mut Cal) {
-    use embedded_cal::HmacAlgorithm;
+pub fn test_hmac_sha256<Cal: embedded_cal_core::HmacProvider>(cal: &mut Cal) {
+    use embedded_cal_core::HmacAlgorithm;
 
     let hmac_sha256 = Cal::Algorithm::from_cose_number(5i8)
         .expect("HmacProvider must recognize COSE 5 (HMAC-SHA-256)");
@@ -117,14 +117,14 @@ pub fn test_hmac_sha256<Cal: embedded_cal::HmacProvider>(cal: &mut Cal) {
     }
 }
 
-pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal) {
+pub fn test_hash_algorithm_sha256<Cal: embedded_cal_core::HashProvider>(cal: &mut Cal) {
     // Equivalence with other constructors can be handled via
-    // embedded_cal::test_hash_algorithm_sha256 (or should we move this in here?)
+    // embedded_cal_core::test_hash_algorithm_sha256 (or should we move this in here?)
 
     // If this test is run on a concrete type, we expect it to provide the algorithm.
     let sha256 = Cal::Algorithm::from_ni_id(1).unwrap();
 
-    use embedded_cal::HashAlgorithm;
+    use embedded_cal_core::HashAlgorithm;
 
     for (tv_data, tv_result) in SHA256HASHES {
         assert_eq!(

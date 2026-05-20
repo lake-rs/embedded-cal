@@ -21,16 +21,16 @@ mod tests {
 
     #[test]
     fn test_hash_algorithm_sha256(state: &mut super::TestState) {
-        embedded_cal::test_hash_algorithm_sha256::<
-            <Stm32wba55Cal as embedded_cal::HashProvider>::Algorithm,
+        embedded_cal_core::test_hash_algorithm_sha256::<
+            <Stm32wba55Cal as embedded_cal_core::HashProvider>::Algorithm,
         >();
         testvectors::test_hash_algorithm_sha256(&mut state.cal);
     }
 
     #[test]
     fn test_hmac_sha256(state: &mut super::TestState) {
-        embedded_cal::test_hmac_algorithm_hmacsha256::<
-            <Stm32wba55Cal as embedded_cal::HmacProvider>::Algorithm,
+        embedded_cal_core::test_hmac_algorithm_hmacsha256::<
+            <Stm32wba55Cal as embedded_cal_core::HmacProvider>::Algorithm,
         >();
         testvectors::test_hmac_sha256(&mut state.cal);
     }

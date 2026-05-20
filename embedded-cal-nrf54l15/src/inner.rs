@@ -49,12 +49,12 @@ impl Drop for Nrf54l15CalInner {
     }
 }
 
-impl embedded_cal::Cal for Nrf54l15CalInner {}
+impl embedded_cal_core::Cal for Nrf54l15CalInner {}
 
-impl embedded_cal::HashProvider for Nrf54l15CalInner {
-    type Algorithm = embedded_cal::NoHashAlgorithms;
-    type HashState = embedded_cal::NoHashAlgorithms;
-    type HashResult = embedded_cal::NoHashAlgorithms;
+impl embedded_cal_core::HashProvider for Nrf54l15CalInner {
+    type Algorithm = embedded_cal_core::NoHashAlgorithms;
+    type HashState = embedded_cal_core::NoHashAlgorithms;
+    type HashResult = embedded_cal_core::NoHashAlgorithms;
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::HashState {
         match algorithm {}
@@ -69,10 +69,10 @@ impl embedded_cal::HashProvider for Nrf54l15CalInner {
     }
 }
 
-impl embedded_cal::HmacProvider for Nrf54l15CalInner {
-    type Algorithm = embedded_cal::NoHmacAlgorithms;
-    type HmacState = embedded_cal::NoHmacAlgorithms;
-    type HmacResult = embedded_cal::NoHmacAlgorithms;
+impl embedded_cal_core::HmacProvider for Nrf54l15CalInner {
+    type Algorithm = embedded_cal_core::NoHmacAlgorithms;
+    type HmacState = embedded_cal_core::NoHmacAlgorithms;
+    type HmacResult = embedded_cal_core::NoHmacAlgorithms;
 
     fn init(&mut self, algorithm: Self::Algorithm, _key: &[u8]) -> Self::HmacState {
         match algorithm {}
@@ -87,11 +87,11 @@ impl embedded_cal::HmacProvider for Nrf54l15CalInner {
     }
 }
 
-impl embedded_cal::plumbing::Plumbing for Nrf54l15CalInner {}
+impl embedded_cal_core::plumbing::Plumbing for Nrf54l15CalInner {}
 
-impl embedded_cal::plumbing::hash::Hash for Nrf54l15CalInner {}
+impl embedded_cal_core::plumbing::hash::Hash for Nrf54l15CalInner {}
 
-impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15CalInner {
+impl embedded_cal_core::plumbing::hash::Sha2Short for Nrf54l15CalInner {
     const SUPPORTED: bool = true;
     const SEND_PADDING: bool = true;
     const FIRST_CHUNK_SIZE: usize = 64;
@@ -99,9 +99,12 @@ impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15CalInner {
 
     type State = HashState;
 
-    fn init(&mut self, variant: embedded_cal::plumbing::hash::Sha2ShortVariant) -> Self::State {
+    fn init(
+        &mut self,
+        variant: embedded_cal_core::plumbing::hash::Sha2ShortVariant,
+    ) -> Self::State {
         match variant {
-            embedded_cal::plumbing::hash::Sha2ShortVariant::Sha256 => (),
+            embedded_cal_core::plumbing::hash::Sha2ShortVariant::Sha256 => (),
             // Although really all we need to support it is probably just copying the requested
             // length into the output buffer
             _ => todo!("Unsupported variant"),

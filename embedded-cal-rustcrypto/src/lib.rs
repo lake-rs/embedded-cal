@@ -7,7 +7,7 @@ pub enum HashAlgorithm {
     Sha256,
 }
 
-impl embedded_cal::HashAlgorithm for HashAlgorithm {
+impl embedded_cal_core::HashAlgorithm for HashAlgorithm {
     fn len(&self) -> usize {
         match self {
             HashAlgorithm::Sha256 => 32,
@@ -52,7 +52,7 @@ impl AsRef<[u8]> for HashResult {
     }
 }
 
-impl embedded_cal::HashProvider for RustcryptoCal {
+impl embedded_cal_core::HashProvider for RustcryptoCal {
     type Algorithm = HashAlgorithm;
     type HashState = HashState;
     type HashResult = HashResult;
@@ -87,8 +87,8 @@ mod tests {
     fn test_hash_algorithm_sha256() {
         let mut cal = RustcryptoCal;
 
-        embedded_cal::test_hash_algorithm_sha256::<
-            <RustcryptoCal as embedded_cal::HashProvider>::Algorithm,
+        embedded_cal_core::test_hash_algorithm_sha256::<
+            <RustcryptoCal as embedded_cal_core::HashProvider>::Algorithm,
         >();
         testvectors::test_hash_algorithm_sha256(&mut cal);
     }

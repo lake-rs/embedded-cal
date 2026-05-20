@@ -9,5 +9,5 @@ categories.workspace = true
 version.workspace = true
 
 [dependencies]
-embedded-cal.path = "../embedded-cal/"
+embedded-cal-core.path = "../embedded-cal-core/"
 hexlit = "0.5.5"

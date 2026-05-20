@@ -193,7 +193,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "embedded-cal"
+name = "embedded-cal-core"
 version = "0.1.0"
 dependencies = [
  "hax-lib",
@@ -208,7 +208,7 @@ dependencies = [
  "defmt",
  "defmt-rtt",
  "defmt-test",
- "embedded-cal",
+ "embedded-cal-core",
  "embedded-cal-software",
  "nrf-pac",
  "panic-probe",
@@ -220,7 +220,7 @@ name = "embedded-cal-rustcrypto"
 version = "0.1.0"
 dependencies = [
  "digest",
- "embedded-cal",
+ "embedded-cal-core",
  "sha2",
  "testvectors",
 ]
@@ -229,7 +229,7 @@ dependencies = [
 name = "embedded-cal-software"
 version = "0.1.0"
 dependencies = [
- "embedded-cal",
+ "embedded-cal-core",
  "testvectors",
 ]
 
@@ -242,7 +242,7 @@ dependencies = [
  "defmt",
  "defmt-rtt",
  "defmt-test",
- "embedded-cal",
+ "embedded-cal-core",
  "embedded-cal-software",
  "panic-probe",
  "stm32-metapac",
@@ -585,7 +585,7 @@ dependencies = [
 name = "testvectors"
 version = "0.1.0"
 dependencies = [
- "embedded-cal",
+ "embedded-cal-core",
  "hexlit",
 ]
 

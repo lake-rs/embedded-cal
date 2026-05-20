@@ -11,7 +11,7 @@
 /// All implementation follows the Wikipedia pseudocode.
 pub struct DummySha256;
 
-impl embedded_cal::Cal for DummySha256 {}
+impl embedded_cal_core::Cal for DummySha256 {}
 
 const k: [u32; 64] = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -24,10 +24,10 @@ const k: [u32; 64] = [
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 
-impl embedded_cal::HashProvider for DummySha256 {
-    type Algorithm = embedded_cal::NoHashAlgorithms;
-    type HashState = embedded_cal::NoHashAlgorithms;
-    type HashResult = embedded_cal::NoHashAlgorithms;
+impl embedded_cal_core::HashProvider for DummySha256 {
+    type Algorithm = embedded_cal_core::NoHashAlgorithms;
+    type HashState = embedded_cal_core::NoHashAlgorithms;
+    type HashResult = embedded_cal_core::NoHashAlgorithms;
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::HashState {
         match algorithm {}
@@ -42,10 +42,10 @@ impl embedded_cal::HashProvider for DummySha256 {
     }
 }
 
-impl embedded_cal::HmacProvider for DummySha256 {
-    type Algorithm = embedded_cal::NoHmacAlgorithms;
-    type HmacState = embedded_cal::NoHmacAlgorithms;
-    type HmacResult = embedded_cal::NoHmacAlgorithms;
+impl embedded_cal_core::HmacProvider for DummySha256 {
+    type Algorithm = embedded_cal_core::NoHmacAlgorithms;
+    type HmacState = embedded_cal_core::NoHmacAlgorithms;
+    type HmacResult = embedded_cal_core::NoHmacAlgorithms;
 
     fn init(&mut self, algorithm: Self::Algorithm, _key: &[u8]) -> Self::HmacState {
         match algorithm {}
@@ -60,11 +60,11 @@ impl embedded_cal::HmacProvider for DummySha256 {
     }
 }
 
-impl embedded_cal::plumbing::Plumbing for DummySha256 {}
+impl embedded_cal_core::plumbing::Plumbing for DummySha256 {}
 
-impl embedded_cal::plumbing::hash::Hash for DummySha256 {}
+impl embedded_cal_core::plumbing::hash::Hash for DummySha256 {}
 
-impl embedded_cal::plumbing::hash::Sha2Short for DummySha256 {
+impl embedded_cal_core::plumbing::hash::Sha2Short for DummySha256 {
     const SUPPORTED: bool = true;
     const SEND_PADDING: bool = true;
     const FIRST_CHUNK_SIZE: usize = 64;
@@ -72,11 +72,14 @@ impl embedded_cal::plumbing::hash::Sha2Short for DummySha256 {
 
     type State = [u32; 8];
 
-    fn init(&mut self, variant: embedded_cal::plumbing::hash::Sha2ShortVariant) -> Self::State {
+    fn init(
+        &mut self,
+        variant: embedded_cal_core::plumbing::hash::Sha2ShortVariant,
+    ) -> Self::State {
         // FIXME
         if !matches!(
             variant,
-            embedded_cal::plumbing::hash::Sha2ShortVariant::Sha256
+            embedded_cal_core::plumbing::hash::Sha2ShortVariant::Sha256
         ) {
             todo!();
         }

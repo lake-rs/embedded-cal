@@ -1,4 +1,4 @@
-use embedded_cal::plumbing::hash::SHA2SHORT_BLOCK_SIZE;
+use embedded_cal_core::plumbing::hash::SHA2SHORT_BLOCK_SIZE;
 use stm32_metapac::{hash, rcc};
 
 const WORD_SIZE: usize = 4;
@@ -12,7 +12,7 @@ pub struct Stm32wba55CalInner {
 }
 
 pub struct HashState {
-    pub(crate) _variant: embedded_cal::plumbing::hash::Sha2ShortVariant,
+    pub(crate) _variant: embedded_cal_core::plumbing::hash::Sha2ShortVariant,
     pub(crate) context: Option<Context>,
 }
 
@@ -40,7 +40,7 @@ pub enum HmacAlgorithm {
     HmacSha256,
 }
 
-impl embedded_cal::HmacAlgorithm for HmacAlgorithm {
+impl embedded_cal_core::HmacAlgorithm for HmacAlgorithm {
     fn len(&self) -> usize {
         match self {
             HmacAlgorithm::HmacSha256 => 32,
@@ -79,12 +79,12 @@ impl Stm32wba55CalInner {
     }
 }
 
-impl embedded_cal::Cal for Stm32wba55CalInner {}
+impl embedded_cal_core::Cal for Stm32wba55CalInner {}
 
-impl embedded_cal::HashProvider for Stm32wba55CalInner {
-    type Algorithm = embedded_cal::NoHashAlgorithms;
-    type HashState = embedded_cal::NoHashAlgorithms;
-    type HashResult = embedded_cal::NoHashAlgorithms;
+impl embedded_cal_core::HashProvider for Stm32wba55CalInner {
+    type Algorithm = embedded_cal_core::NoHashAlgorithms;
+    type HashState = embedded_cal_core::NoHashAlgorithms;
+    type HashResult = embedded_cal_core::NoHashAlgorithms;
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::HashState {
         match algorithm {}
@@ -99,7 +99,7 @@ impl embedded_cal::HashProvider for Stm32wba55CalInner {
     }
 }
 
-impl embedded_cal::HmacProvider for Stm32wba55CalInner {
+impl embedded_cal_core::HmacProvider for Stm32wba55CalInner {
     type Algorithm = HmacAlgorithm;
     type HmacState = HmacState;
     type HmacResult = HmacResult;
@@ -229,11 +229,11 @@ impl embedded_cal::HmacProvider for Stm32wba55CalInner {
     }
 }
 
-impl embedded_cal::plumbing::Plumbing for Stm32wba55CalInner {}
+impl embedded_cal_core::plumbing::Plumbing for Stm32wba55CalInner {}
 
-impl embedded_cal::plumbing::hash::Hash for Stm32wba55CalInner {}
+impl embedded_cal_core::plumbing::hash::Hash for Stm32wba55CalInner {}
 
-impl embedded_cal::plumbing::hash::Sha2Short for Stm32wba55CalInner {
+impl embedded_cal_core::plumbing::hash::Sha2Short for Stm32wba55CalInner {
     const SUPPORTED: bool = true;
     const SEND_PADDING: bool = false;
     const FIRST_CHUNK_SIZE: usize = 68;
@@ -241,7 +241,10 @@ impl embedded_cal::plumbing::hash::Sha2Short for Stm32wba55CalInner {
 
     type State = HashState;
 
-    fn init(&mut self, variant: embedded_cal::plumbing::hash::Sha2ShortVariant) -> Self::State {
+    fn init(
+        &mut self,
+        variant: embedded_cal_core::plumbing::hash::Sha2ShortVariant,
+    ) -> Self::State {
         Self::State {
             _variant: variant,
             context: None,
@@ -389,7 +392,9 @@ impl Stm32wba55CalInner {
     ///
     /// Used internally to hash HMAC keys that are longer than 64 bytes (RFC 2104).
     fn sha256_of(&mut self, data: &[u8]) -> [u8; 32] {
-        use embedded_cal::plumbing::hash::{SHA2SHORT_BLOCK_SIZE, Sha2Short, Sha2ShortVariant};
+        use embedded_cal_core::plumbing::hash::{
+            SHA2SHORT_BLOCK_SIZE, Sha2Short, Sha2ShortVariant,
+        };
 
         let mut instance = <Self as Sha2Short>::init(self, Sha2ShortVariant::Sha256);
         let mut remaining = data;

@@ -20,40 +20,40 @@ impl Stm32wba55Cal {
     }
 }
 
-impl embedded_cal::Cal for Stm32wba55Cal {}
+impl embedded_cal_core::Cal for Stm32wba55Cal {}
 
-impl embedded_cal::HashProvider for Stm32wba55Cal {
+impl embedded_cal_core::HashProvider for Stm32wba55Cal {
     type Algorithm = embedded_cal_software::HashAlgorithm<DefaultConfig>;
     type HashState = embedded_cal_software::HashState<DefaultConfig>;
     type HashResult = embedded_cal_software::HashResult<DefaultConfig>;
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::HashState {
-        embedded_cal::HashProvider::init(&mut self.0, algorithm)
+        embedded_cal_core::HashProvider::init(&mut self.0, algorithm)
     }
 
     fn update(&mut self, instance: &mut Self::HashState, data: &[u8]) {
-        embedded_cal::HashProvider::update(&mut self.0, instance, data)
+        embedded_cal_core::HashProvider::update(&mut self.0, instance, data)
     }
 
     fn finalize(&mut self, instance: Self::HashState) -> Self::HashResult {
-        embedded_cal::HashProvider::finalize(&mut self.0, instance)
+        embedded_cal_core::HashProvider::finalize(&mut self.0, instance)
     }
 }
 
-impl embedded_cal::HmacProvider for Stm32wba55Cal {
+impl embedded_cal_core::HmacProvider for Stm32wba55Cal {
     type Algorithm = embedded_cal_software::HmacAlgorithm;
     type HmacState = embedded_cal_software::HmacState<DefaultConfig>;
     type HmacResult = embedded_cal_software::HmacResult;
 
     fn init(&mut self, algorithm: Self::Algorithm, key: &[u8]) -> Self::HmacState {
-        embedded_cal::HmacProvider::init(&mut self.0, algorithm, key)
+        embedded_cal_core::HmacProvider::init(&mut self.0, algorithm, key)
     }
 
     fn update(&mut self, state: &mut Self::HmacState, data: &[u8]) {
-        embedded_cal::HmacProvider::update(&mut self.0, state, data)
+        embedded_cal_core::HmacProvider::update(&mut self.0, state, data)
     }
 
     fn finalize(&mut self, state: Self::HmacState) -> Self::HmacResult {
-        embedded_cal::HmacProvider::finalize(&mut self.0, state)
+        embedded_cal_core::HmacProvider::finalize(&mut self.0, state)
     }
 }

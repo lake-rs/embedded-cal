@@ -4,7 +4,7 @@
 //! only does the hard work of the SHA hashes and not the clerical buffering / padding.
 #![no_std]
 
-use embedded_cal::{
+use embedded_cal_core::{
     HashProvider, HmacProvider,
     plumbing::Plumbing,
     plumbing::hash::{SHA2SHORT_BLOCK_SIZE, Sha2Short, Sha2ShortVariant},
@@ -26,7 +26,7 @@ pub struct Extender<EC: ExtenderConfig>(EC::Base);
 
 const HASH_WRAPPER_MAX_BLOCKSIZE: usize = 68;
 
-impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {}
+impl<EC: ExtenderConfig> embedded_cal_core::Cal for Extender<EC> {}
 
 impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
     type Algorithm = HashAlgorithm<EC>;
@@ -193,7 +193,7 @@ impl<EC: ExtenderConfig> PartialEq for HashAlgorithm<EC> {
 // As for Clone
 impl<EC: ExtenderConfig> Eq for HashAlgorithm<EC> {}
 
-impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
+impl<EC: ExtenderConfig> embedded_cal_core::HashAlgorithm for HashAlgorithm<EC> {
     fn len(&self) -> usize {
         match self {
             HashAlgorithm::Sha256 => 32,
@@ -236,7 +236,7 @@ pub enum HashState<EC: ExtenderConfig> {
         // FIXME: would rely on const generic arguments, have to pick configurable maximum instead and
         // const assert on that fitting.
         //
-        // [u8; embedded_cal::plumbing::hash::hash_buffer_requirements::<EC::Base>()]
+        // [u8; embedded_cal_core::plumbing::hash::hash_buffer_requirements::<EC::Base>()]
         //
         // (Also as we're an enum, we don't even have to go through hash_buffer_requirements, but
         // the problem is the same)
@@ -265,7 +265,7 @@ pub enum HmacAlgorithm {
     HmacSha256,
 }
 
-impl embedded_cal::HmacAlgorithm for HmacAlgorithm {
+impl embedded_cal_core::HmacAlgorithm for HmacAlgorithm {
     fn len(&self) -> usize {
         match self {
             HmacAlgorithm::HmacSha256 => 32,

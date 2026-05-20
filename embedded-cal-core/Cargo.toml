@@ -1,6 +1,6 @@
 [package]
-name = "embedded-cal"
-description = "A Cryptographic Abstraction Layer (CAL) for embedded systems"
+name = "embedded-cal-core"
+description = "A Cryptographic Abstraction Layer (CAL) for embedded systems — core traits"
 
 license.workspace = true
 edition.workspace = true

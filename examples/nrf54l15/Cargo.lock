@@ -135,7 +135,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "embedded-cal"
+name = "embedded-cal-core"
 version = "0.1.0"
 dependencies = [
  "hax-lib",
@@ -145,7 +145,7 @@ dependencies = [
 name = "embedded-cal-nrf54l15"
 version = "0.1.0"
 dependencies = [
- "embedded-cal",
+ "embedded-cal-core",
  "embedded-cal-software",
  "nrf-pac",
 ]
@@ -154,7 +154,7 @@ dependencies = [
 name = "embedded-cal-software"
 version = "0.1.0"
 dependencies = [
- "embedded-cal",
+ "embedded-cal-core",
 ]
 
 [[package]]
@@ -344,7 +344,7 @@ dependencies = [
  "cortex-m-rt",
  "defmt",
  "defmt-rtt",
- "embedded-cal",
+ "embedded-cal-core",
  "embedded-cal-nrf54l15",
  "embedded-cal-software",
  "hexlit",
