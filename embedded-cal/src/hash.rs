@@ -11,7 +11,7 @@ pub trait HashProvider {
     /// way. (Also, if such a hardware actually exists, please open an issue about it).
     // FIXME: Link to stable FAQ position once that is more website/documentation shape and not
     // just a GitHub Markdown document.
-    type HashState: Sized;
+    type HashState: Sized + Clone;
     /// Output of a hashing operation.
     ///
     /// This needs to be sufficiently large to contain any selected hash's output. When collecting

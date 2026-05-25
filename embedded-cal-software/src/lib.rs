@@ -271,6 +271,25 @@ pub enum HashState<EC: ExtenderConfig> {
     },
 }
 
+impl<EC: ExtenderConfig> Clone for HashState<EC> {
+    // This is the default implemnentation, but we can't derive it because EC is not clone. (We
+    // don't expect it to, but we'd need "minimal derives" in Rust to make it derivable).
+    fn clone(&self) -> Self {
+        match self {
+            Self::Direct(arg0) => Self::Direct(arg0.clone()),
+            Self::Sha256 {
+                written,
+                buffer,
+                instance,
+            } => Self::Sha256 {
+                written: *written,
+                buffer: *buffer,
+                instance: instance.clone(),
+            },
+        }
+    }
+}
+
 pub enum HashResult<EC: ExtenderConfig> {
     Sha256([u8; 32]),
     Direct(<EC::Base as HashProvider>::HashResult),

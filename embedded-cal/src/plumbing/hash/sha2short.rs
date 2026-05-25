@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 pub enum Sha2ShortVariant {
     Sha244,
     Sha256,
@@ -32,7 +32,7 @@ pub trait Sha2Short {
     /// State containing an ongoing operation.
     ///
     /// Analogous to [`crate::HashProvider::HashState`].
-    type State: Sized;
+    type State: Sized + Clone;
 
     /// Initiates a [`Self::State`] according to the selected algorithm.
     fn init(&mut self, variant: Sha2ShortVariant) -> Self::State;

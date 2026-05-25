@@ -117,11 +117,13 @@ pub enum HashAlgorithm {
     Sha256,
 }
 
+#[derive(Clone)]
 pub struct HashState {
     _variant: embedded_cal::plumbing::hash::Sha2ShortVariant,
     context: Option<Context>,
 }
 
+#[derive(Clone)]
 struct Context {
     /// HASH context swap registers (HASH_CSR0 - HASH_CSR53)
     csr: [u32; CSR_REGS_LEN],

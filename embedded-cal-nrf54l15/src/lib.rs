@@ -59,6 +59,7 @@ impl Drop for Nrf54l15Cal {
     }
 }
 
+#[derive(Clone)]
 pub struct HashState {
     // We could instead make this unconditional and then set state (in init) to 0x6a, 0x09, 0xe6,
     // 0x67, ... (the big-endian version of the SHA256 starting points 0x6a09e667u32), but the

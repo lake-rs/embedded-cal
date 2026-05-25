@@ -36,6 +36,7 @@ impl embedded_cal::HashAlgorithm for HashAlgorithm {
     }
 }
 
+#[derive(Clone)]
 pub enum HashState {
     Sha256(sha2::Sha256),
 }
