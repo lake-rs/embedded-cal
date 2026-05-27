@@ -61,27 +61,6 @@ pub trait HmacAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     }
 }
 
-/// Type which an implementation of [`Cal`][crate::Cal] can use when it implements no HMAC
-/// algorithm for [`HmacProvider`].
-///
-/// This type is uninhabited and can stand in for all of the [`Algorithm`][HmacProvider::Algorithm],
-/// [`HmacState`][HmacProvider::HmacState] and [`HmacResult`][HmacProvider::HmacResult] associated
-/// types.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum NoHmacAlgorithms {}
-
-impl HmacAlgorithm for NoHmacAlgorithms {
-    fn len(&self) -> usize {
-        match *self {}
-    }
-}
-
-impl AsRef<[u8]> for NoHmacAlgorithms {
-    fn as_ref(&self) -> &[u8] {
-        match *self {}
-    }
-}
-
 pub fn test_hmac_algorithm_hmacsha256<HA: HmacAlgorithm>() {
     let cose_5 = HA::from_cose_number(5i8);
     assert!(

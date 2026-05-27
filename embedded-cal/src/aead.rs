@@ -107,34 +107,6 @@ pub trait AeadAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     }
 }
 
-/// Type which an implementation of [`Cal`][crate::Cal] can use when it implements no AEAD
-/// algorithm for [`AeadProvider`].
-///
-/// This type is uninhabited and can stand in for all of the [`Algorithm`][AeadProvider::Algorithm]
-/// and [`Tag`][AeadProvider::Tag] associated types.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum NoAeadAlgorithms {}
-
-impl AeadAlgorithm for NoAeadAlgorithms {
-    fn key_length(&self) -> usize {
-        match *self {}
-    }
-
-    fn tag_length(&self) -> usize {
-        match *self {}
-    }
-
-    fn nonce_length(&self) -> usize {
-        match *self {}
-    }
-}
-
-impl AsRef<[u8]> for NoAeadAlgorithms {
-    fn as_ref(&self) -> &[u8] {
-        match *self {}
-    }
-}
-
 /// Tool for providing the AAD (Additional Authenticated Data) in a scatter-gather fashion.
 pub trait AadGenerator {
     // FIXME: What precise guarantees do we want to ask/give?

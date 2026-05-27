@@ -135,9 +135,9 @@ struct Context {
 }
 
 impl embedded_cal::HashProvider for Stm32wba55Cal {
-    type Algorithm = embedded_cal::NoHashAlgorithms;
-    type HashState = embedded_cal::NoHashAlgorithms;
-    type HashResult = embedded_cal::NoHashAlgorithms;
+    type Algorithm = embedded_cal::empty::NoAlgorithms;
+    type HashState = embedded_cal::empty::NoAlgorithms;
+    type HashResult = embedded_cal::empty::NoAlgorithms;
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::HashState {
         match algorithm {}

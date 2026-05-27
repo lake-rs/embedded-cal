@@ -6,9 +6,9 @@
 use super::*;
 
 impl embedded_cal::HashProvider for DummySha256 {
-    type Algorithm = embedded_cal::NoHashAlgorithms;
-    type HashState = embedded_cal::NoHashAlgorithms;
-    type HashResult = embedded_cal::NoHashAlgorithms;
+    type Algorithm = embedded_cal::empty::NoAlgorithms;
+    type HashState = embedded_cal::empty::NoAlgorithms;
+    type HashResult = embedded_cal::empty::NoAlgorithms;
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::HashState {
         match algorithm {}
@@ -24,10 +24,10 @@ impl embedded_cal::HashProvider for DummySha256 {
 }
 
 impl embedded_cal::HmacProvider for DummySha256 {
-    type Algorithm = embedded_cal::NoHmacAlgorithms;
-    type Key = embedded_cal::NoHmacAlgorithms;
-    type HmacState = embedded_cal::NoHmacAlgorithms;
-    type HmacResult = embedded_cal::NoHmacAlgorithms;
+    type Algorithm = embedded_cal::empty::NoAlgorithms;
+    type Key = embedded_cal::empty::NoAlgorithms;
+    type HmacState = embedded_cal::empty::NoAlgorithms;
+    type HmacResult = embedded_cal::empty::NoAlgorithms;
 
     fn load_from_keydata(&mut self, algorithm: Self::Algorithm, _key: &[u8]) -> Self::Key {
         match algorithm {}
@@ -47,9 +47,9 @@ impl embedded_cal::HmacProvider for DummySha256 {
 }
 
 impl embedded_cal::AeadProvider for DummySha256 {
-    type Algorithm = embedded_cal::NoAeadAlgorithms;
-    type Key = embedded_cal::NoAeadAlgorithms;
-    type Tag = embedded_cal::NoAeadAlgorithms;
+    type Algorithm = embedded_cal::empty::NoAlgorithms;
+    type Key = embedded_cal::empty::NoAlgorithms;
+    type Tag = embedded_cal::empty::NoAlgorithms;
 
     fn load_from_keydata(&mut self, alg: Self::Algorithm, _key: &[u8]) -> Self::Key {
         match alg {}

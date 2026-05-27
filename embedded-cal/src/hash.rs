@@ -109,26 +109,6 @@ pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     }
 }
 
-/// Type which an implemnetation of [`Cal`][crate::Cal] can use when it implements no single
-/// algorithm for [`HashProvider`].
-///
-/// This type is uninhabited and can stand in for all of the [`Algorithm`][HashProvider::Algorithm],
-/// [`HashState`][HashProvider::HashState] and [`HashResult`][HashProvider::HashResult] associated types.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum NoHashAlgorithms {}
-
-impl HashAlgorithm for NoHashAlgorithms {
-    fn len(&self) -> usize {
-        match *self {}
-    }
-}
-
-impl AsRef<[u8]> for NoHashAlgorithms {
-    fn as_ref(&self) -> &[u8] {
-        match *self {}
-    }
-}
-
 // FIXME: Should we introduce a feature to no build those all the time?
 pub fn test_hash_algorithm_sha256<HA: HashAlgorithm>() {
     // FIXME see from_cose_number comment
