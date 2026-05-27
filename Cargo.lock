@@ -248,8 +248,17 @@ dependencies = [
 name = "embedded-cal"
 version = "0.1.0"
 dependencies = [
- "hax-lib",
- "rand_core",
+ "hax-lib 0.3.5",
+ "rand_core 0.10.1",
+]
+
+[[package]]
+name = "embedded-cal-libcrux"
+version = "0.1.0"
+dependencies = [
+ "embedded-cal",
+ "libcrux-sha2",
+ "testvectors",
 ]
 
 [[package]]
@@ -265,7 +274,7 @@ dependencies = [
  "embedded-cal-software-demo",
  "nrf-pac",
  "panic-probe",
- "rand_core",
+ "rand_core 0.10.1",
  "testvectors",
 ]
 
@@ -286,7 +295,7 @@ name = "embedded-cal-software-demo"
 version = "0.1.0"
 dependencies = [
  "embedded-cal",
- "rand_core",
+ "rand_core 0.10.1",
  "testvectors",
 ]
 
@@ -302,7 +311,7 @@ dependencies = [
  "embedded-cal",
  "embedded-cal-software-demo",
  "panic-probe",
- "rand_core",
+ "rand_core 0.10.1",
  "stm32-metapac",
  "testvectors",
 ]
@@ -344,7 +353,18 @@ name = "hax-lib"
 version = "0.3.5"
 source = "git+https://github.com/hacspec/hax#bf9a7e4b6a24aebf015910d62477103d010fd643"
 dependencies = [
- "hax-lib-macros",
+ "hax-lib-macros 0.3.5",
+ "num-bigint",
+ "num-traits",
+]
+
+[[package]]
+name = "hax-lib"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "543f93241d32b3f00569201bfce9d7a93c92c6421b23c77864ac929dc947b9fc"
+dependencies = [
+ "hax-lib-macros 0.3.6",
  "num-bigint",
  "num-traits",
 ]
@@ -354,7 +374,20 @@ name = "hax-lib-macros"
 version = "0.3.5"
 source = "git+https://github.com/hacspec/hax#bf9a7e4b6a24aebf015910d62477103d010fd643"
 dependencies = [
- "hax-lib-macros-types",
+ "hax-lib-macros-types 0.3.5",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "hax-lib-macros"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8755751e760b11021765bb04cb4a6c4e24742688d9f3aa14c2079638f537b0f"
+dependencies = [
+ "hax-lib-macros-types 0.3.6",
  "proc-macro-error2",
  "proc-macro2",
  "quote",
@@ -365,6 +398,19 @@ dependencies = [
 name = "hax-lib-macros-types"
 version = "0.3.5"
 source = "git+https://github.com/hacspec/hax#bf9a7e4b6a24aebf015910d62477103d010fd643"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "hax-lib-macros-types"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f177c9ae8ea456e2f71ff3c1ea47bf4464f772a05133fcbba56cd5ba169035a2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -409,6 +455,55 @@ name = "libc"
 version = "0.2.176"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58f929b4d672ea937a23a1ab494143d968337a5f47e56d0815df1e0890ddf174"
+
+[[package]]
+name = "libcrux-hacl-rs"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2637dc87d158e1f1b550fd9b226443e84153fded4de69028d897b534d16d22e6"
+dependencies = [
+ "libcrux-macros",
+]
+
+[[package]]
+name = "libcrux-macros"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffd6aa2dcd5be681662001b81d493f1569c6d49a32361f470b0c955465cd0338"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "libcrux-secrets"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ce650f3041b44ba40d4263852347d007cd2cd9d1cc856a6f6c8b2e10c3fd40b"
+dependencies = [
+ "hax-lib 0.3.6",
+]
+
+[[package]]
+name = "libcrux-sha2"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9d253473f259fc74a280c43f29c464f7e374abdf28b4942234dc707f529d4b7"
+dependencies = [
+ "libcrux-hacl-rs",
+ "libcrux-macros",
+ "libcrux-traits",
+]
+
+[[package]]
+name = "libcrux-traits"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "812e4fa89f3f5e34b47f928b22b1b78395a0d4ec23b1f583db635f128159d65f"
+dependencies = [
+ "libcrux-secrets",
+ "rand",
+]
 
 [[package]]
 name = "log"
@@ -536,6 +631,21 @@ name = "r-efi"
 version = "5.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
+
+[[package]]
+name = "rand"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44c5af06bb1b7d3216d91932aed5265164bf384dc89cd6ba05cf59a35f5f76ea"
+dependencies = [
+ "rand_core 0.9.5",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c"
 
 [[package]]
 name = "rand_core"

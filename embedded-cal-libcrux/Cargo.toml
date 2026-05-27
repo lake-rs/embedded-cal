@@ -1,0 +1,16 @@
+[package]
+name = "embedded-cal-libcrux"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[dependencies]
+embedded-cal.path = "../embedded-cal"
+libcrux-sha2 = "0.0.6"
+
+[dev-dependencies]
+testvectors.path = "../testvectors"
