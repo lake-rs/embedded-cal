@@ -414,7 +414,7 @@ impl<EC: ExtenderConfig> HmacProvider for Extender<EC> {
 
     fn init(&mut self, key: Self::Key) -> Self::HmacState {
         match key {
-            HmacKey::HmacSha256 { inner, outer_key } => HmacState::HmacSha256 { inner, outer_key }
+            HmacKey::HmacSha256 { inner, outer_key } => HmacState::HmacSha256 { inner, outer_key },
         }
     }
 
