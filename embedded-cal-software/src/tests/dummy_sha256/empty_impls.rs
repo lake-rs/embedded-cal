@@ -29,7 +29,7 @@ impl embedded_cal::HmacProvider for DummySha256 {
     type HmacState = embedded_cal::NoHmacAlgorithms;
     type HmacResult = embedded_cal::NoHmacAlgorithms;
 
-    fn load_from_keydata(&mut self, algorithm: Self::Algorithm, key: &[u8]) -> Self::Key {
+    fn load_from_keydata(&mut self, algorithm: Self::Algorithm, _key: &[u8]) -> Self::Key {
         match algorithm {}
     }
 
