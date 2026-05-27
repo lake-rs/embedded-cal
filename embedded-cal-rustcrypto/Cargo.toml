@@ -9,7 +9,22 @@ categories.workspace = true
 version.workspace = true
 
 [dependencies]
+aes = { version = "0.8.3", default-features = false }
+ccm = { version = "0.5.0", default-features = false }
 digest = "0.10.7"
 embedded-cal.path = "../embedded-cal"
 sha2 = { version = "0.10.9", default-features = false }
 testvectors.path = "../testvectors"
+
+[features]
+## Enables the use of the system allocator for AEAD algorithms.
+##
+## In particular, this is needed because the rustcrypto AEAD mechanism expects
+## the AAD to be provided in contiguous memory, whereas the embedded-cal way is
+## to allow feeding them piecemeal (e.g. to accommodate OSCORE's Class I items,
+## whose size is only bounded by a full message size).
+##
+## When this feature is not active, a fixed size (currently 1024 byte) buffer
+## is allocated inside the `Cal` instance, and exceeding that size is treated
+## similar to a memory allocation failure, resulting in a panic.
+alloc = []

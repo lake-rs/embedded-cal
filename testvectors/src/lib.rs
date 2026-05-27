@@ -86,6 +86,19 @@ pub const HMAC_SHA256: &[(&[u8], &[u8], [u8; 32])] = &[
     ),
 ];
 
+pub const AES_CCM_16_64_128: &[AeadCase] = &[
+    // From Appendix C.4 of RFC8613
+    AeadCase {
+        alg_cose: 10,
+        key: &hex!("f0910ed7295e6ad4b54fc793154302ff"),
+        nonce: &hex!("4622d4dd6d944168eefb549868"),
+        aad: &hex!("8368456e63727970743040488501810a40411440"),
+        plaintext: &hex!("01b3747631"),
+        ciphertext: &hex!("612f1092f1"),
+        tag: &hex!("776f1c1668b3825e"),
+    },
+];
+
 pub fn test_hmac_sha256<Cal: embedded_cal::HmacProvider>(cal: &mut Cal) {
     use embedded_cal::HmacAlgorithm;
 
@@ -148,5 +161,46 @@ pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal
             tv_result,
             "Hash values mismatch when input is fed in chunks"
         );
+    }
+}
+
+pub struct AeadCase {
+    alg_cose: i16,
+    key: &'static [u8],
+    nonce: &'static [u8],
+    // The tester will chunk this up arbitrarily
+    aad: &'static [u8],
+    plaintext: &'static [u8],
+    ciphertext: &'static [u8],
+    tag: &'static [u8],
+}
+
+impl AeadCase {
+    fn test<Cal: embedded_cal::AeadProvider>(&self, cal: &mut Cal) {
+        use embedded_cal::AeadAlgorithm;
+
+        let alg = Cal::Algorithm::from_cose_number(self.alg_cose)
+            .expect("algorithm not present for test");
+
+        let key = cal.load_from_keydata(alg, self.key);
+
+        let mut buf = [0; 4096];
+        let buf = &mut buf[..self.plaintext.len()];
+        buf.copy_from_slice(self.plaintext);
+
+        // FIXME: try again with chunked AAD
+
+        let produced_tag = cal.encrypt_in_place(&key, self.nonce, buf, self.aad);
+        assert_eq!(self.tag, produced_tag.as_ref());
+        assert_eq!(buf, self.ciphertext);
+        cal.decrypt_in_place(&key, self.nonce, buf, self.tag, self.aad)
+            .unwrap();
+        assert_eq!(buf, self.plaintext);
+    }
+}
+
+pub fn test_aead_aesccm_16_64_128(cal: &mut impl embedded_cal::AeadProvider) {
+    for case in AES_CCM_16_64_128 {
+        case.test(cal);
     }
 }
