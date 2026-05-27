@@ -24,8 +24,8 @@ pub trait HmacProvider {
     /// Compute HMAC over contiguous in-memory data in a single pass, based on a key directly
     /// entered as bytes.
     ///
-    /// This is a shortcut for [`self.init_with_keydata(…)`] / [`self.update(…)`] /
-    /// [`self.finalize(…)`].
+    /// This is a shortcut for [`self.init_with_keydata(…)`][Self::init_with_keydata()] /
+    /// [`self.update(…)`][Self::update()] / [`self.finalize(…)`][Self::finalize()].
     fn hmac_with_keydata(
         &mut self,
         algorithm: Self::Algorithm,
