@@ -4,6 +4,7 @@
 use embedded_cal::{Cal, plumbing::Plumbing};
 use libcrux_sha2::Digest;
 
+mod aead;
 mod empty_impls;
 mod hash;
 

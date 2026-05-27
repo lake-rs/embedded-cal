@@ -27,34 +27,3 @@ impl<EC: ExtenderConfig> embedded_cal::HmacProvider for Extender<EC> {
         match state {}
     }
 }
-
-impl<EC: ExtenderConfig> embedded_cal::AeadProvider for Extender<EC> {
-    type Algorithm = embedded_cal::empty::NoAlgorithms;
-    type Key = embedded_cal::empty::NoAlgorithms;
-    type Tag = embedded_cal::empty::NoAlgorithms;
-
-    fn load_from_keydata(&mut self, alg: Self::Algorithm, _key: &[u8]) -> Self::Key {
-        match alg {}
-    }
-
-    fn encrypt_in_place(
-        &mut self,
-        key: &Self::Key,
-        _nonce: &[u8],
-        _message: &mut [u8],
-        _aad: impl embedded_cal::AadGenerator,
-    ) -> Self::Tag {
-        match *key {}
-    }
-
-    fn decrypt_in_place(
-        &mut self,
-        key: &Self::Key,
-        _nonce: &[u8],
-        _message: &mut [u8],
-        _tag: &[u8],
-        _aad: impl embedded_cal::AadGenerator,
-    ) -> Result<(), embedded_cal::DecryptionFailed> {
-        match *key {}
-    }
-}
