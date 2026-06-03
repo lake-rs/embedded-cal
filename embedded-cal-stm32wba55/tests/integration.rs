@@ -74,4 +74,9 @@ mod tests {
     fn test_aead_aesccm_16_64_128(state: &mut super::TestState) {
         testvectors::test_aead_aesccm_16_64_128(&mut state.raw);
     }
+
+    #[test]
+    fn test_aead_aesccm_16_64_256(state: &mut super::TestState) {
+        testvectors::test_aead_aesccm_16_64_256(&mut state.raw);
+    }
 }

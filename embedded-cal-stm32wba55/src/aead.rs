@@ -92,6 +92,26 @@ fn write_ivr(aes: &stm32_metapac::aes::Aes, block: &[u8; 16]) {
     ]));
 }
 
+/// Write a 256-bit key into AES_KEYR7..AES_KEYR0 (MSB-first, big-endian words).
+fn write_key_256(aes: &stm32_metapac::aes::Aes, key: &[u8; 32]) {
+    aes.keyr(7)
+        .write_value(u32::from_be_bytes([key[0], key[1], key[2], key[3]]));
+    aes.keyr(6)
+        .write_value(u32::from_be_bytes([key[4], key[5], key[6], key[7]]));
+    aes.keyr(5)
+        .write_value(u32::from_be_bytes([key[8], key[9], key[10], key[11]]));
+    aes.keyr(4)
+        .write_value(u32::from_be_bytes([key[12], key[13], key[14], key[15]]));
+    aes.keyr(3)
+        .write_value(u32::from_be_bytes([key[16], key[17], key[18], key[19]]));
+    aes.keyr(2)
+        .write_value(u32::from_be_bytes([key[20], key[21], key[22], key[23]]));
+    aes.keyr(1)
+        .write_value(u32::from_be_bytes([key[24], key[25], key[26], key[27]]));
+    aes.keyr(0)
+        .write_value(u32::from_be_bytes([key[28], key[29], key[30], key[31]]));
+}
+
 /// Write a 128-bit key into AES_KEYR3..AES_KEYR0 (MSB-first, big-endian words).
 fn write_key_128(aes: &stm32_metapac::aes::Aes, key: &[u8; 16]) {
     aes.keyr(3)
@@ -169,6 +189,37 @@ fn run_payload_phase(aes: &stm32_metapac::aes::Aes, message: &mut [u8], with_npb
         message[msg_offset..msg_offset + chunk].copy_from_slice(&out[..chunk]);
         msg_offset += chunk;
     }
+}
+
+/// Run the CCM init phase for a 256-bit key.
+fn run_init_phase_256(
+    aes: &stm32_metapac::aes::Aes,
+    mode: stm32_metapac::aes::vals::Mode,
+    nonce: &[u8],
+    msg_len: usize,
+    a_len: usize,
+    tag_len: usize,
+    key: &[u8; 32],
+) {
+    use stm32_metapac::aes::vals::{Chmod, Datatype, Gcmph};
+    aes.cr().modify(|w| w.set_en(false));
+    aes.cr().modify(|w| {
+        w.set_chmod(Chmod::CCM);
+        w.set_datatype(Datatype::NONE);
+        w.set_keysize(true); // 256-bit key
+        w.set_mode(mode);
+        w.set_kmod(0x00);
+        w.set_gcmph(Gcmph::INIT_PHASE);
+        w.set_npblb(0);
+    });
+
+    write_ivr(aes, &build_b0(nonce, msg_len, a_len, tag_len));
+    write_key_256(aes, key);
+
+    while !aes.sr().read().keyvalid() {}
+    aes.cr().modify(|w| w.set_en(true));
+    while !aes.isr().read().ccf() {}
+    aes.isr().write(|w| w.set_ccf(true));
 }
 
 /// Run the CCM init phase for a 128-bit key: configure AES_CR, load B0 and key,
@@ -302,7 +353,34 @@ impl embedded_cal::AeadProvider for super::Stm32wba55Cal {
                 tag.copy_from_slice(&tag_full[..TAG_LEN]);
                 AeadTag::AesCcm16_64_128(tag)
             }
-            AeadKey::AesCcm16_64_256(_) => todo!(),
+            AeadKey::AesCcm16_64_256(key_bytes) => {
+                const TAG_LEN: usize = 8;
+                let aes = &self.aes;
+
+                let a_len: usize = aad.items().map(|s| s.len()).sum();
+
+                run_init_phase_256(
+                    aes,
+                    Mode::MODE1,
+                    nonce,
+                    message.len(),
+                    a_len,
+                    TAG_LEN,
+                    key_bytes,
+                );
+
+                if a_len > 0 {
+                    run_header_phase(aes, aad, a_len);
+                }
+
+                run_payload_phase(aes, message, false);
+
+                let tag_full = run_final_phase(aes);
+
+                let mut tag = [0u8; TAG_LEN];
+                tag.copy_from_slice(&tag_full[..TAG_LEN]);
+                AeadTag::AesCcm16_64_256(tag)
+            }
         }
     }
 
@@ -359,7 +437,44 @@ impl embedded_cal::AeadProvider for super::Stm32wba55Cal {
                     Err(embedded_cal::DecryptionFailed)
                 }
             }
-            AeadKey::AesCcm16_64_256(_) => todo!(),
+            AeadKey::AesCcm16_64_256(key_bytes) => {
+                const TAG_LEN: usize = 8;
+                let aes = &self.aes;
+
+                let a_len: usize = aad.items().map(|s| s.len()).sum();
+
+                run_init_phase_256(
+                    aes,
+                    Mode::MODE3,
+                    nonce,
+                    message.len(),
+                    a_len,
+                    TAG_LEN,
+                    key_bytes,
+                );
+
+                if a_len > 0 {
+                    run_header_phase(aes, aad, a_len);
+                }
+
+                run_payload_phase(aes, message, true);
+
+                let tag_full = run_final_phase(aes);
+
+                let computed = &tag_full[..TAG_LEN];
+                let tags_match = computed.len() == tag.len()
+                    && computed
+                        .iter()
+                        .zip(tag.iter())
+                        .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+                        == 0;
+
+                if tags_match {
+                    Ok(())
+                } else {
+                    Err(embedded_cal::DecryptionFailed)
+                }
+            }
         }
     }
 }
