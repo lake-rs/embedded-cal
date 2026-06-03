@@ -241,7 +241,12 @@ impl embedded_cal::AeadProvider for super::Nrf54l15Cal {
                 tag.copy_from_slice(&output_buf[message.len()..message.len() + 8]);
                 AeadTag::AesCcm16_64_128(tag)
             }
-            AeadKey::AesCcm16_64_256(_) => todo!(),
+            AeadKey::AesCcm16_64_256(_) => {
+                // The CCM00 peripheral is 128-bit only
+                // https://docs.nordicsemi.com/r/bundle/ps_nrf54L15/page/ccm.html-unique_2145434636
+                // https://docs.nordicsemi.com/r/bundle/ps_nrf54L15/page/ccm.html-register.KEY.VALUE
+                todo!()
+            }
         }
     }
 
