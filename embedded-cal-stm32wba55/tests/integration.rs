@@ -30,11 +30,13 @@ mod tests {
             stm32_metapac::HASH,
             stm32_metapac::RCC,
             stm32_metapac::RNG,
+            stm32_metapac::AES,
         );
         let base = embedded_cal_stm32wba55::Stm32wba55Cal::new(
             stm32_metapac::HASH,
             stm32_metapac::RCC,
             stm32_metapac::RNG,
+            stm32_metapac::AES,
         );
 
         let cal = embedded_cal_software_demo::Extender::<ImplementSha256Short>::new(base);
@@ -66,5 +68,10 @@ mod tests {
     #[test]
     fn test_tryrng(state: &mut super::TestState) {
         embedded_cal::test_tryrng(&mut state.cal);
+    }
+
+    #[test]
+    fn test_aead_aesccm_16_64_128(state: &mut super::TestState) {
+        testvectors::test_aead_aesccm_16_64_128(&mut state.raw);
     }
 }

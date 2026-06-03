@@ -2,7 +2,7 @@
 
 use embedded_cal::plumbing::hash::SHA2SHORT_BLOCK_SIZE;
 use stm32_metapac::{
-    hash,
+    aes, hash,
     rcc::{self, vals::Rngsel},
     rng::{
         self,
@@ -23,22 +23,29 @@ pub struct Stm32wba55Cal {
     hash: hash::Hash,
     rcc: rcc::Rcc,
     rng: rng::Rng,
+    aes: aes::Aes,
 }
 
 impl embedded_cal::Cal for Stm32wba55Cal {}
 
 impl Stm32wba55Cal {
-    pub fn new(hash: hash::Hash, rcc: rcc::Rcc, rng: rng::Rng) -> Self {
+    pub fn new(hash: hash::Hash, rcc: rcc::Rcc, rng: rng::Rng, aes: aes::Aes) -> Self {
         // Select HSI as the RNG kernel clock source (default is LSE which may not be running)
         rcc.ccipr2().modify(|w| w.set_rngsel(Rngsel::HSI));
 
-        // Enable HASH and RNG clocks
+        // Enable HASH, RNG, and AES clocks
         rcc.ahb2enr().modify(|w| {
             w.set_hashen(true);
             w.set_rngen(true);
+            w.set_aesen(true);
         });
 
-        let mut cal = Self { hash, rcc, rng };
+        let mut cal = Self {
+            hash,
+            rcc,
+            rng,
+            aes,
+        };
         cal.init_rng().expect("RNG init failed");
         cal
     }
@@ -108,8 +115,11 @@ fn wait_for(mut condition: impl FnMut() -> bool) -> Result<(), try_rng::RngError
 
 impl Drop for Stm32wba55Cal {
     fn drop(&mut self) {
-        // Disable HASH clock
-        self.rcc.ahb2enr().modify(|w| w.set_hashen(false));
+        self.rcc.ahb2enr().modify(|w| {
+            w.set_hashen(false);
+            w.set_rngen(false);
+            w.set_aesen(false);
+        });
         self.rng.cr().modify(|w| w.set_rngen(false));
     }
 }
