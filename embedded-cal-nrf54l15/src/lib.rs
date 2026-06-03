@@ -14,12 +14,17 @@ pub struct Nrf54l15Cal {
     // it's possible to have a more granular ownership
     cracen: cracen::Cracen,
     cracen_core: cracencore::Cracencore,
+    ccm: nrf_pac::ccm::Ccm,
 }
 
 impl embedded_cal::Cal for Nrf54l15Cal {}
 
 impl Nrf54l15Cal {
-    pub fn new(cracen: cracen::Cracen, cracen_core: cracencore::Cracencore) -> Self {
+    pub fn new(
+        cracen: cracen::Cracen,
+        cracen_core: cracencore::Cracencore,
+        ccm: nrf_pac::ccm::Ccm,
+    ) -> Self {
         // Enable cryptomaster
         cracen.enable().write(|w| {
             w.set_cryptomaster(true);
@@ -40,6 +45,7 @@ impl Nrf54l15Cal {
         Self {
             cracen,
             cracen_core,
+            ccm,
         }
     }
 }
