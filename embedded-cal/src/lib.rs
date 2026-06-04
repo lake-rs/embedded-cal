@@ -14,7 +14,7 @@ pub use aead::{
     AadGenerator, AeadAlgorithm, AeadProvider, DecryptionFailed,
     test_aead_algorithm_aesccm_16_64_128,
 };
-pub use dh::{DhAlgorithm, DhProvider, IncompatibleKeys, SharedSecret, test_dh_algorithm_ecdh_p256};
+pub use dh::{DhAlgorithm, DhProvider, IncompatibleKeys, test_dh_algorithm_ecdh_p256};
 pub use hash::{HashAlgorithm, HashProvider, test_hash_algorithm_sha256};
 pub use hmac::{HmacAlgorithm, HmacProvider, test_hmac_algorithm_hmacsha256};
 pub use rng::test_tryrng;

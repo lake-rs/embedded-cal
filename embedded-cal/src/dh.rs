@@ -19,7 +19,7 @@ pub trait DhProvider {
     type DhAlgorithm: DhAlgorithm;
     type SecretKey: Sized;
     type PublicKey: Sized;
-    type SharedSecret: SharedSecret;
+    type SharedSecret: Sized + AsRef<[u8]>;
 
     /// Derives a shared secret from a public and a private key.
     ///
@@ -36,22 +36,6 @@ pub trait DhProvider {
 
     /// Produces the public key corresponding to a private key.
     fn public_key(&mut self, private: &Self::SecretKey) -> Self::PublicKey;
-}
-
-/// An output of a Diffie-Hellman-style operation.
-///
-/// This trait takes inspiration from the [`elliptic_curve struct of the same
-/// name`](https://docs.rs/elliptic-curve/latest/elliptic_curve/ecdh/struct.SharedSecret.html),
-/// but does not use it directly because
-/// - `embedded-cal` passes around an exclusive reference to its engine,
-/// - its operation is cryptographically agile rather than monomorphized over algorithms,
-pub trait SharedSecret: Sized {
-    // FIXME: Offer `extract`-style method once our KDF API is done.
-
-    // FIXME: document when and when not to use this
-    fn raw_secret_bytes<C>(&self, cal: &mut C) -> impl AsRef<[u8]>
-    where
-        C: DhProvider<SharedSecret = Self>;
 }
 
 /// Error indicating that the public and the private key are incompatible.
