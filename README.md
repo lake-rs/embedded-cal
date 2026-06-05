@@ -27,6 +27,12 @@ or implementations of [SUIT](https://datatracker.ietf.org/doc/draft-ietf-suit-ma
 The project is currently being launched,
 and expected to become usable before the end of 2025.
 
+## Publications
+
+`embedded-cal` was introduced in:
+
+* embedded-cal: A Formally Verified Cryptographic Provider for Embedded Platforms. Elsa Lopez Perez, William Takeshi Pereira, Thomas Watteyne, Christian Amsüss, Franziskus Kiefer and Jonas Schneider-Bensch, Karthikeyan Bhargavan, Mališa Vučinić. International Workshop on Security, Privacy and Trust in the Internet of Things (SPT-IoT), part of IEEE International Conference on Pervasive Computing and Communications (PerCom), Pisa, Italy, 16-20 March 2026. **(Best Paper Award).** [PDF is available!](https://hal.science/hal-05524081v1/document)
+
 ## Contributors
 
 The project is driven
