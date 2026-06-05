@@ -13,8 +13,16 @@ aes = { version = "0.8.3", default-features = false }
 ccm = { version = "0.5.0", default-features = false }
 digest = "0.10.7"
 embedded-cal.path = "../embedded-cal"
+heapless = { version = "0.9.3", features = ["zeroize"] }
+p256 = { version = "0.13.2", default-features = false, features = ["ecdh"] }
 sha2 = { version = "0.10.9", default-features = false }
 testvectors.path = "../testvectors"
+zeroize = { version = "1.8.2", default-features = false }
+
+# FIXME: This makes it currently unusable on embedded -- but otherwise, we
+# can't generate keys. A better way might be to follow lakers and make it
+# generic over a CryptoRng.
+rand = "0.8.0"
 
 [features]
 ## Enables the use of the system allocator for AEAD algorithms.

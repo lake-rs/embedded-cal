@@ -1,3 +1,6 @@
+mod dh;
+mod hmac;
+
 use digest::Digest;
 
 pub struct RustcryptoCal {
@@ -38,6 +41,8 @@ impl Default for RustcryptoCal {
         Self::new()
     }
 }
+
+impl embedded_cal::Cal for RustcryptoCal {}
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum HashAlgorithm {
