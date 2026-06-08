@@ -62,11 +62,9 @@ impl embedded_cal::DhProvider for RustcryptoCal {
                     .try_into()
                     .expect("MAX_SHARED_SECRET_LENGTH is long enough")
             }
-            (SecretKey::X25519(secret_key), PublicKey::X25519(public_key)) => secret_key
-                .diffie_hellman(public_key)
-                .to_bytes()
-                .try_into()
-                .expect("MAX_SHARED_SECRET_LENGTH is long enough"),
+            (SecretKey::X25519(secret_key), PublicKey::X25519(public_key)) => {
+                secret_key.diffie_hellman(public_key).to_bytes().into()
+            }
             _ => return Err(embedded_cal::IncompatibleKeys),
         }))
     }
@@ -89,9 +87,18 @@ impl embedded_cal::DhProvider for RustcryptoCal {
         &mut self,
         public: &'p Self::PublicKey,
     ) -> impl AsRef<[u8]> + use<'p> {
+        use p256::elliptic_curve::sec1::ToEncodedPoint;
         match public {
-            PublicKey::P256(public_key) => todo!(),
-            PublicKey::X25519(public_key) => public_key.as_bytes(),
+            PublicKey::P256(public_key) => public_key
+                .to_encoded_point(false)
+                .x()
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .clone(),
+            // FIXME: If we're only supporting X25519, we could do without the .clone() and use the
+            // reference.
+            PublicKey::X25519(public_key) => public_key.as_bytes().clone(),
         }
     }
 
@@ -100,8 +107,23 @@ impl embedded_cal::DhProvider for RustcryptoCal {
         alg: Self::DhAlgorithm,
         data: &[u8],
     ) -> Result<Self::PublicKey, ImportError> {
+        use p256::elliptic_curve::point::DecompressPoint;
         match alg {
-            DhAlgorithm::P256 => Err(ImportError),
+            DhAlgorithm::P256 => Ok(PublicKey::P256(
+                p256::PublicKey::from_affine(
+                    p256::AffinePoint::decompress(
+                        &<[u8; 32]>::try_from(data).map_err(|_| ImportError)?.into(),
+                        // Using the trick from
+                        // https://datatracker.ietf.org/doc/html/rfc9528#name-compact-representation,
+                        // picking an arbitrary version for the compact import
+                        0.into(),
+                    )
+                    // FIXME Should we try to stay subtle?
+                    .into_option()
+                    .ok_or(ImportError)?,
+                )
+                .map_err(|_| ImportError)?,
+            )),
             DhAlgorithm::X25519 => Ok(PublicKey::X25519(x25519_dalek::PublicKey::from(
                 <[u8; 32]>::try_from(data).map_err(|_| ImportError)?,
             ))),
