@@ -44,7 +44,18 @@ pub trait HmacProvider {
     reason = "Lint only makes sense when length can reasonably be zero, which is not the case here."
 )]
 pub trait HmacAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
+    /// The maximum output of [`Self::len()`].
+    ///
+    /// This can be used by consumers of this trait (e.g. the HMAC trait) to build internal
+    /// buffers.
+    const MAX_LEN: usize;
+
     /// Output length in bytes.
+    ///
+    /// ## Constraints
+    ///
+    /// The returned value must not be greater than [`Self::MAX_LEN`]; otherwise, consumers of the
+    /// trait may panic.
     fn len(&self) -> usize;
 
     /// Selects an HMAC algorithm from its COSE number.

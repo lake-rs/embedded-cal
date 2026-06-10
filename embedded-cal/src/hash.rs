@@ -58,7 +58,9 @@ pub trait HashProvider {
 )]
 // FIXME: Are all of those requirements good?
 pub trait HashAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
-    /// Output length of .
+    // No MAX_LEN *yet*, but we might add one as we implement HMAC more widely.
+
+    /// Output length of the hash algorithm.
     fn len(&self) -> usize;
 
     /// Selects a hash algorithm from its COSE number.
