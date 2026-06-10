@@ -9,14 +9,14 @@ impl embedded_cal::DhProvider for RustcryptoCal {
     type PublicKey = PublicKey;
     type SharedSecret = SharedSecret;
 
-    fn generate_visible(&mut self, alg: Self::DhAlgorithm) -> Option<Self::VisibleSecretKey> {
+    fn generate_visible(&mut self, alg: Self::DhAlgorithm) -> Self::VisibleSecretKey {
         // We're not wrapping anything, so no point in deferring to the self RNG.
-        Some(VisibleSecretKey(match alg {
+        VisibleSecretKey(match alg {
             DhAlgorithm::P256 => SecretKey::P256(p256::SecretKey::random(&mut OldRng(self))),
             DhAlgorithm::X25519 => {
                 SecretKey::X25519(x25519_dalek::StaticSecret::random_from_rng(OldRng(self)))
             }
-        }))
+        })
     }
 
     fn export_secretkey_bytes<'s>(

@@ -10,12 +10,8 @@ impl<EC: ExtenderConfig> DhProvider for Extender<EC> {
     type PublicKey = <EC::Base as DhProvider>::PublicKey;
     type SharedSecret = <EC::Base as DhProvider>::SharedSecret;
 
-    fn generate_visible(&mut self, _alg: Self::DhAlgorithm) -> Option<Self::VisibleSecretKey>
-    where
-        Self: rand_core::TryRng,
-    {
-        // pending resolution of https://github.com/lake-rs/embedded-cal/issues/51
-        todo!()
+    fn generate_visible(&mut self, alg: Self::DhAlgorithm) -> Self::VisibleSecretKey {
+        self.0.generate_visible(alg)
     }
 
     fn shared_secret(

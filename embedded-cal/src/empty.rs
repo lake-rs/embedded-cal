@@ -94,10 +94,7 @@ impl<const PLUMBING: bool> DhProvider for EmptyCal<PLUMBING> {
     type PublicKey = NoAlgorithms;
     type SharedSecret = NoAlgorithms;
 
-    fn generate_visible(&mut self, alg: Self::DhAlgorithm) -> Option<Self::VisibleSecretKey>
-    where
-        Self: rand_core::TryRng,
-    {
+    fn generate_visible(&mut self, alg: Self::DhAlgorithm) -> Self::VisibleSecretKey {
         match alg {}
     }
 

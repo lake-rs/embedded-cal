@@ -66,10 +66,7 @@ impl<EC: ExtenderConfig> embedded_cal::DhProvider for Extender<EC> {
     type PublicKey = embedded_cal::empty::NoAlgorithms;
     type SharedSecret = embedded_cal::empty::NoAlgorithms;
 
-    fn generate_visible(&mut self, alg: Self::DhAlgorithm) -> Option<Self::VisibleSecretKey>
-    where
-        Self: rand_core::TryRng,
-    {
+    fn generate_visible(&mut self, alg: Self::DhAlgorithm) -> Self::VisibleSecretKey {
         match alg {}
     }
 
