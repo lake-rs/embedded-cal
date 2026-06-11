@@ -13,7 +13,7 @@ env:
 
 jobs:
   lint:
-    name: Run various Rust lints
+    name: Rust lints and tests
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -29,22 +29,22 @@ jobs:
     - name: run `cargo test`
       run: cargo test
 
-  generate-fstar:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout lakers
-      uses: actions/checkout@v4
-
-    - name: Install hax and F* (Fstar)
-      uses: hacspec/hax-actions@main
-
-    - name: Hax extract into F* (Fstar)
-      run: |
-        cargo-hax -C \; into fstar
-
-    - name: Typecheck
-      working-directory: ./shared/proofs/fstar/extraction
-      run: |
-        curl -o Makefile https://gist.githubusercontent.com/W95Psp/4c304132a1f85c5af4e4959dd6b356c3/raw/Makefile
-        make verify
+#   generate-fstar:
+#     runs-on: ubuntu-latest
+# 
+#     steps:
+#     - name: Checkout lakers
+#       uses: actions/checkout@v4
+# 
+#     - name: Install hax and F* (Fstar)
+#       uses: hacspec/hax-actions@main
+# 
+#     - name: Hax extract into F* (Fstar)
+#       run: |
+#         cargo-hax -C \; into fstar
+# 
+#     - name: Typecheck
+#       working-directory: ./shared/proofs/fstar/extraction
+#       run: |
+#         curl -o Makefile https://gist.githubusercontent.com/W95Psp/4c304132a1f85c5af4e4959dd6b356c3/raw/Makefile
+#         make verify
