@@ -5,11 +5,13 @@
 
 use super::*;
 
-/// An implementation of [`Cal`] that provides no single algorithm (or, for the random number
-/// aspect that has no algorithms, never succeeds in doing anything).
+/// An implementation of [`Cal`] that provides no single algorithm.
+///
+/// It implements all the individual traits, as well as the full `Cal` trait. The former is useful
+/// for hardware implementations that don't touch an area at all; the latter is useful in testing
+/// or when an extender is used standalone.
 pub struct EmptyCal<const PLUMBING: bool>;
 
-// Eventually, we can probbly even drop the Cal impl
 impl<const PLUMBING: bool> Cal for EmptyCal<PLUMBING> {
     type DhProvider = Self;
     type AeadProvider = Self;
