@@ -44,7 +44,28 @@ pub trait HmacProvider {
     reason = "Lint only makes sense when length can reasonably be zero, which is not the case here."
 )]
 pub trait HmacAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
+    /// The maximum output of [`Self::len()`].
+    ///
+    /// This can be used by consumers of this trait (e.g. the HMAC trait) to build internal
+    /// buffers.
+    const MAX_LEN: usize;
+
+    /// A `[u8; MAX_LEN]` type.
+    ///
+    /// This is needed as a workaround while limitation inconst generics mean that users (in
+    /// particular, HKDF implementations) can not create a local variable of type `[u8;
+    /// Self::HmacAlgorithm::MAX_LEN]`.
+    ///
+    /// The only sensible implementation is `[u8; MAX_LEN]`. Users of the trait may panic if it is
+    /// not, but must assume that it is anything for safety and security.
+    type MaxLenBuf: AsMut<[u8]> + Sized + Default;
+
     /// Output length in bytes.
+    ///
+    /// ## Constraints
+    ///
+    /// The returned value must not be greater than [`Self::MAX_LEN`]; otherwise, consumers of the
+    /// trait may panic.
     fn len(&self) -> usize;
 
     /// Selects an HMAC algorithm from its COSE number.

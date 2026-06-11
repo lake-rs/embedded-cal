@@ -201,21 +201,34 @@ pub const HKDF_SHA256: &[HkdfCase] = &[
     ),
 ];
 
-pub fn test_hkdf_sha256<Cal: embedded_cal::HkdfProvider>(cal: &mut Cal) {
+pub fn test_hkdf_sha256<Cal>(cal: &mut Cal)
+where
+    Cal: embedded_cal::HkdfProvider,
+{
+    use embedded_cal::HmacAlgorithm;
+    let alg = <Cal as embedded_cal::HmacProvider>::Algorithm::from_cose_number(5i8)
+        .expect("HkdfProvider must recognize COSE 5 (HMAC-SHA-256)");
+
     for (salt, ikm, info, expected_prk, expected_okm) in HKDF_SHA256 {
-        let prk = cal.hkdf_extract(*salt, ikm).expect("HKDF-Extract failed");
-        assert_eq!(&prk, expected_prk, "HKDF-Extract PRK mismatch");
+        let prk = cal
+            .hkdf_extract(alg.clone(), *salt, ikm)
+            .expect("HKDF-Extract failed");
+        assert_eq!(
+            prk.as_ref(),
+            expected_prk.as_ref(),
+            "HKDF-Extract PRK mismatch"
+        );
 
         let mut okm = [0u8; 82]; // large enough for test case 2 (82 bytes)
         let okm = &mut okm[..expected_okm.len()];
-        cal.hkdf_expand(&prk, info, okm)
+        cal.hkdf_expand(alg.clone(), prk.as_ref(), info, okm)
             .expect("HKDF-Expand failed");
         assert_eq!(okm, *expected_okm, "HKDF-Expand OKM mismatch");
         // Also test the combined hkdf() method using test case 1 only (salt is Some).
         if salt.is_some() {
             let mut okm2 = [0u8; 82];
             let okm2 = &mut okm2[..expected_okm.len()];
-            cal.hkdf(*salt, ikm, info, okm2)
+            cal.hkdf(alg.clone(), *salt, ikm, info, okm2)
                 .expect("hkdf() combined call failed");
             assert_eq!(okm2, *expected_okm, "hkdf() combined call OKM mismatch");
         }

@@ -168,6 +168,10 @@ pub enum HmacAlgorithm {
 }
 
 impl embedded_cal::HmacAlgorithm for HmacAlgorithm {
+    const MAX_LEN: usize = 32;
+
+    type MaxLenBuf = [u8; 32];
+
     fn len(&self) -> usize {
         match self {
             HmacAlgorithm::HmacSha256 => 32,

@@ -207,6 +207,10 @@ impl HashAlgorithm for NoAlgorithms {
 }
 
 impl HmacAlgorithm for NoAlgorithms {
+    const MAX_LEN: usize = 0;
+
+    type MaxLenBuf = [u8; 0];
+
     fn len(&self) -> usize {
         match *self {}
     }
