@@ -24,14 +24,12 @@ mod tests {
     use embedded_cal_stm32wba55::Stm32wba55Cal;
     #[init]
     fn init() -> super::TestState {
-        // stm32_metapac::HASH is a `const`, so it can be used at two sites
-        // without conflict; both values alias the same hardware register block.
-        // Tests run sequentially so there is no concurrent access.
         let base = embedded_cal_stm32wba55::Stm32wba55Cal::new(
             stm32_metapac::HASH,
             stm32_metapac::RCC,
             stm32_metapac::RNG,
             stm32_metapac::AES,
+            stm32_metapac::PKA,
         );
 
         let cal = embedded_cal_software_demo::Extender::<ImplementSha256Short>::new(base);
@@ -73,5 +71,13 @@ mod tests {
     #[test]
     fn test_aead_aesccm_16_64_256(state: &mut super::TestState) {
         testvectors::test_aead_aesccm_16_64_256(state.cal.aead());
+    }
+
+    #[test]
+    fn test_dh_ecdh_p256(state: &mut super::TestState) {
+        embedded_cal::test_dh_algorithm_ecdh_p256::<Stm32wba55Cal>();
+        for v in testvectors::dh::RFC5903_P256 {
+            v.test_with(state.cal.dh());
+        }
     }
 }
