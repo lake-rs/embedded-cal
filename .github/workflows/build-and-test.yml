@@ -29,6 +29,21 @@ jobs:
     - name: run `cargo test`
       run: cargo test
 
+  check-hw-backends:
+    name: Check hardware back-ends compile
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v5
+    - name: Add embedded target
+      run: rustup target add thumbv8m.main-none-eabihf
+    - name: cargo check nRF54L15 (lib + tests)
+      working-directory: embedded-cal-nrf54l15
+      run: cargo check --tests
+    - name: cargo check STM32WBA55 (lib + tests)
+      working-directory: embedded-cal-stm32wba55
+      run: cargo check --tests
+
 #   generate-fstar:
 #     runs-on: ubuntu-latest
 # 
