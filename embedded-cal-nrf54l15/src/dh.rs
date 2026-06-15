@@ -181,7 +181,10 @@ impl super::Nrf54l15Cal {
         while self.cracen_core.ikg().status().read().ctrdrbgbusy() {}
     }
 
-    pub(super) fn cracen_ecc_mult(
+    // P-256 short-Weierstrass scalar multiplication on the CRACEN BA414ep PKE engine.
+    // `scalar`, `px`, `py` are big-endian byte arrays; returns the resulting affine point (rx, ry)
+    // also in big-endian. Zeroes the scalar slot in PKE RAM before returning.
+    pub(super) fn cracen_p256_mult(
         &mut self,
         scalar: &[u8; 32],
         px: &[u8; 32],
@@ -237,7 +240,7 @@ impl super::Nrf54l15Cal {
     // Montgomery-curve scalar multiplication on CRACEN hardware.
     // `curve_params` carries (prime, coeff_a) for curves that need them written to slots 0/1
     // (X448); pass `None` for hardware-accelerated curves (X25519) that don't.
-    // Both operands must be pre-clamped per RFC 7748 §5 before calling.
+    // Both operands must be pre-clamped per RFC 7748 before calling.
     fn cracen_montgomery_mult<const N: usize>(
         &mut self,
         scalar: &[u8; N],
@@ -407,7 +410,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
                     .try_into()
                     .expect("slice is always 32 bytes");
                 let px32: [u8; 32] = public.x[..32].try_into().expect("slice is always 32 bytes");
-                let (result_x, _) = self.cracen_ecc_mult(&scalar32, &px32, &public.y);
+                let (result_x, _) = self.cracen_p256_mult(&scalar32, &px32, &public.y);
                 scalar32.zeroize();
                 let mut bytes = [0u8; 56];
                 bytes[..32].copy_from_slice(&result_x);
@@ -443,7 +446,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
                 let mut scalar32: [u8; 32] = private.scalar[..32]
                     .try_into()
                     .expect("slice is always 32 bytes");
-                let (rx, ry) = self.cracen_ecc_mult(&scalar32, &P256_GX, &P256_GY);
+                let (rx, ry) = self.cracen_p256_mult(&scalar32, &P256_GX, &P256_GY);
                 scalar32.zeroize();
                 let mut x = [0u8; 56];
                 x[..32].copy_from_slice(&rx);
