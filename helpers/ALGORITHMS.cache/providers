@@ -1,6 +1,7 @@
 ./embedded-cal-libcrux/src/aead.rs:impl<EC: ExtenderConfig> embedded_cal::AeadProvider for Extender<EC> {
 ./embedded-cal-libcrux/src/hash.rs:impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 ./embedded-cal-nrf54l15/src/aead.rs:impl embedded_cal::AeadProvider for super::Nrf54l15Cal {
+./embedded-cal-nrf54l15/src/dh.rs:impl embedded_cal::DhProvider for super::Nrf54l15Cal {
 ./embedded-cal-rustcrypto/src/dh.rs:impl embedded_cal::DhProvider for RustcryptoCal {
 ./embedded-cal-rustcrypto/src/hmac.rs:impl HmacProvider for RustcryptoCal {
 ./embedded-cal-rustcrypto/src/lib.rs:impl embedded_cal::HashProvider for RustcryptoCal {
@@ -8,6 +9,7 @@
 ./embedded-cal-software-demo/src/hash.rs:impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 ./embedded-cal-software-demo/src/hmac.rs:impl<EC: ExtenderConfig> HmacProvider for Extender<EC> {
 ./embedded-cal-stm32wba55/src/aead.rs:impl embedded_cal::AeadProvider for super::Stm32wba55Cal {
+./embedded-cal-stm32wba55/src/dh.rs:impl embedded_cal::DhProvider for super::Stm32wba55Cal {
 ./embedded-cal-stm32wba55/src/lib.rs:impl embedded_cal::HmacProvider for Stm32wba55Cal {
 ./embedded-cal/src/empty.rs:impl<const PLUMBING: bool> HashProvider for EmptyCal<PLUMBING> {
 ./embedded-cal/src/empty.rs:impl<const PLUMBING: bool> HmacProvider for EmptyCal<PLUMBING> {

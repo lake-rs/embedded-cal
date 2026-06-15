@@ -26,6 +26,10 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 |-----------|----------------|-------|
 | ECDH on curve P-256 | rustcrypto | |
 | ECDH on curve X25519 | rustcrypto | |
+| ECDH on curve P-256 | stm32wba55 | |
+| ECDH on curve P-256 | nrf54l15 | |
+| ECDH on curve X25519 | nrf54l15 | |
+| ECDH on curve X448 | nrf54l15 | |
 
 # Hash
 

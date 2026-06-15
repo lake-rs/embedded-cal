@@ -12,6 +12,12 @@
     AesCcm16_64_128,
 ./embedded-cal-nrf54l15/src/aead.rs
     AesCcm16_64_256,
+./embedded-cal-nrf54l15/src/dh.rs
+    EcdhP256,
+./embedded-cal-nrf54l15/src/dh.rs
+    X25519,
+./embedded-cal-nrf54l15/src/dh.rs
+    X448,
 ./embedded-cal-rustcrypto/src/dh.rs
     P256,
 ./embedded-cal-rustcrypto/src/dh.rs
@@ -36,6 +42,8 @@
     AesCcm16_64_128,
 ./embedded-cal-stm32wba55/src/aead.rs
     AesCcm16_64_256,
+./embedded-cal-stm32wba55/src/dh.rs
+    EcdhP256,
 ./embedded-cal-stm32wba55/src/lib.rs
     Sha256,
 ./embedded-cal-stm32wba55/src/lib.rs
