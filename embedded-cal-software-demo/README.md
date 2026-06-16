@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT OR Apache-2.0
+SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+-->
+
 This crate is an example and a demo of how implementations of embedded-cal's plumbing layer can have their pieces connected into a functional Cal implementation for the algorithms supported by the plumbing.
 
 It is **not** intended for production.

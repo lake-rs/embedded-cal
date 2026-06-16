@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT OR Apache-2.0
+SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+-->
+
 # `embedded-cal`: A Cryptographic Abstraction Layer (CAL) for embedded systems
 
 *An embedded systems-friendly verified crypto provider.*

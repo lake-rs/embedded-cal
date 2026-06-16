@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 [workspace]
 members = ["embedded-cal", "embedded-cal-rustcrypto", "embedded-cal-software-demo", "embedded-cal-nrf54l15", "embedded-cal-stm32wba55", "testvectors", "embedded-cal-libcrux"]
 default-members = ["embedded-cal", "embedded-cal-rustcrypto", "embedded-cal-libcrux", "embedded-cal-software-demo", "testvectors"]
@@ -5,7 +8,7 @@ resolver = "3"
 
 [workspace.package]
 edition = "2024"
-license = "BSD-3-Clause"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/lake-rs/embedded-cal.git"
 keywords = ["iot", "security", "crypto", "embedded"]

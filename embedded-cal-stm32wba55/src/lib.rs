@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+// SPDX-License-Identifier: MIT OR Apache-2.0
 #![no_std]
 
 use embedded_cal::empty::EmptyCal;

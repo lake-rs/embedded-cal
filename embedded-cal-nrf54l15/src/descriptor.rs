@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 /// Pointer to memory address 1.
 /// It means that the descriptor chain is over
 #[allow(

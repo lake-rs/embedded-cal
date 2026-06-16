@@ -1,4 +1,7 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 #![no_std]
+
 mod aead;
 mod descriptor;
 mod try_rng;

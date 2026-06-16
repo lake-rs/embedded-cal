@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 # Rebuilds helpers/ALGORITHMS.cache; see helpers/ALGORITHMS.cache/README.md.
 

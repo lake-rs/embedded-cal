@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 // # BA411E AES engine — cryptomaster DMA tags and command words
 //
 // Sources: sdk-nrf subsys/nrf_security/src/drivers/cracen/sxsymcrypt/src/{cmdma.h,cmaes.h,aead.c}

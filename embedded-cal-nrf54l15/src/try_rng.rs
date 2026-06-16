@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 use crate::Nrf54l15Cal;
 use nrf_pac::cracencore::vals::{ControlSoftrst, State};
 const MAX_TRNG_RESTARTS: u32 = 3;
