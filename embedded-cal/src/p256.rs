@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 // P-256 field arithmetic shared by hardware DH back-ends.
 //
 // All [u32; 8] arrays use little-endian word order: index 0 is the least-significant word.
