@@ -126,3 +126,22 @@ the test vectors have an [example of how to use hashing](./testvectors/src/lib.r
   If an implementation has a general algorithm for SHAKE,
   its `HashAlgorithm` item can be an enum with a `Shake(usize)` variant,
   even if only a limited subset of those can be crated with the portable constructors.
+
+* Why is composition done through extenders rather than through choices?
+
+  I.e., why do we have a `MySoftware<MyHardware>`, rather than `Prioritize<MyHardware, MySoftware>`?
+
+  There are two reasons:
+
+  - The software implementation can only tap into lower-layer building blocks if it has access to the hardware.
+
+    If the hardware provides ECC and the software provides AEAD, that does not matter,
+    but it does if the hardware has accelerated SHA hashes and the software builds HMAC based on it.
+
+  - If all added functionality is self-contained, either is possible, and there are reasons for both:
+
+    - A non-generic version is easier code and thus easier to maintain.
+      (There'd just need to be one `Prioritize` type that unions all its children's associated types).
+    - A version generic over the child is easier on enum sizes:
+      If multiple enums are stacked and have suitable niches, the discriminators can overlap.
+      (`OrAlgorithm1<OrAlgorithm2<OrAlgorithm3<Hardware>>>` can have the same size as `Hardware` if three is a niche for it).
