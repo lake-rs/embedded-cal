@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 use crate::Stm32wba55Cal;
 const MAX_SEED_RETRIES: u32 = 3;
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 //! Testing-only module with a manual version of SHA256 that does *not* do the padding (in order to
 //! test the `fullblock_nonfinishing_from_cose_number()` algorithms)
 #![allow(

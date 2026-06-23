@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 use libcrux_aesgcm::AeadConsts as _;
 use libcrux_traits::aead::typed_owned;
 

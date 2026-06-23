@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum Sha2ShortVariant {
     Sha244,

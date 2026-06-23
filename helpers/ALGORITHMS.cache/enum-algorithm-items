@@ -1,0 +1,56 @@
+./embedded-cal-libcrux/src/aead.rs
+    Direct(AeadAlgorithmOf<EC::Base>),
+./embedded-cal-libcrux/src/aead.rs
+    AesGcm128,
+./embedded-cal-libcrux/src/aead.rs
+    AesGcm256,
+./embedded-cal-libcrux/src/hash.rs
+    Sha256,
+./embedded-cal-libcrux/src/hash.rs
+    Direct(HashAlgorithmOf<EC::Base>),
+./embedded-cal-nrf54l15/src/aead.rs
+    AesCcm16_64_128,
+./embedded-cal-nrf54l15/src/aead.rs
+    AesCcm16_64_256,
+./embedded-cal-nrf54l15/src/dh.rs
+    EcdhP256,
+./embedded-cal-nrf54l15/src/dh.rs
+    X25519,
+./embedded-cal-nrf54l15/src/dh.rs
+    X448,
+./embedded-cal-rustcrypto/src/dh.rs
+    P256,
+./embedded-cal-rustcrypto/src/dh.rs
+    X25519,
+./embedded-cal-rustcrypto/src/lib.rs
+    Sha256,
+./embedded-cal-rustcrypto/src/lib.rs
+    AesCcm16_64_128,
+./embedded-cal-rustcrypto/src/lib.rs
+    AesCcm16_64_256,
+./embedded-cal-software-demo/src/hash.rs
+    // FIXME: Ideally we'd employ some witness type of <EC::Base as Sha2Short>::SUPPORTED
+./embedded-cal-software-demo/src/hash.rs
+    // to render this uninhabited when unused.
+./embedded-cal-software-demo/src/hash.rs
+    Sha256,
+./embedded-cal-software-demo/src/hash.rs
+    Direct(HashAlgorithmOf<EC::Base>),
+./embedded-cal-software-demo/src/hmac.rs
+    HmacSha256,
+./embedded-cal-stm32wba55/src/aead.rs
+    AesCcm16_64_128,
+./embedded-cal-stm32wba55/src/aead.rs
+    AesCcm16_64_256,
+./embedded-cal-stm32wba55/src/dh.rs
+    EcdhP256,
+./embedded-cal-stm32wba55/src/lib.rs
+    Sha256,
+./embedded-cal-stm32wba55/src/lib.rs
+    HmacSha256,
+./embedded-cal/src/empty.rs
+
+./embedded-cal/src/empty.rs
+impl AeadAlgorithm for NoAlgorithms {
+./embedded-cal/src/empty.rs
+    fn key_length(&self) -> usize {

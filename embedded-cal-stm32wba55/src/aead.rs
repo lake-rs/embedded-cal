@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AeadAlgorithm {
     AesCcm16_64_128,

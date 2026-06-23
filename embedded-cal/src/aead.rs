@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 // FIXME: Document that we don't do variable length tags (or more precisely, overhead of encryption
 // like in plain AES), and that we expect the tag to be separate (although we could consider
 // changing interfaces if it turns out that everyone appends the tag to the ciphertext anyway, to

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 name: Build and test
 
 on:
@@ -29,6 +32,21 @@ jobs:
     - name: run `cargo test`
       run: cargo test
 
+  check-hw-backends:
+    name: Check hardware back-ends compile
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v5
+    - name: Add embedded target
+      run: rustup target add thumbv8m.main-none-eabihf
+    - name: cargo check nRF54L15 (lib + tests)
+      working-directory: embedded-cal-nrf54l15
+      run: cargo check --tests
+    - name: cargo check STM32WBA55 (lib + tests)
+      working-directory: embedded-cal-stm32wba55
+      run: cargo check --tests
+
 #   generate-fstar:
 #     runs-on: ubuntu-latest
 # 
@@ -48,3 +66,14 @@ jobs:
 #       run: |
 #         curl -o Makefile https://gist.githubusercontent.com/W95Psp/4c304132a1f85c5af4e4959dd6b356c3/raw/Makefile
 #         make verify
+
+  check-algorithms-state:
+    name: Check whether any algorithms or implementations were added
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v5
+    - name: Update files
+      run: ./helpers/grep-algorithms.sh
+    - name: Verify that there are no changes. If this fails, update ALGORITHMS.md if needed and check in the output of ./helpers/grep-algorithms.sh to confirm that the former is up to date.
+      run: git diff --exit-code ./helpers/ALGORITHMS.cache/

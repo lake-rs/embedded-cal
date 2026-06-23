@@ -1,0 +1,7 @@
+version = 1
+
+[[annotations]]
+# Those are generated files, derived from the project's regular source code.
+path = ["enum-algorithm-items", "plumbing", "providers"]
+SPDX-License-Identifier = "MIT OR Apache-2.0"
+SPDX-FileCopyrightText = "Inria-AIO, Cryspen, and Christian Amsüss"

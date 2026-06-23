@@ -1,9 +1,11 @@
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+// SPDX-License-Identifier: MIT OR Apache-2.0
 #![no_std]
 
 use embedded_cal::empty::EmptyCal;
 use embedded_cal::plumbing::hash::SHA2SHORT_BLOCK_SIZE;
 use stm32_metapac::{
-    aes, hash,
+    aes, hash, pka,
     rcc::{self, vals::Rngsel},
     rng::{
         self,
@@ -11,6 +13,7 @@ use stm32_metapac::{
     },
 };
 mod aead;
+mod dh;
 mod try_rng;
 
 const WORD_SIZE: usize = 4;
@@ -24,19 +27,20 @@ pub struct Stm32wba55Cal {
     rcc: rcc::Rcc,
     rng: rng::Rng,
     aes: aes::Aes,
+    pka: pka::Pka,
 
     // Null-provider for everything we do *not* implement
     empty: EmptyCal<false>,
 }
 
 impl embedded_cal::Cal for Stm32wba55Cal {
-    type DhProvider = EmptyCal<false>;
+    type DhProvider = Self;
     type AeadProvider = Self;
     type HashProvider = EmptyCal<false>;
     type HmacProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
-        &mut self.empty
+        self
     }
 
     fn aead(&mut self) -> &mut Self::AeadProvider {
@@ -51,15 +55,22 @@ impl embedded_cal::Cal for Stm32wba55Cal {
 }
 
 impl Stm32wba55Cal {
-    pub fn new(hash: hash::Hash, rcc: rcc::Rcc, rng: rng::Rng, aes: aes::Aes) -> Self {
+    pub fn new(
+        hash: hash::Hash,
+        rcc: rcc::Rcc,
+        rng: rng::Rng,
+        aes: aes::Aes,
+        pka: pka::Pka,
+    ) -> Self {
         // Select HSI as the RNG kernel clock source (default is LSE which may not be running)
         rcc.ccipr2().modify(|w| w.set_rngsel(Rngsel::HSI));
 
-        // Enable HASH, RNG, and AES clocks
+        // Enable HASH, RNG, AES, and PKA clocks
         rcc.ahb2enr().modify(|w| {
             w.set_hashen(true);
             w.set_rngen(true);
             w.set_aesen(true);
+            w.set_pkaen(true);
         });
 
         let mut cal = Self {
@@ -67,9 +78,16 @@ impl Stm32wba55Cal {
             rcc,
             rng,
             aes,
+            pka,
             empty: EmptyCal,
         };
         cal.init_rng();
+
+        // PKA INITOK depends on the RNG being operational; initialize after RNG is ready.
+        cal.pka.cr().modify(|w| w.set_en(false));
+        cal.pka.cr().modify(|w| w.set_en(true));
+        while !cal.pka.sr().read().initok() {}
+
         cal
     }
 
@@ -136,12 +154,14 @@ fn wait_for(mut condition: impl FnMut() -> bool) {
 
 impl Drop for Stm32wba55Cal {
     fn drop(&mut self) {
+        self.rng.cr().modify(|w| w.set_rngen(false));
+        self.pka.cr().modify(|w| w.set_en(false));
         self.rcc.ahb2enr().modify(|w| {
             w.set_hashen(false);
             w.set_rngen(false);
             w.set_aesen(false);
+            w.set_pkaen(false);
         });
-        self.rng.cr().modify(|w| w.set_rngen(false));
     }
 }
 

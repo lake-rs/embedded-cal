@@ -1,6 +1,11 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 #![no_std]
+
 mod aead;
 mod descriptor;
+mod dh;
+mod microcode;
 mod try_rng;
 
 use descriptor::{DescriptorChain, Input, Output};
@@ -22,13 +27,13 @@ pub struct Nrf54l15Cal {
 }
 
 impl embedded_cal::Cal for Nrf54l15Cal {
-    type DhProvider = EmptyCal<false>;
+    type DhProvider = Self;
     type AeadProvider = Self;
     type HashProvider = EmptyCal<false>;
     type HmacProvider = EmptyCal<false>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
-        &mut self.empty
+        self
     }
 
     fn aead(&mut self) -> &mut Self::AeadProvider {
@@ -52,6 +57,9 @@ impl Nrf54l15Cal {
             w.set_rng(true);
             w.set_pkeikg(true)
         });
+
+        // Load PKE microcode immediately after enabling the PKE/IKG block
+        unsafe { microcode::load() };
 
         // Enable the NDRNG; it stays on until Drop.
         cracen_core

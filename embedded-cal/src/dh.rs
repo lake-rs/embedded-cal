@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 /// Diffie-Hellman style key establishment.
 ///
 /// This trait does not distinguish between prime factor DH and Elliptic Curve DH (ECDH); it

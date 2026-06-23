@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 #![no_std]
 #![no_main]
 
@@ -13,40 +15,31 @@ impl embedded_cal_software_demo::ExtenderConfig for ImplementSha256Short {
 struct TestState {
     /// Software-extended CAL used for the SHA-256 hash tests.
     cal: embedded_cal_software_demo::Extender<ImplementSha256Short>,
-    /// Raw STM32WBA55 CAL used to exercise the hardware HMAC accelerator directly.
-    raw: embedded_cal_stm32wba55::Stm32wba55Cal,
 }
 
 #[defmt_test::tests]
 mod tests {
     use super::ImplementSha256Short;
+    use embedded_cal::Cal;
     use embedded_cal_stm32wba55::Stm32wba55Cal;
     #[init]
     fn init() -> super::TestState {
-        // stm32_metapac::HASH is a `const`, so it can be used at two sites
-        // without conflict; both values alias the same hardware register block.
-        // Tests run sequentially so there is no concurrent access.
-        let raw = embedded_cal_stm32wba55::Stm32wba55Cal::new(
-            stm32_metapac::HASH,
-            stm32_metapac::RCC,
-            stm32_metapac::RNG,
-            stm32_metapac::AES,
-        );
         let base = embedded_cal_stm32wba55::Stm32wba55Cal::new(
             stm32_metapac::HASH,
             stm32_metapac::RCC,
             stm32_metapac::RNG,
             stm32_metapac::AES,
+            stm32_metapac::PKA,
         );
 
         let cal = embedded_cal_software_demo::Extender::<ImplementSha256Short>::new(base);
-        super::TestState { cal, raw }
+        super::TestState { cal }
     }
 
     #[test]
     fn test_hash_algorithm_sha256(state: &mut super::TestState) {
         embedded_cal::test_hash_algorithm_sha256::<
-            <Stm32wba55Cal as embedded_cal::HashProvider>::Algorithm,
+            <embedded_cal_software_demo::Extender<ImplementSha256Short> as embedded_cal::HashProvider>::Algorithm,
         >();
         testvectors::test_hash_algorithm_sha256(&mut state.cal);
     }
@@ -57,12 +50,12 @@ mod tests {
             <Stm32wba55Cal as embedded_cal::HmacProvider>::Algorithm,
         >();
         // Runs directly against the hardware HMAC accelerator (MODE=1 in HASH_CR).
-        testvectors::test_hmac_sha256(&mut state.raw);
+        testvectors::test_hmac_sha256(state.cal.hmac());
     }
 
     #[test]
     fn test_hkdf_sha256(state: &mut super::TestState) {
-        testvectors::test_hkdf_sha256(&mut state.raw);
+        testvectors::test_hkdf_sha256(state.cal.hmac());
     }
 
     #[test]
@@ -72,11 +65,19 @@ mod tests {
 
     #[test]
     fn test_aead_aesccm_16_64_128(state: &mut super::TestState) {
-        testvectors::test_aead_aesccm_16_64_128(&mut state.raw);
+        testvectors::test_aead_aesccm_16_64_128(state.cal.aead());
     }
 
     #[test]
     fn test_aead_aesccm_16_64_256(state: &mut super::TestState) {
-        testvectors::test_aead_aesccm_16_64_256(&mut state.raw);
+        testvectors::test_aead_aesccm_16_64_256(state.cal.aead());
+    }
+
+    #[test]
+    fn test_dh_ecdh_p256(state: &mut super::TestState) {
+        embedded_cal::test_dh_algorithm_ecdh_p256::<Stm32wba55Cal>();
+        for v in testvectors::dh::RFC5903_P256 {
+            v.test_with(state.cal.dh());
+        }
     }
 }

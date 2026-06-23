@@ -1,7 +1,10 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 [package]
 name = "embedded-cal-nrf54l15"
 edition.workspace = true
-license.workspace = true
+license = "(MIT OR Apache-2.0) AND MIT OR Apache-2.0"
 readme.workspace = true
 repository.workspace = true
 keywords.workspace = true
@@ -22,6 +25,7 @@ harness = false
 embedded-cal.path = "../embedded-cal"
 nrf-pac = { version = "0.2.0", features = ["nrf54l15-app", "rt"] }
 rand_core.workspace = true
+zeroize = { version = "1.8.2", default-features = false, features = ["derive"]}
 
 [dev-dependencies]
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }

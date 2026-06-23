@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 //! Implementations of the various traits of embedded-cal that implemnt the empty set of
 //! algorithms.
 //!

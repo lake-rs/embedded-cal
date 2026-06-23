@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
+on: pull_request
+
+name: Commit checks
+
+permissions:
+  pull-requests: read
+
+jobs:
+  message-check:
+    name: Block Autosquash Commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: xt0rted/block-autosquash-commits-action@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

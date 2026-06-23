@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 #![no_std]
 #![no_main]
 
@@ -11,30 +13,29 @@ impl embedded_cal_software_demo::ExtenderConfig for ImplementSha256Short {
 }
 struct TestState {
     cal: embedded_cal_software_demo::Extender<ImplementSha256Short>,
-    raw: embedded_cal_nrf54l15::Nrf54l15Cal,
 }
 
 #[defmt_test::tests]
 mod tests {
     use super::ImplementSha256Short;
+    use embedded_cal::Cal;
     use embedded_cal_nrf54l15::Nrf54l15Cal;
 
     #[init]
     fn init() -> super::TestState {
-        let raw = embedded_cal_nrf54l15::Nrf54l15Cal::new(nrf_pac::CRACEN_S, nrf_pac::CRACENCORE_S);
         // FIXME: How to make sure there is a exclusive reference for CRACEN_S?
         let base =
             embedded_cal_nrf54l15::Nrf54l15Cal::new(nrf_pac::CRACEN_S, nrf_pac::CRACENCORE_S);
 
         let cal = embedded_cal_software_demo::Extender::<ImplementSha256Short>::new(base);
 
-        super::TestState { cal, raw }
+        super::TestState { cal }
     }
 
     #[test]
     fn test_hash_algorithm_sha256(state: &mut super::TestState) {
         embedded_cal::test_hash_algorithm_sha256::<
-            <Nrf54l15Cal as embedded_cal::HashProvider>::Algorithm,
+            <embedded_cal_software_demo::Extender<ImplementSha256Short> as embedded_cal::HashProvider>::Algorithm,
         >();
         testvectors::test_hash_algorithm_sha256(&mut state.cal);
     }
@@ -59,11 +60,33 @@ mod tests {
 
     #[test]
     fn test_aead_aesccm_16_64_128(state: &mut super::TestState) {
-        testvectors::test_aead_aesccm_16_64_128(&mut state.raw);
+        testvectors::test_aead_aesccm_16_64_128(state.cal.aead());
     }
 
     #[test]
     fn test_aead_aesccm_16_64_256(state: &mut super::TestState) {
-        testvectors::test_aead_aesccm_16_64_256(&mut state.raw);
+        testvectors::test_aead_aesccm_16_64_256(state.cal.aead());
+    }
+
+    #[test]
+    fn test_dh_ecdh_p256(state: &mut super::TestState) {
+        embedded_cal::test_dh_algorithm_ecdh_p256::<Nrf54l15Cal>();
+        for v in testvectors::dh::RFC5903_P256 {
+            v.test_with(state.cal.dh());
+        }
+    }
+
+    #[test]
+    fn test_dh_x25519(state: &mut super::TestState) {
+        for v in testvectors::dh::RFC7748_X25519 {
+            v.test_with(state.cal.dh());
+        }
+    }
+
+    #[test]
+    fn test_dh_x448(state: &mut super::TestState) {
+        for v in testvectors::dh::RFC7748_X448 {
+            v.test_with(state.cal.dh());
+        }
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 use super::{Extender, ExtenderConfig};
 
 impl<EC: ExtenderConfig> rand_core::TryCryptoRng for Extender<EC> where

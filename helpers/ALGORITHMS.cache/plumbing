@@ -1,0 +1,4 @@
+./embedded-cal-nrf54l15/src/lib.rs:impl embedded_cal::plumbing::Plumbing for Nrf54l15Cal {}
+./embedded-cal-software-demo/src/tests/dummy_sha256.rs:impl embedded_cal::plumbing::Plumbing for DummySha256 {}
+./embedded-cal-stm32wba55/src/lib.rs:impl embedded_cal::plumbing::Plumbing for Stm32wba55Cal {}
+./embedded-cal/src/empty.rs:impl plumbing::Plumbing for EmptyCal<true> {}

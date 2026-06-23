@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 //! Traits that describe how a hardware accelerator can assist in calculating SHA-2 hashes.
 //!
 //! As support for SHA-2 is commonly split by the variant's block size (SHA-224 and SHA-256 with

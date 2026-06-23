@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
 pub fn test_tryrng<R: rand_core::TryCryptoRng>(rng: &mut R) {
     // Zero-length fill must not panic
     rng.try_fill_bytes(&mut []).unwrap();

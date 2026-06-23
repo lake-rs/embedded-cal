@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 //! Minimal stand-in for the libcrux based implementation and polyfills.
 //!
 //! Currently, this demonstrates how that layer would work on top of a hardware implementation that

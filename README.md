@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT OR Apache-2.0
+SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+-->
+
 # `embedded-cal`: A Cryptographic Abstraction Layer (CAL) for embedded systems
 
 *An embedded systems-friendly verified crypto provider.*
@@ -32,6 +37,16 @@ and expected to become usable before the end of 2025.
 `embedded-cal` was introduced in:
 
 * embedded-cal: A Formally Verified Cryptographic Provider for Embedded Platforms. Elsa Lopez Perez, William Takeshi Pereira, Thomas Watteyne, Christian Amsüss, Franziskus Kiefer and Jonas Schneider-Bensch, Karthikeyan Bhargavan, Mališa Vučinić. International Workshop on Security, Privacy and Trust in the Internet of Things (SPT-IoT), part of IEEE International Conference on Pervasive Computing and Communications (PerCom), Pisa, Italy, 16-20 March 2026. **(Best Paper Award).** [PDF is available!](https://hal.science/hal-05524081v1/document)
+
+## License
+
+All files developed as part of this project is distributed under the terms of both the [Apache License, version 2.0](LICENSES/Apache-2.0.txt) and the [MIT License](LICENSES/MIT.txt).
+
+Individual hardware accelerators can require additional binary data ("blobs") for their operation.
+Those are shipped with this project for lack of an established place in the device's ROM,
+and are only included in build outputs when that particular hardware acceleration is enabled.
+At the time of writing, this affects the `embedded-cal-nrf54l15` crate.
+See the individual crates' and/or files' license annotations for details.
 
 ## Contributors
 
