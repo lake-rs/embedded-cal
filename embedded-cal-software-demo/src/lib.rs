@@ -6,7 +6,7 @@
 //! only does the hard work of the SHA hashes and not the clerical buffering / padding.
 #![no_std]
 
-use embedded_cal::{Cal, plumbing::Plumbing};
+use embedded_cal::{Cal, accessor::*, plumbing::Plumbing};
 
 mod hash;
 mod hkdf;
@@ -29,8 +29,8 @@ pub struct Extender<EC: ExtenderConfig>(EC::Base);
 
 // All the required trait impls come from the modules.
 impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
-    type DhProvider = <EC::Base as Cal>::DhProvider;
-    type AeadProvider = <EC::Base as Cal>::AeadProvider;
+    type DhProvider = DhProviderOf<EC::Base>;
+    type AeadProvider = AeadProviderOf<EC::Base>;
     type HashProvider = Self;
     type HmacProvider = Self;
 

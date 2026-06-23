@@ -3,7 +3,7 @@
 //! libcrux-sha2 backed SHA-256, plus plumbing to extend any hardware-backed [`Cal`] with it.
 #![no_std]
 
-use embedded_cal::{Cal, plumbing::Plumbing};
+use embedded_cal::{Cal, accessor::*, plumbing::Plumbing};
 use libcrux_sha2::Digest;
 
 mod aead;
@@ -26,11 +26,11 @@ impl<EC: ExtenderConfig> Extender<EC> {
 }
 
 impl<EC: ExtenderConfig> Cal for Extender<EC> {
-    type DhProvider = <EC::Base as Cal>::DhProvider;
+    type DhProvider = DhProviderOf<EC::Base>;
     type AeadProvider = Self;
     type HashProvider = Self;
     // FIXME: This should just be provided as well.
-    type HmacProvider = <EC::Base as Cal>::HmacProvider;
+    type HmacProvider = HmacProviderOf<EC::Base>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self.0.dh()

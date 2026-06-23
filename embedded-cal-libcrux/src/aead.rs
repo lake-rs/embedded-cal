@@ -4,7 +4,7 @@
 use libcrux_aesgcm::AeadConsts as _;
 use libcrux_traits::aead::typed_owned;
 
-use embedded_cal::{AeadProvider, Cal};
+use embedded_cal::AeadProvider;
 
 use super::*;
 
@@ -13,24 +13,24 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 
 pub enum AeadAlgorithm<EC: ExtenderConfig> {
-    Direct(<<EC::Base as Cal>::AeadProvider as AeadProvider>::Algorithm),
+    Direct(AeadAlgorithmOf<EC::Base>),
     AesGcm128,
     AesGcm256,
 }
 
 pub enum Key<EC: ExtenderConfig> {
-    Direct(<<EC::Base as Cal>::AeadProvider as AeadProvider>::Key),
+    Direct(AeadKeyOf<EC::Base>),
     AesGcm128(libcrux_aesgcm::AesGcm128Key),
     AesGcm256(libcrux_aesgcm::AesGcm256Key),
 }
 
 pub enum Tag<EC: ExtenderConfig> {
-    Direct(<<EC::Base as Cal>::AeadProvider as AeadProvider>::Tag),
+    Direct(AeadTagOf<EC::Base>),
     AesGcm128(libcrux_aesgcm::AesGcm128Tag),
     AesGcm256(libcrux_aesgcm::AesGcm256Tag),
 }
 
-impl<EC: ExtenderConfig> embedded_cal::AeadProvider for Extender<EC> {
+impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
     type Algorithm = AeadAlgorithm<EC>;
     type Key = Key<EC>;
     type Tag = Tag<EC>;

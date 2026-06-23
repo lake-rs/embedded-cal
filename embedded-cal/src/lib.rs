@@ -27,6 +27,46 @@ pub use hkdf::{HkdfError, HkdfProvider};
 pub use hmac::{HmacAlgorithm, HmacProvider, test_hmac_algorithm_hmacsha256};
 pub use rng::test_tryrng;
 
+#[allow(
+    type_alias_bounds,
+    reason = "makes the intention clearer, and no danger of later incompatibility because the type expansion explicitly requires that C is a Cal"
+)]
+/// Accessors to the deep associated types of a [`Cal`].
+///
+/// As associated types often need explicit naming of the trait (even when the trait is in scope),
+/// and due to the various Provider traits being associated types, accessing eg. a Cal's AEAD
+/// algorithm type is relatively cumbersome.
+///
+/// This module provides easy `{Interface}{Type}Of` style type aliases for various values of
+/// `Interface` and `Type`.
+pub mod accessor {
+    use super::*;
+
+    pub type AeadProviderOf<C: Cal> = <C as Cal>::AeadProvider;
+    pub type AeadAlgorithmOf<C: Cal> = <<C as Cal>::AeadProvider as AeadProvider>::Algorithm;
+    pub type AeadKeyOf<C: Cal> = <<C as Cal>::AeadProvider as AeadProvider>::Key;
+    pub type AeadTagOf<C: Cal> = <<C as Cal>::AeadProvider as AeadProvider>::Tag;
+
+    pub type DhProviderOf<C: Cal> = <C as Cal>::DhProvider;
+    pub type DhAlgorithmOf<C: Cal> = <<C as Cal>::DhProvider as DhProvider>::Algorithm;
+    pub type DhVisibleSecretKeyOf<C: Cal> =
+        <<C as Cal>::DhProvider as DhProvider>::VisibleSecretKey;
+    pub type DhSecretKeyOf<C: Cal> = <<C as Cal>::DhProvider as DhProvider>::SecretKey;
+    pub type DhPublicKeyOf<C: Cal> = <<C as Cal>::DhProvider as DhProvider>::PublicKey;
+    pub type DhSharedSecretOf<C: Cal> = <<C as Cal>::DhProvider as DhProvider>::SharedSecret;
+
+    pub type HashProviderOf<C: Cal> = <C as Cal>::HashProvider;
+    pub type HashAlgorithmOf<C: Cal> = <<C as Cal>::HashProvider as HashProvider>::Algorithm;
+    pub type HashStateOf<C: Cal> = <<C as Cal>::HashProvider as HashProvider>::State;
+    pub type HashOutputOf<C: Cal> = <<C as Cal>::HashProvider as HashProvider>::Output;
+
+    pub type HmacProviderOf<C: Cal> = <C as Cal>::HmacProvider;
+    pub type HmacAlgorithmOf<C: Cal> = <<C as Cal>::HmacProvider as HmacProvider>::Algorithm;
+    pub type HmacKeyOf<C: Cal> = <<C as Cal>::HmacProvider as HmacProvider>::Key;
+    pub type HmacStateOf<C: Cal> = <<C as Cal>::HmacProvider as HmacProvider>::State;
+    pub type HmacOutputOf<C: Cal> = <<C as Cal>::HmacProvider as HmacProvider>::Output;
+}
+
 /// Cryptographic abstraction provider that encompasses all features abstracted by the
 /// embedded-cal.
 ///

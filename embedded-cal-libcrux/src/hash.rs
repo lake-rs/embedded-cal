@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
-use embedded_cal::{Cal, HashProvider};
+use embedded_cal::HashProvider;
 
 use super::*;
 
@@ -9,7 +9,7 @@ use super::*;
 pub struct Sha256State(libcrux_sha2::Sha256);
 
 pub enum HashState<EC: ExtenderConfig> {
-    Direct(<<EC::Base as Cal>::HashProvider as HashProvider>::State),
+    Direct(HashStateOf<EC::Base>),
     Sha256(Sha256State),
 }
 
@@ -57,7 +57,7 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 
 pub enum HashAlgorithm<EC: ExtenderConfig> {
     Sha256,
-    Direct(<<EC::Base as Cal>::HashProvider as HashProvider>::Algorithm),
+    Direct(HashAlgorithmOf<EC::Base>),
 }
 
 // Seems the Derive wouldn't take because it only looks at whether all arguments are Clone, not at
@@ -110,10 +110,7 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
 
         match number {
             -16 => Some(HashAlgorithm::Sha256),
-            _ => <<EC::Base as Cal>::HashProvider as HashProvider>::Algorithm::from_cose_number(
-                number,
-            )
-            .map(HashAlgorithm::Direct),
+            _ => HashAlgorithmOf::<EC::Base>::from_cose_number(number).map(HashAlgorithm::Direct),
         }
     }
 
@@ -136,7 +133,7 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
 
 pub enum HashResult<EC: ExtenderConfig> {
     Sha256([u8; 32]),
-    Direct(<<EC::Base as Cal>::HashProvider as HashProvider>::Output),
+    Direct(HashOutputOf<EC::Base>),
 }
 
 impl<EC: ExtenderConfig> AsRef<[u8]> for HashResult<EC> {
