@@ -434,6 +434,7 @@ version = "0.1.0"
 dependencies = [
  "embedded-cal",
  "libcrux-iot-aes",
+ "libcrux-iot-sha3",
  "libcrux-secrets",
  "libcrux-sha2",
  "libcrux-traits",
@@ -816,6 +817,16 @@ name = "libcrux-iot-aes"
 version = "0.0.8"
 source = "git+https://github.com/celabshq/libcrux-iot?rev=d62904ee7c023b9758eeb0a736af5afc1c5cd16d#d62904ee7c023b9758eeb0a736af5afc1c5cd16d"
 dependencies = [
+ "libcrux-secrets",
+ "libcrux-traits",
+]
+
+[[package]]
+name = "libcrux-iot-sha3"
+version = "0.0.3"
+source = "git+https://github.com/celabshq/libcrux-iot.git?rev=54e2681a39f5d4d79ab5465f2c2341f267ff6ec1#54e2681a39f5d4d79ab5465f2c2341f267ff6ec1"
+dependencies = [
+ "hax-lib 0.3.6",
  "libcrux-secrets",
  "libcrux-traits",
 ]

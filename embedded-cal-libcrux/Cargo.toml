@@ -13,10 +13,14 @@ version.workspace = true
 # Due to libcrux-iot being AGPL-3.0
 license = "AGPL-3.0-only"
 
+[features]
+check-secret-independence = ["libcrux-secrets/check-secret-independence", "libcrux-iot-sha3/check-secret-independence"]
+
 [dependencies]
 embedded-cal.path = "../embedded-cal"
 # depends on unmerged changes of https://github.com/celabshq/libcrux-iot/pull/180
 libcrux-iot-aes = { git = "https://github.com/celabshq/libcrux-iot", rev = "d62904ee7c023b9758eeb0a736af5afc1c5cd16d" }
+libcrux-iot-sha3 = { git = "https://github.com/celabshq/libcrux-iot.git", rev = "54e2681a39f5d4d79ab5465f2c2341f267ff6ec1" }
 libcrux-secrets = { version = "0.0.5" }
 libcrux-sha2 = "0.0.7"
 libcrux-traits = { version = "0.0.7", features = ["error-in-core"] }
