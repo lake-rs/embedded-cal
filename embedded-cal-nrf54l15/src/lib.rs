@@ -7,6 +7,7 @@ mod descriptor;
 mod dh;
 mod microcode;
 mod sha2;
+mod sha3;
 mod try_rng;
 
 use descriptor::{DescriptorChain, Input, Output};
@@ -30,7 +31,7 @@ pub struct Nrf54l15Cal {
 impl embedded_cal::Cal for Nrf54l15Cal {
     type DhProvider = Self;
     type AeadProvider = Self;
-    type HashProvider = EmptyCal<false>;
+    type HashProvider = Self;
     type HmacProvider = EmptyCal<false>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
@@ -42,7 +43,7 @@ impl embedded_cal::Cal for Nrf54l15Cal {
     }
 
     fn hash(&mut self) -> &mut Self::HashProvider {
-        &mut self.empty
+        self
     }
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
