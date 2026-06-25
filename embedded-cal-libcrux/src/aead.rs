@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
-use libcrux_aesgcm::AeadConsts as _;
+use libcrux_iot_aes::AeadConsts as _;
 use libcrux_traits::aead::typed_owned;
 
 use embedded_cal::AeadProvider;
@@ -20,14 +20,14 @@ pub enum AeadAlgorithm<EC: ExtenderConfig> {
 
 pub enum Key<EC: ExtenderConfig> {
     Direct(AeadKeyOf<EC::Base>),
-    AesGcm128(libcrux_aesgcm::AesGcm128Key),
-    AesGcm256(libcrux_aesgcm::AesGcm256Key),
+    AesGcm128(libcrux_iot_aes::AesGcm128Key),
+    AesGcm256(libcrux_iot_aes::AesGcm256Key),
 }
 
 pub enum Tag<EC: ExtenderConfig> {
     Direct(AeadTagOf<EC::Base>),
-    AesGcm128(libcrux_aesgcm::AesGcm128Tag),
-    AesGcm256(libcrux_aesgcm::AesGcm256Tag),
+    AesGcm128(libcrux_iot_aes::AesGcm128Tag),
+    AesGcm256(libcrux_iot_aes::AesGcm256Tag),
 }
 
 impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
@@ -98,14 +98,14 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
 
         let tag = match key {
             Key::Direct(_) => unreachable!(),
-            Key::AesGcm128(key) => Tag::AesGcm128(encrypt::<libcrux_aesgcm::AesGcm128, _, _>(
+            Key::AesGcm128(key) => Tag::AesGcm128(encrypt::<libcrux_iot_aes::AesGcm128, _, _>(
                 &mut ciphertext,
                 key,
                 nonce,
                 &aad,
                 message,
             )),
-            Key::AesGcm256(key) => Tag::AesGcm256(encrypt::<libcrux_aesgcm::AesGcm256, _, _>(
+            Key::AesGcm256(key) => Tag::AesGcm256(encrypt::<libcrux_iot_aes::AesGcm256, _, _>(
                 &mut ciphertext,
                 key,
                 nonce,
@@ -166,7 +166,7 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
 
         match key {
             Key::Direct(_) => unreachable!(),
-            Key::AesGcm128(key) => decrypt::<libcrux_aesgcm::AesGcm128, _, _>(
+            Key::AesGcm128(key) => decrypt::<libcrux_iot_aes::AesGcm128, _, _>(
                 &mut ciphertext,
                 key,
                 nonce,
@@ -174,7 +174,7 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
                 message,
                 tag,
             ),
-            Key::AesGcm256(key) => decrypt::<libcrux_aesgcm::AesGcm256, _, _>(
+            Key::AesGcm256(key) => decrypt::<libcrux_iot_aes::AesGcm256, _, _>(
                 &mut ciphertext,
                 key,
                 nonce,
@@ -190,24 +190,24 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
     fn key_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.key_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_aesgcm::AESGCM128_KEY_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_aesgcm::AESGCM256_KEY_LEN,
+            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::AESGCM128_KEY_LEN,
+            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::AESGCM256_KEY_LEN,
         }
     }
 
     fn tag_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.tag_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_aesgcm::AesGcm128::TAG_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_aesgcm::AesGcm256::TAG_LEN,
+            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::AesGcm128::TAG_LEN,
+            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::AesGcm256::TAG_LEN,
         }
     }
 
     fn nonce_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.nonce_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_aesgcm::AesGcm128::NONCE_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_aesgcm::AesGcm256::NONCE_LEN,
+            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::AesGcm128::NONCE_LEN,
+            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::AesGcm256::NONCE_LEN,
         }
     }
 }

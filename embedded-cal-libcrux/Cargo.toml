@@ -14,7 +14,7 @@ version.workspace = true
 [dependencies]
 embedded-cal.path = "../embedded-cal"
 libcrux-sha2 = "0.0.7"
-libcrux-aesgcm = "0.0.8"
+libcrux-iot-aes = { git = "https://github.com/celabshq/libcrux-iot", rev = "d62904ee7c023b9758eeb0a736af5afc1c5cd16d" }
 libcrux-traits = { version = "0.0.7", features = ["error-in-core"] }
 rand_core = "0.10"
 
