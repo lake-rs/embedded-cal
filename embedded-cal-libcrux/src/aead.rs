@@ -1,16 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
-use libcrux_aesgcm::AeadConsts as _;
-use libcrux_traits::aead::typed_owned;
+use core::iter::Flatten;
 
-use embedded_cal::AeadProvider;
+use embedded_cal::{AadGenerator, AeadProvider};
 
 use super::*;
-
-// Used to copy the ciphertext out of the way, and to spool the AAD.
-extern crate alloc;
-use alloc::{vec, vec::Vec};
 
 pub enum AeadAlgorithm<EC: ExtenderConfig> {
     Direct(AeadAlgorithmOf<EC::Base>),
@@ -20,14 +15,49 @@ pub enum AeadAlgorithm<EC: ExtenderConfig> {
 
 pub enum Key<EC: ExtenderConfig> {
     Direct(AeadKeyOf<EC::Base>),
-    AesGcm128(libcrux_aesgcm::AesGcm128Key),
-    AesGcm256(libcrux_aesgcm::AesGcm256Key),
+    AesGcm128([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
+    AesGcm256([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
 }
 
 pub enum Tag<EC: ExtenderConfig> {
     Direct(AeadTagOf<EC::Base>),
-    AesGcm128(libcrux_aesgcm::AesGcm128Tag),
-    AesGcm256(libcrux_aesgcm::AesGcm256Tag),
+    AesGcm128([u8; libcrux_iot_aes::TAG_LEN]),
+    AesGcm256([u8; libcrux_iot_aes::TAG_LEN]),
+}
+
+struct AadAdapter<'a, A: Iterator<Item = &'a [u8]>> {
+    inner: Flatten<A>,
+    len: usize,
+}
+
+impl<'a, A: Iterator<Item = &'a [u8]>> Iterator for AadAdapter<'a, A> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().copied()
+    }
+}
+
+impl<'a, A: Iterator<Item = &'a [u8]>> ExactSizeIterator for AadAdapter<'a, A> {
+    fn len(&self) -> usize {
+        self.len
+    }
+}
+
+fn flatten<T: AadGenerator>(generator: &T) -> AadAdapter<'_, impl Iterator<Item = &[u8]>> {
+    let mut len = 0;
+
+    // get the length once
+    for chunk in generator.items() {
+        len += chunk.len();
+    }
+
+    let non_empty_chunks = generator.items().filter(|c| !c.is_empty()).flatten();
+
+    AadAdapter {
+        inner: non_empty_chunks,
+        len,
+    }
 }
 
 impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
@@ -38,16 +68,12 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
     fn load_from_keydata(&mut self, alg: Self::Algorithm, key: &[u8]) -> Self::Key {
         match alg {
             AeadAlgorithm::Direct(alg) => Key::Direct(self.0.aead().load_from_keydata(alg, key)),
-            AeadAlgorithm::AesGcm128 => Key::AesGcm128(
-                <[u8; _]>::try_from(key)
-                    .expect("key length mismatch")
-                    .into(),
-            ),
-            AeadAlgorithm::AesGcm256 => Key::AesGcm256(
-                <[u8; _]>::try_from(key)
-                    .expect("key length mismatch")
-                    .into(),
-            ),
+            AeadAlgorithm::AesGcm128 => {
+                Key::AesGcm128(<[u8; _]>::try_from(key).expect("key length mismatch"))
+            }
+            AeadAlgorithm::AesGcm256 => {
+                Key::AesGcm256(<[u8; _]>::try_from(key).expect("key length mismatch"))
+            }
         }
     }
 
@@ -58,63 +84,37 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
         message: &mut [u8],
         aad: impl embedded_cal::AadGenerator,
     ) -> Self::Tag {
-        // Handle the simple case quicly; everything else needs the allocations
         if let Key::Direct(k) = key {
             return Tag::Direct(self.0.aead().encrypt_in_place(k, nonce, message, aad));
         };
 
-        let mut ciphertext = vec![0; message.len()];
-        let aad: Vec<_> = aad.items().flatten().copied().collect();
-
-        // I hope this explicitness mess pays off when we run not 2 but many types through
-        // the match below.
-
-        fn encrypt<Alg, const T: usize, const N: usize>(
-            ciphertext: &mut Vec<u8>,
-            key: &typed_owned::Key<Alg>,
-            nonce: &[u8],
-            aad: &Vec<u8>,
-            message: &[u8],
-        ) -> typed_owned::Tag<Alg>
-        where
-            Alg: typed_owned::Aead,
-            typed_owned::Tag<Alg>: From<[u8; T]>,
-            typed_owned::Nonce<Alg>: From<[u8; N]>,
-        {
-            let mut tag: typed_owned::Tag<Alg> = [0u8; _].into();
-            let nonce: typed_owned::Nonce<Alg> =
-                (<[u8; N]>::try_from(nonce).expect("nonce length mismatch")).into();
-            Alg::encrypt(
-                ciphertext.as_mut_slice(),
-                &mut tag,
-                key,
-                &nonce,
-                aad.as_slice(),
-                message,
-            )
-            .expect("slice lenghts match");
-            tag
-        }
-
-        let tag = match key {
+        match key {
             Key::Direct(_) => unreachable!(),
-            Key::AesGcm128(key) => Tag::AesGcm128(encrypt::<libcrux_aesgcm::AesGcm128, _, _>(
-                &mut ciphertext,
-                key,
-                nonce,
-                &aad,
-                message,
-            )),
-            Key::AesGcm256(key) => Tag::AesGcm256(encrypt::<libcrux_aesgcm::AesGcm256, _, _>(
-                &mut ciphertext,
-                key,
-                nonce,
-                &aad,
-                message,
-            )),
-        };
-        message.copy_from_slice(&ciphertext);
-        tag
+            Key::AesGcm128(key) => {
+                let mut tag = [0u8; libcrux_iot_aes::TAG_LEN];
+                libcrux_iot_aes::portable::aes_gcm_128::encrypt(
+                    key,
+                    nonce,
+                    flatten(&aad),
+                    message,
+                    &mut tag,
+                )
+                .unwrap();
+                Tag::AesGcm128(tag)
+            }
+            Key::AesGcm256(key) => {
+                let mut tag = [0u8; libcrux_iot_aes::TAG_LEN];
+                libcrux_iot_aes::portable::aes_gcm_256::encrypt(
+                    key,
+                    nonce,
+                    flatten(&aad),
+                    message,
+                    &mut tag,
+                )
+                .unwrap();
+                Tag::AesGcm256(tag)
+            }
+        }
     }
 
     fn decrypt_in_place(
@@ -125,64 +125,31 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
         tag: &[u8],
         aad: impl embedded_cal::AadGenerator,
     ) -> Result<(), embedded_cal::DecryptionFailed> {
-        // Handle the simple case quicly; everything else needs the allocations
         if let Key::Direct(k) = key {
             return self.0.aead().decrypt_in_place(k, nonce, message, tag, aad);
         };
 
-        let mut ciphertext = Vec::from(&*message);
-        let aad: Vec<_> = aad.items().flatten().copied().collect();
-
-        // I hope this explicitness mess pays off when we run not 2 but many types through
-        // the match below.
-
-        fn decrypt<Alg, const T: usize, const N: usize>(
-            ciphertext: &mut Vec<u8>,
-            key: &typed_owned::Key<Alg>,
-            nonce: &[u8],
-            aad: &Vec<u8>,
-            message: &mut [u8],
-            tag: &[u8],
-        ) -> Result<(), embedded_cal::DecryptionFailed>
-        where
-            Alg: typed_owned::Aead,
-            typed_owned::Tag<Alg>: From<[u8; T]>,
-            typed_owned::Nonce<Alg>: From<[u8; N]>,
-        {
-            let tag: typed_owned::Tag<Alg> =
-                (<[u8; T]>::try_from(tag).expect("tag length mismatch")).into();
-            let nonce: typed_owned::Nonce<Alg> =
-                (<[u8; N]>::try_from(nonce).expect("nonce length mismatch")).into();
-            Alg::decrypt(
-                ciphertext.as_mut_slice(),
-                key,
-                &nonce,
-                aad.as_slice(),
-                message,
-                &tag,
-            )
-            .map_err(|_| embedded_cal::DecryptionFailed)
-        }
-
         match key {
             Key::Direct(_) => unreachable!(),
-            Key::AesGcm128(key) => decrypt::<libcrux_aesgcm::AesGcm128, _, _>(
-                &mut ciphertext,
+            Key::AesGcm128(key) => libcrux_iot_aes::portable::aes_gcm_128::decrypt(
                 key,
                 nonce,
-                &aad,
+                flatten(&aad),
                 message,
                 tag,
-            ),
-            Key::AesGcm256(key) => decrypt::<libcrux_aesgcm::AesGcm256, _, _>(
-                &mut ciphertext,
+            )
+            .map_err(|_| embedded_cal::DecryptionFailed)?,
+            Key::AesGcm256(key) => libcrux_iot_aes::portable::aes_gcm_256::decrypt(
                 key,
                 nonce,
-                &aad,
+                flatten(&aad),
                 message,
                 tag,
-            ),
+            )
+            .map_err(|_| embedded_cal::DecryptionFailed)?,
         }
+
+        Ok(())
     }
 }
 
@@ -190,24 +157,24 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
     fn key_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.key_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_aesgcm::AESGCM128_KEY_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_aesgcm::AESGCM256_KEY_LEN,
+            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::AES_128_KEY_LEN,
+            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::AES_256_KEY_LEN,
         }
     }
 
     fn tag_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.tag_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_aesgcm::AesGcm128::TAG_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_aesgcm::AesGcm256::TAG_LEN,
+            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::TAG_LEN,
+            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::TAG_LEN,
         }
     }
 
     fn nonce_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.nonce_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_aesgcm::AesGcm128::NONCE_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_aesgcm::AesGcm256::NONCE_LEN,
+            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::NONCE_LEN,
+            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::NONCE_LEN,
         }
     }
 }
