@@ -2,6 +2,7 @@
 ./embedded-cal-libcrux/src/hash.rs:impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 ./embedded-cal-nrf54l15/src/aead.rs:impl embedded_cal::AeadProvider for super::Nrf54l15Cal {
 ./embedded-cal-nrf54l15/src/dh.rs:impl embedded_cal::DhProvider for super::Nrf54l15Cal {
+./embedded-cal-nrf54l15/src/sha3.rs:impl embedded_cal::HashProvider for super::Nrf54l15Cal {
 ./embedded-cal-rustcrypto/src/aead.rs:impl<Base: Cal> AeadProvider for RustcryptoCalExtender<Base> {
 ./embedded-cal-rustcrypto/src/dh.rs:impl<Base: Cal> DhProvider for RustcryptoCalExtender<Base> {
 ./embedded-cal-rustcrypto/src/hash.rs:impl<Base: Cal> HashProvider for RustcryptoCalExtender<Base> {

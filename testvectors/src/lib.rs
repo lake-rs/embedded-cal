@@ -6,6 +6,121 @@ use hexlit::hex;
 
 pub mod dh;
 
+/// SHA3-224 test vectors from NIST FIPS 202.
+pub const SHA3_224_HASHES: &[(&[u8], [u8; 28])] = &[
+    (
+        b"",
+        hex!("6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7"),
+    ),
+    (
+        b"abc",
+        hex!("e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf"),
+    ),
+];
+
+/// SHA3-256 test vectors from NIST FIPS 202.
+pub const SHA3_256_HASHES: &[(&[u8], [u8; 32])] = &[
+    (
+        b"",
+        hex!("a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"),
+    ),
+    (
+        b"abc",
+        hex!("3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532"),
+    ),
+];
+
+/// SHA3-384 test vectors from NIST FIPS 202.
+pub const SHA3_384_HASHES: &[(&[u8], [u8; 48])] = &[
+    (
+        b"",
+        hex!(
+            "0c63a75b845e4f7d01107d852e4c2485c51a50aaaa94fc61995e71bbee983a2ac3713831264adb47fb6bd1e058d5f004"
+        ),
+    ),
+    (
+        b"abc",
+        hex!(
+            "ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b298d88cea927ac7f539f1edf228376d25"
+        ),
+    ),
+];
+
+/// SHA3-512 test vectors from NIST FIPS 202.
+pub const SHA3_512_HASHES: &[(&[u8], [u8; 64])] = &[
+    (
+        b"",
+        hex!(
+            "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a615b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26"
+        ),
+    ),
+    (
+        b"abc",
+        hex!(
+            "b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0"
+        ),
+    ),
+];
+
+fn test_hash_sha3<Cal, const N: usize>(
+    cal: &mut Cal,
+    algorithm: Cal::Algorithm,
+    vectors: &[(&[u8], [u8; N])],
+) where
+    Cal: embedded_cal::HashProvider,
+{
+    for (tv_data, tv_result) in vectors {
+        assert_eq!(
+            cal.hash(algorithm.clone(), tv_data).as_ref(),
+            tv_result,
+            "Hash values mismatch"
+        );
+
+        let mut hash = cal.init(algorithm.clone());
+        let mid = tv_data.len() / 2;
+        let postmid = mid + 1;
+        if tv_data.len() < postmid {
+            continue;
+        }
+        cal.update(&mut hash, &tv_data[..mid]);
+        cal.update(&mut hash, &tv_data[mid..postmid]);
+        cal.update(&mut hash, &tv_data[postmid..]);
+        assert_eq!(
+            cal.finalize(hash).as_ref(),
+            tv_result,
+            "Hash values mismatch when input is fed in chunks"
+        );
+    }
+}
+
+pub fn test_hash_sha3_224<Cal: embedded_cal::HashProvider>(
+    cal: &mut Cal,
+    algorithm: Cal::Algorithm,
+) {
+    test_hash_sha3(cal, algorithm, SHA3_224_HASHES);
+}
+
+pub fn test_hash_sha3_256<Cal: embedded_cal::HashProvider>(
+    cal: &mut Cal,
+    algorithm: Cal::Algorithm,
+) {
+    test_hash_sha3(cal, algorithm, SHA3_256_HASHES);
+}
+
+pub fn test_hash_sha3_384<Cal: embedded_cal::HashProvider>(
+    cal: &mut Cal,
+    algorithm: Cal::Algorithm,
+) {
+    test_hash_sha3(cal, algorithm, SHA3_384_HASHES);
+}
+
+pub fn test_hash_sha3_512<Cal: embedded_cal::HashProvider>(
+    cal: &mut Cal,
+    algorithm: Cal::Algorithm,
+) {
+    test_hash_sha3(cal, algorithm, SHA3_512_HASHES);
+}
+
 pub const SHA256HASHES: &[(&[u8], [u8; 32])] = &[
     (
         b"",

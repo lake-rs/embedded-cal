@@ -18,6 +18,14 @@
     X25519,
 ./embedded-cal-nrf54l15/src/dh.rs
     X448,
+./embedded-cal-nrf54l15/src/sha3.rs
+    Sha3_224,
+./embedded-cal-nrf54l15/src/sha3.rs
+    Sha3_256,
+./embedded-cal-nrf54l15/src/sha3.rs
+    Sha3_384,
+./embedded-cal-nrf54l15/src/sha3.rs
+    Sha3_512,
 ./embedded-cal-rustcrypto/src/aead.rs
     AesCcm16_64_128,
 ./embedded-cal-rustcrypto/src/aead.rs

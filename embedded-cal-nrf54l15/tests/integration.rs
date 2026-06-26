@@ -33,6 +33,38 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_sha3_224(state: &mut super::TestState) {
+        use embedded_cal::{HashAlgorithm, HashProvider};
+        let alg = <embedded_cal_software_demo::Extender<ImplementSha256Short> as HashProvider>::Algorithm::from_ni_name("sha3-224")
+            .expect("sha3-224 must be recognized");
+        testvectors::test_hash_sha3_224(&mut state.cal, alg);
+    }
+
+    #[test]
+    fn test_hash_sha3_256(state: &mut super::TestState) {
+        use embedded_cal::{HashAlgorithm, HashProvider};
+        let alg = <embedded_cal_software_demo::Extender<ImplementSha256Short> as HashProvider>::Algorithm::from_ni_name("sha3-256")
+            .expect("sha3-256 must be recognized");
+        testvectors::test_hash_sha3_256(&mut state.cal, alg);
+    }
+
+    #[test]
+    fn test_hash_sha3_384(state: &mut super::TestState) {
+        use embedded_cal::{HashAlgorithm, HashProvider};
+        let alg = <embedded_cal_software_demo::Extender<ImplementSha256Short> as HashProvider>::Algorithm::from_ni_name("sha3-384")
+            .expect("sha3-384 must be recognized");
+        testvectors::test_hash_sha3_384(&mut state.cal, alg);
+    }
+
+    #[test]
+    fn test_hash_sha3_512(state: &mut super::TestState) {
+        use embedded_cal::{HashAlgorithm, HashProvider};
+        let alg = <embedded_cal_software_demo::Extender<ImplementSha256Short> as HashProvider>::Algorithm::from_ni_name("sha3-512")
+            .expect("sha3-512 must be recognized");
+        testvectors::test_hash_sha3_512(&mut state.cal, alg);
+    }
+
+    #[test]
     fn test_hash_algorithm_sha256(state: &mut super::TestState) {
         embedded_cal::test_hash_algorithm_sha256::<
             <embedded_cal_software_demo::Extender<ImplementSha256Short> as embedded_cal::HashProvider>::Algorithm,
