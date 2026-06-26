@@ -33,16 +33,6 @@ const AES_CMD_CCM_DECRYPT: u32 = AES_CCM_MODE | 1; // 0x2001
 
 use crate::descriptor::{DescriptorChain, Input, Output, dmatag_ign};
 
-fn collect_aad(aad: impl embedded_cal::AadGenerator) -> ([u8; 255], usize) {
-    let mut buf = [0u8; 255];
-    let mut len: usize = 0;
-    for chunk in aad.items() {
-        buf[len..len + chunk.len()].copy_from_slice(chunk);
-        len += chunk.len();
-    }
-    (buf, len)
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AeadAlgorithm {
     AesCcm16_64_128,
@@ -99,7 +89,7 @@ impl super::Nrf54l15Cal {
         key: &[u8; KEY_LEN],
         nonce: &[u8],
         message: &mut [u8],
-        aad: &[u8],
+        aad: impl embedded_cal::AadGenerator,
     ) -> [u8; 8] {
         const {
             assert!(
@@ -113,17 +103,22 @@ impl super::Nrf54l15Cal {
         // Header = B0 (16 B) + [aad_len_be (2 B) + aad] when AAD present,
         // zero-padded to the next 16-byte multiple.
         // Max size: 16 + 2 + 255 = 273 → pads to 288.
-        let b0 = embedded_cal::build_b0(nonce, message.len(), aad.len(), TAG_LEN);
+        // Write AAD chunks directly at offset 18, then fill B0 and length prefix.
         let mut header_buf = [0u8; 288];
-        let header_data_len = if aad.is_empty() {
+        let mut aad_len = 0usize;
+        for chunk in aad.items() {
+            header_buf[18 + aad_len..18 + aad_len + chunk.len()].copy_from_slice(chunk);
+            aad_len += chunk.len();
+        }
+        let b0 = embedded_cal::build_b0(nonce, message.len(), aad_len, TAG_LEN);
+        let header_data_len = if aad_len == 0 {
             header_buf[..16].copy_from_slice(&b0);
             16
         } else {
             header_buf[..16].copy_from_slice(&b0);
-            header_buf[16] = (aad.len() >> 8) as u8;
-            header_buf[17] = (aad.len() & 0xFF) as u8;
-            header_buf[18..18 + aad.len()].copy_from_slice(aad);
-            18 + aad.len()
+            header_buf[16] = (aad_len >> 8) as u8;
+            header_buf[17] = (aad_len & 0xFF) as u8;
+            18 + aad_len
         };
         let header_padded_len = (header_data_len + 15) & !15;
         let header_ign = header_padded_len - header_data_len;
@@ -179,7 +174,7 @@ impl super::Nrf54l15Cal {
         nonce: &[u8],
         ciphertext: &mut [u8],
         tag_in: &[u8],
-        aad: &[u8],
+        aad: impl embedded_cal::AadGenerator,
     ) -> bool {
         const {
             assert!(
@@ -190,17 +185,21 @@ impl super::Nrf54l15Cal {
         const TAG_LEN: usize = 8;
         let cmd = AES_CMD_CCM_DECRYPT.to_le_bytes();
 
-        let b0 = embedded_cal::build_b0(nonce, ciphertext.len(), aad.len(), TAG_LEN);
         let mut header_buf = [0u8; 288];
-        let header_data_len = if aad.is_empty() {
+        let mut aad_len = 0usize;
+        for chunk in aad.items() {
+            header_buf[18 + aad_len..18 + aad_len + chunk.len()].copy_from_slice(chunk);
+            aad_len += chunk.len();
+        }
+        let b0 = embedded_cal::build_b0(nonce, ciphertext.len(), aad_len, TAG_LEN);
+        let header_data_len = if aad_len == 0 {
             header_buf[..16].copy_from_slice(&b0);
             16
         } else {
             header_buf[..16].copy_from_slice(&b0);
-            header_buf[16] = (aad.len() >> 8) as u8;
-            header_buf[17] = (aad.len() & 0xFF) as u8;
-            header_buf[18..18 + aad.len()].copy_from_slice(aad);
-            18 + aad.len()
+            header_buf[16] = (aad_len >> 8) as u8;
+            header_buf[17] = (aad_len & 0xFF) as u8;
+            18 + aad_len
         };
         let header_padded_len = (header_data_len + 15) & !15;
         let header_ign = header_padded_len - header_data_len;
@@ -276,15 +275,12 @@ impl embedded_cal::AeadProvider for super::Nrf54l15Cal {
         message: &mut [u8],
         aad: impl embedded_cal::AadGenerator,
     ) -> Self::Tag {
-        let (aad_buf, aad_len) = collect_aad(aad);
         match key {
             AeadKey::AesCcm16_64_128(key_bytes) => {
-                let tag = self.ccm_encrypt(key_bytes, nonce, message, &aad_buf[..aad_len]);
-                AeadTag::AesCcm16_64_128(tag)
+                AeadTag::AesCcm16_64_128(self.ccm_encrypt(key_bytes, nonce, message, aad))
             }
             AeadKey::AesCcm16_64_256(key_bytes) => {
-                let tag = self.ccm_encrypt(key_bytes, nonce, message, &aad_buf[..aad_len]);
-                AeadTag::AesCcm16_64_256(tag)
+                AeadTag::AesCcm16_64_256(self.ccm_encrypt(key_bytes, nonce, message, aad))
             }
         }
     }
@@ -297,13 +293,12 @@ impl embedded_cal::AeadProvider for super::Nrf54l15Cal {
         tag: &[u8],
         aad: impl embedded_cal::AadGenerator,
     ) -> Result<(), embedded_cal::DecryptionFailed> {
-        let (aad_buf, aad_len) = collect_aad(aad);
         let ok = match key {
             AeadKey::AesCcm16_64_128(key_bytes) => {
-                self.ccm_decrypt(key_bytes, nonce, cyphertext, tag, &aad_buf[..aad_len])
+                self.ccm_decrypt(key_bytes, nonce, cyphertext, tag, aad)
             }
             AeadKey::AesCcm16_64_256(key_bytes) => {
-                self.ccm_decrypt(key_bytes, nonce, cyphertext, tag, &aad_buf[..aad_len])
+                self.ccm_decrypt(key_bytes, nonce, cyphertext, tag, aad)
             }
         };
         if ok {
