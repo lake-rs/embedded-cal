@@ -5,6 +5,7 @@
 use hexlit::hex;
 
 pub mod dh;
+pub mod sha3;
 
 pub const SHA256HASHES: &[(&[u8], [u8; 32])] = &[
     (
