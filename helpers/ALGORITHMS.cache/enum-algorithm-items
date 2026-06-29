@@ -5,9 +5,17 @@
 ./embedded-cal-libcrux/src/aead.rs
     AesGcm256,
 ./embedded-cal-libcrux/src/hash.rs
+    Direct(HashAlgorithmOf<EC::Base>),
+./embedded-cal-libcrux/src/hash.rs
     Sha256,
 ./embedded-cal-libcrux/src/hash.rs
-    Direct(HashAlgorithmOf<EC::Base>),
+    Sha3_224,
+./embedded-cal-libcrux/src/hash.rs
+    Sha3_256,
+./embedded-cal-libcrux/src/hash.rs
+    Sha3_384,
+./embedded-cal-libcrux/src/hash.rs
+    Sha3_512,
 ./embedded-cal-nrf54l15/src/aead.rs
     AesCcm16_64_128,
 ./embedded-cal-nrf54l15/src/aead.rs

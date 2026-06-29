@@ -40,6 +40,7 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | SHA-256 | software-demo | using SHA2-short plumbing for acceleration |
 | SHA2-short | nrf54l15 | providing plumbing |
 | SHA2-short | stm32wba55 | providing plumbing |
+| SHA-3   | libcrux | |
 
 # HMAC
 
