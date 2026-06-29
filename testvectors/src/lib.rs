@@ -7,7 +7,10 @@ use hexlit::hex;
 pub mod aead;
 pub mod dh;
 
-pub use aead::{test_aead_aesccm_16_64_128, test_aead_aesccm_16_64_256};
+pub use aead::{
+    test_aead_aesccm_16_64_128, test_aead_aesccm_16_64_256, test_aead_aesgcm_128,
+    test_aead_aesgcm_256,
+};
 
 pub const SHA256HASHES: &[(&[u8], [u8; 32])] = &[
     (

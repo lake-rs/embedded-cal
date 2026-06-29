@@ -1,4 +1,5 @@
 pub mod aes_ccm;
+pub mod aes_gcm;
 
 pub struct AeadCase {
     alg_cose: i16,
@@ -58,6 +59,18 @@ pub fn test_aead_aesccm_16_64_128(cal: &mut impl embedded_cal::AeadProvider) {
 
 pub fn test_aead_aesccm_16_64_256(cal: &mut impl embedded_cal::AeadProvider) {
     for case in aes_ccm::AES_CCM_16_64_256 {
+        case.test(cal);
+    }
+}
+
+pub fn test_aead_aesgcm_128(cal: &mut impl embedded_cal::AeadProvider) {
+    for case in aes_gcm::AES_GCM_128 {
+        case.test(cal);
+    }
+}
+
+pub fn test_aead_aesgcm_256(cal: &mut impl embedded_cal::AeadProvider) {
+    for case in aes_gcm::AES_GCM_256 {
         case.test(cal);
     }
 }
