@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: The Wycheproof Authors
 //! Test vectors are a subset of Wychpreoof vectors.
 //!
 //! Source: <https://github.com/C2SP/wycheproof/blob/ee7b4f7e611928cbe163dc6f5e54527bfd166f34/testvectors_v1/aes_gcm_test.json>
