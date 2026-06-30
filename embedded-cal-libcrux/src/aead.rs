@@ -164,7 +164,7 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
             .map_err(|_| embedded_cal::DecryptionFailed)
         }
 
-        match key {
+        let res = match key {
             Key::Direct(_) => unreachable!(),
             Key::AesGcm128(key) => decrypt::<libcrux_aesgcm::AesGcm128, _, _>(
                 &mut ciphertext,
@@ -182,7 +182,11 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
                 message,
                 tag,
             ),
-        }
+        };
+        if let Ok(()) = res {
+            message.copy_from_slice(&ciphertext);
+        };
+        res
     }
 }
 
@@ -208,6 +212,15 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
             AeadAlgorithm::Direct(a) => a.nonce_length(),
             AeadAlgorithm::AesGcm128 => libcrux_aesgcm::AesGcm128::NONCE_LEN,
             AeadAlgorithm::AesGcm256 => libcrux_aesgcm::AesGcm256::NONCE_LEN,
+        }
+    }
+
+    fn from_cose_number(number: impl Into<i128>) -> Option<Self> {
+        let number = number.into();
+        match number {
+            1 => Some(AeadAlgorithm::AesGcm128),
+            3 => Some(AeadAlgorithm::AesGcm256),
+            _ => AeadAlgorithmOf::<EC::Base>::from_cose_number(number).map(AeadAlgorithm::Direct),
         }
     }
 }
@@ -256,5 +269,28 @@ impl<EC: ExtenderConfig> AsRef<[u8]> for Tag<EC> {
             Tag::AesGcm128(tag) => tag.as_ref(),
             Tag::AesGcm256(tag) => tag.as_ref(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Extender, ExtenderConfig};
+
+    struct TestConfig;
+
+    impl ExtenderConfig for TestConfig {
+        type Base = embedded_cal::empty::EmptyCal<true>;
+    }
+
+    #[test]
+    fn test_aes_gcm_128_encrypt_decrypt() {
+        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        testvectors::test_aead_aesgcm_128(&mut cal);
+    }
+
+    #[test]
+    fn test_aes_gcm_256_encrypt_decrypt() {
+        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        testvectors::test_aead_aesgcm_256(&mut cal);
     }
 }
