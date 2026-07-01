@@ -14,7 +14,8 @@ use nrf_pac::{cracen, cracencore};
 
 // CCM encrypt needs 4 input descriptors (config, key, header+aad, plaintext) and
 // 3 output descriptors (header scratch, ciphertext, tag). Decrypt needs 5 input (+ expected tag).
-const MAX_DESCRIPTOR_CHAIN_LEN: usize = 6;
+// 32 is an arbitrary value, picked large enough to comfortably hold the fixed descriptors plus a reasonably chunked AAD
+const MAX_DESCRIPTOR_CHAIN_LEN: usize = 32;
 
 pub struct Nrf54l15Cal {
     // FIXME: No need to enable and take ownership of everything

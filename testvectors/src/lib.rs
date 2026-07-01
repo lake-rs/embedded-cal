@@ -361,6 +361,20 @@ pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal
     }
 }
 
+// An [`embedded_cal::AadGenerator`] that yields its data split into fixed-size pieces, so the
+// scatter-gather AAD path (multiple descriptors / chunks) is tested.
+#[derive(Clone, Copy)]
+struct ChunkedAad<'a> {
+    data: &'a [u8],
+    chunk: usize,
+}
+
+impl embedded_cal::AadGenerator for ChunkedAad<'_> {
+    fn items(&self) -> impl Iterator<Item = &[u8]> {
+        self.data.chunks(self.chunk.max(1))
+    }
+}
+
 pub struct AeadCase {
     alg_cose: i16,
     key: &'static [u8],
@@ -385,9 +399,8 @@ impl AeadCase {
         let buf = &mut buf[..self.plaintext.len()];
         buf.copy_from_slice(self.plaintext);
 
-        // FIXME: try again with chunked AAD
-
         let produced_tag = cal.encrypt_in_place(&key, self.nonce, buf, self.aad);
+
         assert_eq!(
             produced_tag.as_ref(),
             self.tag,
@@ -400,12 +413,37 @@ impl AeadCase {
             "ciphertext mismatch: expected {:02x?}, got {:02x?}",
             self.ciphertext, buf
         );
-
         cal.decrypt_in_place(&key, self.nonce, buf, self.tag, self.aad)
             .unwrap();
         assert_eq!(
             buf, self.plaintext,
             "decryption mismatch: expected {:02x?}, got {:02x?}",
+            self.plaintext, buf
+        );
+
+        // test with chunked `AadGenerator`
+        let chunked_aad = ChunkedAad {
+            data: self.aad,
+            chunk: 3,
+        };
+        let chunked_tag = cal.encrypt_in_place(&key, self.nonce, buf, chunked_aad);
+        assert_eq!(
+            buf, self.ciphertext,
+            "chunked-AAD ciphertext mismatch: expected {:02x?}, got {:02x?}",
+            self.ciphertext, buf
+        );
+        assert_eq!(
+            chunked_tag.as_ref(),
+            self.tag,
+            "chunked-AAD tag mismatch: expected {:02x?}, got {:02x?}",
+            self.tag,
+            chunked_tag.as_ref()
+        );
+        cal.decrypt_in_place(&key, self.nonce, buf, self.tag, chunked_aad)
+            .unwrap();
+        assert_eq!(
+            buf, self.plaintext,
+            "chunked-AAD decryption mismatch: expected {:02x?}, got {:02x?}",
             self.plaintext, buf
         );
     }

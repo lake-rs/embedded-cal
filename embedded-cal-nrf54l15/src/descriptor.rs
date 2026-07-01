@@ -8,6 +8,7 @@
     reason = "nRF54L15 uses 1 as last-descriptor sentinel"
 )]
 const LAST_DESC_PTR: *mut Descriptor = 1 as *mut Descriptor;
+const DMA_REALIGN: u32 = 1 << 29;
 /// Single EasyDMA scatter-gather job entry.
 ///
 /// This structure maps directly to one hardware “job entry” consumed by the
@@ -75,6 +76,9 @@ pub(crate) struct Output;
 pub(crate) struct DescriptorChain<'mem, Direction, const N: usize> {
     descs: [Descriptor; N],
     count: usize,
+    /// Bytes accumulated since the last realign (`DMA_REALIGN`) descriptor — i.e. the running total
+    /// fed by `push_raw`. A realign `push` must bring this to a word boundary before resetting it.
+    pending: usize,
     _dir: core::marker::PhantomData<*mut &'mem Direction>,
 }
 
@@ -87,6 +91,7 @@ impl<'mem, Direction, const N: usize> DescriptorChain<'mem, Direction, N> {
         Self {
             descs: [Descriptor::empty(); N],
             count: 0,
+            pending: 0,
             _dir: core::marker::PhantomData,
         }
     }
@@ -164,9 +169,47 @@ impl<'mem, const N: usize> DescriptorChain<'mem, Input, N> {
     /// - `data` must be DMA-accessible memory.
     /// - `data.len()` must be a multiple of 4.
     pub(crate) fn push(&mut self, data: &'mem [u8], dmatag: u32) {
+        // Realigning descriptor: the cumulative byte count fed since the last realign point (any
+        // preceding `push_raw` bytes plus this descriptor) must land on a word boundary, otherwise
+        // the fetcher flushes a partial word and corrupts the stream.
+        self.pending += data.len();
+        debug_assert!(
+            self.pending.is_multiple_of(4),
+            "Cumulative bytes at a realign point must be a multiple of the word size"
+        );
+        self.pending = 0;
         self.push_descriptor(Descriptor::new(
             data.as_ptr() as *mut u8,
             sz(data.len()),
+            dmatag,
+        ));
+    }
+
+    /// Appends an input (read) buffer *without* the `DMA_REALIGN` flag.
+    ///
+    /// Omitting `DMA_REALIGN` makes the fetcher keep its partial-word accumulator across this
+    /// descriptor's boundary, so the descriptor's trailing 1-3 bytes are byte-concatenated with
+    /// the *next* descriptor's data instead of being padded out to a 32-bit word boundary. This
+    /// mirrors `ADD_RAW_INDESC` in the Nordic SDK (`cmdma.h`), which `sx_hash_feed` uses to stream
+    /// arbitrary-length chunks. It is the mechanism for feeding a sub-word field (e.g. the 2-byte
+    /// CCM AAD length prefix) in its own descriptor while keeping the byte stream contiguous.
+    ///
+    /// Unlike [`push`](Self::push), `data.len()` need not be a multiple of 4. Whatever descriptor
+    /// follows must bring the cumulative byte count back to a word boundary by the next
+    /// `DMA_REALIGN` point.
+    ///
+    /// Must **not** be used for the last descriptor of a data type (or of the whole chain): without
+    /// `DMA_REALIGN` the fetcher never flushes its trailing partial word — it always defers the
+    /// sub-word remainder to the next descriptor. A terminal descriptor has no next one, so its
+    /// pending bytes would be left unflushed. Use [`push`](Self::push) there instead; it realigns
+    /// and flushes (and is also the only variant that can mark trailing padding via `dmatag_ign`).
+    pub(crate) fn push_raw(&mut self, data: &'mem [u8], dmatag: u32) {
+        // RAW descriptor: no realign, so its (possibly sub-word) bytes accumulate into `pending` for
+        // a later realigning `push` to bring back to a word boundary.
+        self.pending += data.len();
+        self.push_descriptor(Descriptor::new(
+            data.as_ptr() as *mut u8,
+            data.len() as u32,
             dmatag,
         ));
     }
@@ -180,7 +223,16 @@ impl<'mem, const N: usize> DescriptorChain<'mem, Output, N> {
     /// # Safety / Correctness requirements
     ///
     /// - `data` must be DMA-accessible memory.
+    /// - `data.len()` must be a multiple of 4.
     pub(crate) fn push(&mut self, data: &'mem mut [u8], dmatag: u32) {
+        // Realigning descriptor: the cumulative byte count fed since the last realign point must land
+        // on a word boundary before the fetcher flushes.
+        self.pending += data.len();
+        debug_assert!(
+            self.pending.is_multiple_of(4),
+            "cumulative bytes at a realign point must be a multiple of the word size"
+        );
+        self.pending = 0;
         self.push_descriptor(Descriptor::new(data.as_mut_ptr(), sz(data.len()), dmatag));
     }
 }
@@ -191,13 +243,13 @@ pub(crate) const fn dmatag_ign(n: usize) -> u32 {
     (n as u32) << 8
 }
 
-/// Asserts that size is a multiple of 4, and ORs in the DMA_REALIGN constant.
+/// ORs in the `DMA_REALIGN` constant.
+///
+/// Note: `n` need NOT be a multiple of the word size. A realign descriptor may complete a partial
+/// word left by preceding RAW (`push_raw`) descriptors; what matters is that the *cumulative* byte
+/// count is word-aligned at the realign point, not that this single descriptor's length is. The
+/// engine handles the sub-word completion via `DMA_REALIGN`.
 #[inline]
 const fn sz(n: usize) -> u32 {
-    const DMA_REALIGN: usize = 0x2000_0000;
-    debug_assert!(
-        n.is_multiple_of(4),
-        "Sizes passed through this function need to be in multiples of the word size"
-    );
-    (n | DMA_REALIGN) as u32
+    n as u32 | DMA_REALIGN
 }

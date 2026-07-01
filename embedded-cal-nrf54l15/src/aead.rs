@@ -33,6 +33,46 @@ const AES_CMD_CCM_DECRYPT: u32 = AES_CCM_MODE | 1; // 0x2001
 
 use crate::descriptor::{DescriptorChain, Input, Output, dmatag_ign};
 
+/// Pushes the CCM header (the `DMATAG_AES_AAD` descriptors) onto `input_chain`: B0, then — when
+/// AAD is present — the 2-byte big-endian length prefix, the AAD chunks streamed straight from the
+/// caller, and the trailing CCM zero-pad.
+///
+/// Every descriptor up to the last AAD-type one is RAW (no realign) so the fetcher carries sub-word
+/// remainders straight into the next descriptor, keeping the CBC-MAC byte stream contiguous. The
+/// final AAD-type descriptor must use `push` (realign) so the engine flushes the block before the
+/// message data: that is the zero-pad when the header is not block-aligned, otherwise the last AAD
+/// chunk itself.
+///
+/// `header_pad` is the zero-padding slice already trimmed to its length (`header_ign` bytes, 0..16);
+/// its length doubles as the ignore count for the final descriptor.
+fn push_ccm_header<'mem, const N: usize>(
+    input_chain: &mut DescriptorChain<'mem, Input, N>,
+    b0: &'mem [u8],
+    aad_len: usize,
+    aad_len_prefix: &'mem [u8],
+    aad: &'mem impl embedded_cal::AadGenerator,
+    header_pad: &'mem [u8],
+) {
+    input_chain.push(b0, DMATAG_AES_AAD);
+    if aad_len == 0 {
+        return;
+    }
+    let header_ign = header_pad.len();
+    input_chain.push_raw(aad_len_prefix, DMATAG_AES_AAD);
+    let mut chunks = aad.items().filter(|c| !c.is_empty()).peekable();
+    while let Some(chunk) = chunks.next() {
+        if chunks.peek().is_none() && header_ign == 0 {
+            // Last AAD-type descriptor: it MUST realign, so use `push` (not `push_raw`).
+            input_chain.push(chunk, DMATAG_AES_AAD);
+        } else {
+            input_chain.push_raw(chunk, DMATAG_AES_AAD);
+        }
+    }
+    if header_ign > 0 {
+        input_chain.push(header_pad, DMATAG_AES_AAD | dmatag_ign(header_ign));
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AeadAlgorithm {
     AesCcm16_64_128,
@@ -100,26 +140,14 @@ impl super::Nrf54l15Cal {
         const TAG_LEN: usize = 8;
         let cmd = AES_CMD_CCM_ENCRYPT.to_le_bytes();
 
-        // Header = B0 (16 B) + [aad_len_be (2 B) + aad] when AAD present,
-        // zero-padded to the next 16-byte multiple.
-        // Max size: 16 + 2 + 255 = 273 → pads to 288.
-        // Write AAD chunks directly at offset 18, then fill B0 and length prefix.
-        let mut header_buf = [0u8; 288];
         let mut aad_len = 0usize;
         for chunk in aad.items() {
-            header_buf[18 + aad_len..18 + aad_len + chunk.len()].copy_from_slice(chunk);
             aad_len += chunk.len();
         }
         let b0 = embedded_cal::build_b0(nonce, message.len(), aad_len, TAG_LEN);
-        let header_data_len = if aad_len == 0 {
-            header_buf[..16].copy_from_slice(&b0);
-            16
-        } else {
-            header_buf[..16].copy_from_slice(&b0);
-            header_buf[16] = (aad_len >> 8) as u8;
-            header_buf[17] = (aad_len & 0xFF) as u8;
-            18 + aad_len
-        };
+        let aad_len_prefix = [(aad_len >> 8) as u8, (aad_len & 0xFF) as u8];
+        let header_pad = [0u8; 16];
+        let header_data_len = if aad_len == 0 { 16 } else { 18 + aad_len };
         let header_padded_len = (header_data_len + 15) & !15;
         let header_ign = header_padded_len - header_data_len;
 
@@ -134,7 +162,10 @@ impl super::Nrf54l15Cal {
         // The BA411E emits one output byte per header input byte (intermediate
         // CBC-MAC state). Absorb those into a scratch buffer so that ct_buf and
         // tag_out_buf receive the correct ciphertext and tag.
-        let mut header_out_buf = [0u8; 288];
+        let mut b0_out_buf = [0u8; 16];
+        // One output byte per header input byte after B0: aad_len (2 B) + aad + zero-pad =
+        // header_padded_len - 16 B (max 288 - 16 = 272). Output count matches input exactly.
+        let mut header_aad_out_buf = [0u8; 272];
 
         let mut input_chain: DescriptorChain<Input, { super::MAX_DESCRIPTOR_CHAIN_LEN }> =
             DescriptorChain::new();
@@ -143,9 +174,13 @@ impl super::Nrf54l15Cal {
 
         input_chain.push(&cmd, DMATAG_AES_CFG);
         input_chain.push(key, DMATAG_AES_KEY);
-        input_chain.push(
-            &header_buf[..header_padded_len],
-            DMATAG_AES_AAD | dmatag_ign(header_ign),
+        push_ccm_header(
+            &mut input_chain,
+            &b0,
+            aad_len,
+            &aad_len_prefix,
+            &aad,
+            &header_pad[..header_ign],
         );
         if !message.is_empty() {
             input_chain.push(
@@ -153,7 +188,10 @@ impl super::Nrf54l15Cal {
                 DMATAG_AES_DATA | dmatag_ign(msg_ign),
             );
         }
-        output_chain.push(&mut header_out_buf[..header_padded_len], 0);
+        output_chain.push(&mut b0_out_buf, 0);
+        if aad_len > 0 {
+            output_chain.push(&mut header_aad_out_buf[..header_padded_len - 16], 0);
+        }
         if !message.is_empty() {
             output_chain.push(&mut ct_buf[..msg_padded_len], 0);
         }
@@ -185,22 +223,16 @@ impl super::Nrf54l15Cal {
         const TAG_LEN: usize = 8;
         let cmd = AES_CMD_CCM_DECRYPT.to_le_bytes();
 
-        let mut header_buf = [0u8; 288];
+        // See `ccm_encrypt` for the header layout; the AAD is streamed straight from the caller's
+        // chunks, with only B0, the length prefix, and the zero-pad in local buffers.
         let mut aad_len = 0usize;
         for chunk in aad.items() {
-            header_buf[18 + aad_len..18 + aad_len + chunk.len()].copy_from_slice(chunk);
             aad_len += chunk.len();
         }
         let b0 = embedded_cal::build_b0(nonce, ciphertext.len(), aad_len, TAG_LEN);
-        let header_data_len = if aad_len == 0 {
-            header_buf[..16].copy_from_slice(&b0);
-            16
-        } else {
-            header_buf[..16].copy_from_slice(&b0);
-            header_buf[16] = (aad_len >> 8) as u8;
-            header_buf[17] = (aad_len & 0xFF) as u8;
-            18 + aad_len
-        };
+        let aad_len_prefix = [(aad_len >> 8) as u8, (aad_len & 0xFF) as u8];
+        let header_pad = [0u8; 16];
+        let header_data_len = if aad_len == 0 { 16 } else { 18 + aad_len };
         let header_padded_len = (header_data_len + 15) & !15;
         let header_ign = header_padded_len - header_data_len;
 
@@ -225,9 +257,13 @@ impl super::Nrf54l15Cal {
 
         input_chain.push(&cmd, DMATAG_AES_CFG);
         input_chain.push(key, DMATAG_AES_KEY);
-        input_chain.push(
-            &header_buf[..header_padded_len],
-            DMATAG_AES_AAD | dmatag_ign(header_ign),
+        push_ccm_header(
+            &mut input_chain,
+            &b0,
+            aad_len,
+            &aad_len_prefix,
+            &aad,
+            &header_pad[..header_ign],
         );
         if !ciphertext.is_empty() {
             input_chain.push(
