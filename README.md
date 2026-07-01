@@ -48,6 +48,9 @@ and are only included in build outputs when that particular hardware acceleratio
 At the time of writing, this affects the `embedded-cal-nrf54l15` crate.
 See the individual crates' and/or files' license annotations for details.
 
+### Embedded-cal Libcrux
+The `embedded-cal-libcrux` crate is currently licensed under the [GNU AFFERO GENERAL PUBLIC LICENSE Version 3](LICENSES/AGPL-3.0-only.txt), as its dependent [libcrux-iot](https://github.com/celabshq/libcrux-iot) is licensed under `AGPL-3.0-only`.
+
 ## Contributors
 
 The project is driven
