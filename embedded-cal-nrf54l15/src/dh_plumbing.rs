@@ -20,7 +20,8 @@
 //! The observation underlying the typed-but-otherwise-identical primitive associated types is that
 //! this code has very simple assembly output:
 //!
-//! ```
+// Ignoring because doctests expect some infrastructure; ```no_run alone doens't suffice.
+//! ```ignore
 //! use core::marker::PhantomData;
 //!
 //! const MAX_LEN: usize = 10;
