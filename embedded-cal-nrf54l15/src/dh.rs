@@ -151,6 +151,10 @@ impl embedded_cal::DhAlgorithm for DhAlgorithm {
     }
 }
 
+/// It is an invariant of this type that algorithm specific preconditions are upheld, concretely:
+///
+/// * RFC7748 curve keys (x25519, x448) are pre-clamped as in that document's decodeScalar
+///   functions.
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct SecretKey {
     alg: DhAlgorithm,
@@ -355,10 +359,12 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
             },
             DhAlgorithm::X25519 => {
                 self.fill_bytes(&mut scalar[..32]);
+                clamp_x25519(scalar.first_chunk_mut().unwrap());
                 VisibleSecretKey(SecretKey { alg, scalar })
             }
             DhAlgorithm::X448 => {
                 self.fill_bytes(&mut scalar[..56]);
+                clamp_x448(scalar.first_chunk_mut().unwrap());
                 VisibleSecretKey(SecretKey { alg, scalar })
             }
         }
@@ -382,6 +388,19 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
         }
         let mut scalar = [0u8; 56];
         scalar[..expected].copy_from_slice(secret);
+        match alg {
+            DhAlgorithm::X25519 => {
+                // RFC7748 says "Implementations MUST accept non-canonical values" about public
+                // keys, and has no concrete words around loading secret keys (which is not really
+                // a necessary operation anyway); following the same notational logic (data is
+                // clipped silently), we also do not err here.
+                clamp_x25519(scalar.first_chunk_mut().unwrap());
+            }
+            DhAlgorithm::X448 => {
+                clamp_x448(scalar.first_chunk_mut().unwrap());
+            }
+            _ => (),
+        }
         Ok(VisibleSecretKey(SecretKey { alg, scalar }))
     }
 
@@ -437,7 +456,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
                 let mut k: [u8; 32] = private.scalar[..32]
                     .try_into()
                     .expect("slice is always 32 bytes");
-                clamp_x25519(&mut k);
+                // Not clamping of k: Was done at generation / loading time.
                 let mut u: [u8; 32] = public.x[..32].try_into().expect("slice is always 32 bytes");
                 u[31] &= 0x7F;
                 let result = self.cracen_x25519_mult(&k, &u);
@@ -448,7 +467,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
             }
             DhAlgorithm::X448 => {
                 let mut k: [u8; 56] = private.scalar;
-                clamp_x448(&mut k);
+                // Not clamping of k: Was done at generation / loading time.
                 let u: [u8; 56] = public.x;
                 let x = self.cracen_x448_mult(&k, &u);
                 k.zeroize();
