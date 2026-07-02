@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
+pub mod ec;
 pub mod hash;
 
 /// Sum of all traits that a hardware accelerator can provide.
@@ -9,4 +10,4 @@ pub mod hash;
 /// provides, all these traits have a `const SUPPORTED: bool`: If this is false (which will be
 /// default once the `associated_type_defaults` feature lands), all other values are ignored, and
 /// all functions can use the provided panicking implementations.
-pub trait Plumbing: hash::Hash {}
+pub trait Plumbing: hash::Hash + ec::Ec {}

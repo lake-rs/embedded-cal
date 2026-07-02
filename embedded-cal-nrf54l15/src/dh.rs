@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
-use embedded_cal::DhAlgorithm as _;
 use embedded_cal::p256::{
     P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y,
 };
@@ -151,11 +150,15 @@ impl embedded_cal::DhAlgorithm for DhAlgorithm {
     }
 }
 
+/// It is an invariant of this type that algorithm specific preconditions are upheld, concretely:
+///
+/// * RFC7748 curve keys (x25519, x448) are pre-clamped as in that document's decodeScalar
+///   functions.
 #[derive(Zeroize, ZeroizeOnDrop)]
-pub struct SecretKey {
-    alg: DhAlgorithm,
-    // First `alg.output_length()` bytes are valid.
-    scalar: [u8; 56],
+pub enum SecretKey {
+    EcdhP256(crate::dh_plumbing::NrfScalar<embedded_cal::plumbing::ec::P256>),
+    X25519(crate::dh_plumbing::NrfScalar<embedded_cal::plumbing::ec::X25519>),
+    X448(crate::dh_plumbing::NrfScalar<embedded_cal::plumbing::ec::X448>),
 }
 
 #[derive(Zeroize)]
@@ -167,18 +170,38 @@ impl From<VisibleSecretKey> for SecretKey {
     }
 }
 
-pub struct PublicKey {
-    alg: DhAlgorithm,
-    // First `alg.output_length()` bytes are valid.
-    x: [u8; 56],
-    // Used only for P-256 (recovered on import).
-    y: [u8; 32],
+/// It is an invariant of this type that algorithm specific preconditions are upheld, concretely:
+///
+/// * RFC7748 curve keys have their unused bits cleared where applicable  (x25519; doesn't apply to
+///   x448 because its length is divisible by 8).
+// This is a *bit* wasteful because y is large enough even to hold a y coordinate of an OKP key;
+// right now my gut feeling is that the simplifications from keeping this type simple outweigh
+// that -- but maybe not, and we should switch to having an NrfScalar in there. (Shouldn't matter
+// too much for the layout, and accessing x will still be the same).
+//
+// (We could deviate from the pattern here, as what matters is usually accessing .x, but then we'd
+// also have to change the point type because the multiply_scalar_point API expects a point)
+pub enum PublicKey {
+    EcdhP256(crate::dh_plumbing::NrfPoint<embedded_cal::plumbing::ec::P256>),
+    X25519(crate::dh_plumbing::NrfPoint<embedded_cal::plumbing::ec::X25519>),
+    X448(crate::dh_plumbing::NrfPoint<embedded_cal::plumbing::ec::X448>),
 }
 
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecret {
-    bytes: [u8; 56],
+    bytes: [u8; crate::dh_plumbing::MAX_SCALAR],
     len: usize,
+}
+
+impl SharedSecret {
+    fn from_x_coordinate<C: crate::dh_plumbing::NrfCurve>(
+        point: crate::dh_plumbing::NrfPoint<C>,
+    ) -> Self {
+        SharedSecret {
+            bytes: point.x.data,
+            len: C::SCALAR_SIZE,
+        }
+    }
 }
 
 impl super::Nrf54l15Cal {
@@ -342,24 +365,27 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
     type SharedSecret = SharedSecret;
 
     fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
-        let mut scalar = [0u8; 56];
         match alg {
             DhAlgorithm::EcdhP256 => loop {
+                let mut scalar = [0u8; 32];
                 // Error = Infallible
-                self.fill_bytes(&mut scalar[..32]);
-                let scalar32: [u8; 32] = scalar[..32].try_into().expect("slice is always 32 bytes");
-                let w = bytes_to_words(&scalar32);
+                self.fill_bytes(&mut scalar);
+                let w = bytes_to_words(&scalar);
                 if w != [0u32; 8] && !ge(&w, &P256_ORDER) {
-                    return VisibleSecretKey(SecretKey { alg, scalar });
+                    return VisibleSecretKey(SecretKey::EcdhP256(scalar.into()));
                 }
             },
             DhAlgorithm::X25519 => {
-                self.fill_bytes(&mut scalar[..32]);
-                VisibleSecretKey(SecretKey { alg, scalar })
+                let mut scalar = [0u8; 32];
+                self.fill_bytes(&mut scalar);
+                clamp_x25519(&mut scalar);
+                VisibleSecretKey(SecretKey::X25519(scalar.into()))
             }
             DhAlgorithm::X448 => {
-                self.fill_bytes(&mut scalar[..56]);
-                VisibleSecretKey(SecretKey { alg, scalar })
+                let mut scalar = [0u8; 56];
+                self.fill_bytes(&mut scalar);
+                clamp_x448(&mut scalar);
+                VisibleSecretKey(SecretKey::X448(scalar.into()))
             }
         }
     }
@@ -368,7 +394,11 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
         &mut self,
         secretkey: &'s Self::VisibleSecretKey,
     ) -> impl AsRef<[u8]> + use<'s> {
-        &secretkey.0.scalar[..secretkey.0.alg.output_length()]
+        match &secretkey.0 {
+            SecretKey::EcdhP256(scalar) => scalar.as_ref().as_slice(),
+            SecretKey::X25519(scalar) => scalar.as_ref().as_slice(),
+            SecretKey::X448(scalar) => scalar.as_ref().as_slice(),
+        }
     }
 
     fn import_secretkey_bytes(
@@ -376,20 +406,41 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
         alg: Self::Algorithm,
         secret: &[u8],
     ) -> Result<Self::VisibleSecretKey, embedded_cal::ImportError> {
-        let expected = alg.output_length();
-        if secret.len() != expected {
-            return Err(embedded_cal::ImportError);
-        }
-        let mut scalar = [0u8; 56];
-        scalar[..expected].copy_from_slice(secret);
-        Ok(VisibleSecretKey(SecretKey { alg, scalar }))
+        let secret = match alg {
+            DhAlgorithm::EcdhP256 => SecretKey::EcdhP256(
+                <[u8; _]>::try_from(secret)
+                    .map_err(|_| embedded_cal::ImportError)?
+                    .into(),
+            ),
+            DhAlgorithm::X25519 => {
+                let mut scalar =
+                    <[u8; _]>::try_from(secret).map_err(|_| embedded_cal::ImportError)?;
+                // RFC7748 says "Implementations MUST accept non-canonical values" about public
+                // keys, and has no concrete words around loading secret keys (which is not really
+                // a necessary operation anyway); following the same notational logic (data is
+                // clipped silently), we also do not err here.
+                clamp_x25519(&mut scalar);
+                SecretKey::X25519(scalar.into())
+            }
+            DhAlgorithm::X448 => {
+                let mut scalar =
+                    <[u8; _]>::try_from(secret).map_err(|_| embedded_cal::ImportError)?;
+                clamp_x448(&mut scalar);
+                SecretKey::X448(scalar.into())
+            }
+        };
+        Ok(VisibleSecretKey(secret))
     }
 
     fn export_publickey_bytes<'p>(
         &mut self,
         public: &'p Self::PublicKey,
     ) -> impl AsRef<[u8]> + use<'p> {
-        &public.x[..public.alg.output_length()]
+        match public {
+            PublicKey::EcdhP256(point) => point.x.as_ref().as_slice(),
+            PublicKey::X25519(point) => point.x.as_ref().as_slice(),
+            PublicKey::X448(point) => point.x.as_ref().as_slice(),
+        }
     }
 
     fn import_publickey_bytes(
@@ -397,20 +448,33 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
         alg: Self::Algorithm,
         data: &[u8],
     ) -> Result<Self::PublicKey, embedded_cal::ImportError> {
-        let expected = alg.output_length();
-        if data.len() != expected {
-            return Err(embedded_cal::ImportError);
-        }
-        let mut x = [0u8; 56];
-        x[..expected].copy_from_slice(data);
-        let y = match alg {
+        use crate::dh_plumbing::NrfPoint;
+
+        match alg {
             DhAlgorithm::EcdhP256 => {
-                let x32: [u8; 32] = x[..32].try_into().expect("slice is always 32 bytes");
-                p256_recover_y(&x32)?
+                let x: [u8; _] = data.try_into().map_err(|_| embedded_cal::ImportError)?;
+                let y = p256_recover_y(&x)?;
+                Ok(PublicKey::EcdhP256(NrfPoint {
+                    x: x.into(),
+                    y: y.into(),
+                }))
             }
-            DhAlgorithm::X25519 | DhAlgorithm::X448 => [0u8; 32],
-        };
-        Ok(PublicKey { alg, x, y })
+            DhAlgorithm::X25519 => {
+                let mut x: [u8; _] = data.try_into().map_err(|_| embedded_cal::ImportError)?;
+                x[31] &= 0x7F;
+                Ok(PublicKey::X25519(NrfPoint {
+                    x: x.into(),
+                    y: [0; _].into(),
+                }))
+            }
+            DhAlgorithm::X448 => {
+                let x: [u8; _] = data.try_into().map_err(|_| embedded_cal::ImportError)?;
+                Ok(PublicKey::X448(NrfPoint {
+                    x: x.into(),
+                    y: [0; _].into(),
+                }))
+            }
+        }
     }
 
     fn shared_secret(
@@ -418,90 +482,60 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
         private: &Self::SecretKey,
         public: &Self::PublicKey,
     ) -> Result<Self::SharedSecret, embedded_cal::IncompatibleKeys> {
-        if private.alg != public.alg {
-            return Err(embedded_cal::IncompatibleKeys);
-        }
-        match private.alg {
-            DhAlgorithm::EcdhP256 => {
-                let mut scalar32: [u8; 32] = private.scalar[..32]
-                    .try_into()
-                    .expect("slice is always 32 bytes");
-                let px32: [u8; 32] = public.x[..32].try_into().expect("slice is always 32 bytes");
-                let (result_x, _) = self.cracen_p256_mult(&scalar32, &px32, &public.y);
-                scalar32.zeroize();
-                let mut bytes = [0u8; 56];
-                bytes[..32].copy_from_slice(&result_x);
-                Ok(SharedSecret { bytes, len: 32 })
+        use embedded_cal::plumbing::ec::{Ec, EcPrimitives};
+
+        match (private, public) {
+            (SecretKey::EcdhP256(private), PublicKey::EcdhP256(public)) => {
+                let result = self.p256().multiply_scalar_point(private, public);
+                Ok(SharedSecret::from_x_coordinate(result))
             }
-            DhAlgorithm::X25519 => {
-                let mut k: [u8; 32] = private.scalar[..32]
-                    .try_into()
-                    .expect("slice is always 32 bytes");
-                clamp_x25519(&mut k);
-                let mut u: [u8; 32] = public.x[..32].try_into().expect("slice is always 32 bytes");
-                u[31] &= 0x7F;
-                let result = self.cracen_x25519_mult(&k, &u);
-                k.zeroize();
-                let mut bytes = [0u8; 56];
-                bytes[..32].copy_from_slice(&result);
-                Ok(SharedSecret { bytes, len: 32 })
+            (SecretKey::X25519(k), PublicKey::X25519(public)) => {
+                // Not clamping of k: Was done at generation / loading time.
+                // No clearing of the 256 bit of the public key: Was done at loading time.
+                let result = self.x25519().multiply_scalar_point(k, public);
+                Ok(SharedSecret::from_x_coordinate(result))
             }
-            DhAlgorithm::X448 => {
-                let mut k: [u8; 56] = private.scalar;
-                clamp_x448(&mut k);
-                let u: [u8; 56] = public.x;
-                let x = self.cracen_x448_mult(&k, &u);
-                k.zeroize();
-                Ok(SharedSecret { bytes: x, len: 56 })
+            (SecretKey::X448(k), PublicKey::X448(public)) => {
+                // Not clamping of k: Was done at generation / loading time.
+                let result = self.x448().multiply_scalar_point(k, public);
+                Ok(SharedSecret::from_x_coordinate(result))
             }
+            _ => Err(embedded_cal::IncompatibleKeys),
         }
     }
 
     fn public_key(&mut self, private: &Self::SecretKey) -> Self::PublicKey {
-        match private.alg {
-            DhAlgorithm::EcdhP256 => {
-                let mut scalar32: [u8; 32] = private.scalar[..32]
-                    .try_into()
-                    .expect("slice is always 32 bytes");
-                let (rx, ry) = self.cracen_p256_mult(&scalar32, &P256_GX_BYTES, &P256_GY_BYTES);
-                scalar32.zeroize();
-                let mut x = [0u8; 56];
-                x[..32].copy_from_slice(&rx);
-                PublicKey {
-                    alg: private.alg.clone(),
-                    x,
-                    y: ry,
-                }
+        use crate::dh_plumbing::{NrfPoint, NrfScalar};
+        use embedded_cal::plumbing::ec::*;
+
+        match private {
+            SecretKey::EcdhP256(scalar) => {
+                const P256_G: NrfPoint<P256> = NrfPoint {
+                    x: NrfScalar::<P256>::from_const(P256_GX_BYTES),
+                    y: NrfScalar::<P256>::from_const(P256_GY_BYTES),
+                };
+                PublicKey::EcdhP256(self.p256().multiply_scalar_point(scalar, &P256_G))
             }
-            DhAlgorithm::X25519 => {
-                let mut k: [u8; 32] = private.scalar[..32]
-                    .try_into()
-                    .expect("slice is always 32 bytes");
-                clamp_x25519(&mut k);
+            SecretKey::X25519(k) => {
                 let mut base_u = [0u8; 32];
                 base_u[0] = 9; // X25519 base point u-coordinate = 9 (little-endian)
-                let u = self.cracen_x25519_mult(&k, &base_u);
-                k.zeroize();
-                let mut x = [0u8; 56];
-                x[..32].copy_from_slice(&u);
-                PublicKey {
-                    alg: private.alg.clone(),
-                    x,
-                    y: [0u8; 32],
-                }
+                let base = NrfPoint {
+                    x: base_u.into(),
+                    y: [0; _].into(),
+                };
+                let public = self.x25519().multiply_scalar_point(k, &base);
+                // FIXME: Verify that the output key needs no bit-clearing (because it is on the
+                // curve by construction)
+                PublicKey::X25519(public)
             }
-            DhAlgorithm::X448 => {
-                let mut k: [u8; 56] = private.scalar;
-                clamp_x448(&mut k);
+            SecretKey::X448(k) => {
                 let mut base_u = [0u8; 56];
                 base_u[0] = 5; // X448 base point u-coordinate = 5 (little-endian)
-                let x = self.cracen_x448_mult(&k, &base_u);
-                k.zeroize();
-                PublicKey {
-                    alg: private.alg.clone(),
-                    x,
-                    y: [0u8; 32],
-                }
+                let base = NrfPoint {
+                    x: base_u.into(),
+                    y: [0; _].into(),
+                };
+                PublicKey::X448(self.x448().multiply_scalar_point(k, &base))
             }
         }
     }

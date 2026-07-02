@@ -205,6 +205,33 @@ impl plumbing::hash::Sha2Short for EmptyCal<true> {
     }
 }
 
+impl plumbing::ec::Ec for EmptyCal<true> {
+    type PrimitivesP256 = Self;
+    type PrimitivesX25519 = Self;
+    type PrimitivesX448 = Self;
+
+    fn p256(&mut self) -> &mut Self::PrimitivesP256 {
+        self
+    }
+    fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
+        self
+    }
+    fn x448(&mut self) -> &mut Self::PrimitivesX448 {
+        self
+    }
+}
+
+impl<C: plumbing::ec::Curve> plumbing::ec::EcPrimitives<C> for EmptyCal<true> {
+    const HAS_MULTIPLY_SCALAR_POINT: bool = false;
+
+    type Scalar = NoAlgorithms;
+    type Point = NoAlgorithms;
+
+    fn multiply_scalar_point(&mut self, a: &Self::Scalar, _b: &Self::Point) -> Self::Point {
+        match *a {}
+    }
+}
+
 /// Type which an implementation of [`Cal`] can use when it implements no algorithm for a
 /// particular provider.
 ///
