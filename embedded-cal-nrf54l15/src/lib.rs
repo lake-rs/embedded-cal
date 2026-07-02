@@ -5,6 +5,7 @@
 mod aead;
 mod descriptor;
 mod dh;
+mod dh_plumbing;
 mod microcode;
 mod try_rng;
 
