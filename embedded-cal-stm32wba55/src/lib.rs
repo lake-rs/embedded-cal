@@ -14,6 +14,7 @@ use stm32_metapac::{
 };
 mod aead;
 mod dh;
+mod dh_plumbing;
 mod try_rng;
 
 const WORD_SIZE: usize = 4;
@@ -30,13 +31,13 @@ pub struct Stm32wba55Cal {
     pka: pka::Pka,
 
     // Null-provider for everything we do *not* implement
-    empty: EmptyCal<false>,
+    empty: EmptyCal<true>,
 }
 
 impl embedded_cal::Cal for Stm32wba55Cal {
     type DhProvider = Self;
     type AeadProvider = Self;
-    type HashProvider = EmptyCal<false>;
+    type HashProvider = EmptyCal<true>;
     type HmacProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
