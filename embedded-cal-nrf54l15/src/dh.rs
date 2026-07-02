@@ -171,6 +171,10 @@ impl From<VisibleSecretKey> for SecretKey {
     }
 }
 
+/// It is an invariant of this type that algorithm specific preconditions are upheld, concretely:
+///
+/// * RFC7748 curve keys have their unused bits cleared where applicable  (x25519; doesn't apply to
+///   x448 because its length is divisible by 8).
 pub struct PublicKey {
     alg: DhAlgorithm,
     // First `alg.output_length()` bytes are valid.
@@ -422,12 +426,19 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
         }
         let mut x = [0u8; 56];
         x[..expected].copy_from_slice(data);
-        let y = match alg {
+        let y;
+        match alg {
             DhAlgorithm::EcdhP256 => {
                 let x32: [u8; 32] = x[..32].try_into().expect("slice is always 32 bytes");
-                p256_recover_y(&x32)?
+                y = p256_recover_y(&x32)?;
+            },
+            DhAlgorithm::X25519 => {
+                x[31] &= 0x7F;
+                y = [0u8; 32];
+            },
+            DhAlgorithm::X448 => {
+                y = [0u8; 32];
             }
-            DhAlgorithm::X25519 | DhAlgorithm::X448 => [0u8; 32],
         };
         Ok(PublicKey { alg, x, y })
     }
@@ -457,8 +468,8 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
                     .try_into()
                     .expect("slice is always 32 bytes");
                 // Not clamping of k: Was done at generation / loading time.
-                let mut u: [u8; 32] = public.x[..32].try_into().expect("slice is always 32 bytes");
-                u[31] &= 0x7F;
+                let u: [u8; 32] = public.x[..32].try_into().expect("slice is always 32 bytes");
+                // No clearing of the 256 bit of u: Was done at loading time.
                 let result = self.cracen_x25519_mult(&k, &u);
                 k.zeroize();
                 let mut bytes = [0u8; 56];
@@ -503,6 +514,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
                 k.zeroize();
                 let mut x = [0u8; 56];
                 x[..32].copy_from_slice(&u);
+                x[31] &= 0x7F;
                 PublicKey {
                     alg: private.alg.clone(),
                     x,
