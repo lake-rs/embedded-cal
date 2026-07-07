@@ -11,18 +11,30 @@ pub enum AeadAlgorithm<EC: ExtenderConfig> {
     Direct(AeadAlgorithmOf<EC::Base>),
     AesGcm128,
     AesGcm256,
+    AesCcm128,
+    AesCcm128Short,
+    AesCcm256,
+    AesCcm256Short,
 }
 
 pub enum Key<EC: ExtenderConfig> {
     Direct(AeadKeyOf<EC::Base>),
     AesGcm128([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
     AesGcm256([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
+    AesCcm128([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
+    AesCcm128Short([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
+    AesCcm256([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
+    AesCcm256Short([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
 }
 
 pub enum Tag<EC: ExtenderConfig> {
     Direct(AeadTagOf<EC::Base>),
     AesGcm128([u8; libcrux_iot_aes::TAG_LEN]),
     AesGcm256([u8; libcrux_iot_aes::TAG_LEN]),
+    AesCcm128([u8; libcrux_iot_aes::TAG_LEN]),
+    AesCcm128Short([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
+    AesCcm256([u8; libcrux_iot_aes::TAG_LEN]),
+    AesCcm256Short([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
 }
 
 struct AadAdapter<'a, A: Iterator<Item = &'a [u8]>> {
@@ -74,6 +86,18 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
             AeadAlgorithm::AesGcm256 => {
                 Key::AesGcm256(<[u8; _]>::try_from(key).expect("key length mismatch"))
             }
+            AeadAlgorithm::AesCcm128 => {
+                Key::AesCcm128(<[u8; _]>::try_from(key).expect("key length mismatch"))
+            }
+            AeadAlgorithm::AesCcm128Short => {
+                Key::AesCcm128Short(<[u8; _]>::try_from(key).expect("key length mismatch"))
+            }
+            AeadAlgorithm::AesCcm256 => {
+                Key::AesCcm256(<[u8; _]>::try_from(key).expect("key length mismatch"))
+            }
+            AeadAlgorithm::AesCcm256Short => {
+                Key::AesCcm256Short(<[u8; _]>::try_from(key).expect("key length mismatch"))
+            }
         }
     }
 
@@ -88,31 +112,46 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
             return Tag::Direct(self.0.aead().encrypt_in_place(k, nonce, message, aad));
         };
 
+        macro_rules! encrypt {
+            ($module:ident, $tag_len:expr, $key:expr) => {{
+                let mut tag = [0u8; $tag_len];
+                libcrux_iot_aes::portable::$module::encrypt(
+                    $key,
+                    nonce,
+                    flatten(&aad),
+                    message,
+                    &mut tag,
+                )
+                .unwrap();
+                tag
+            }};
+        }
+
         match key {
             Key::Direct(_) => unreachable!(),
             Key::AesGcm128(key) => {
-                let mut tag = [0u8; libcrux_iot_aes::TAG_LEN];
-                libcrux_iot_aes::portable::aes_gcm_128::encrypt(
-                    key,
-                    nonce,
-                    flatten(&aad),
-                    message,
-                    &mut tag,
-                )
-                .unwrap();
+                let tag = encrypt!(aes_gcm_128, libcrux_iot_aes::TAG_LEN, key);
                 Tag::AesGcm128(tag)
             }
             Key::AesGcm256(key) => {
-                let mut tag = [0u8; libcrux_iot_aes::TAG_LEN];
-                libcrux_iot_aes::portable::aes_gcm_256::encrypt(
-                    key,
-                    nonce,
-                    flatten(&aad),
-                    message,
-                    &mut tag,
-                )
-                .unwrap();
+                let tag = encrypt!(aes_gcm_256, libcrux_iot_aes::TAG_LEN, key);
                 Tag::AesGcm256(tag)
+            }
+            Key::AesCcm128(key) => {
+                let tag = encrypt!(aes_ccm_128, libcrux_iot_aes::TAG_LEN, key);
+                Tag::AesCcm128(tag)
+            }
+            Key::AesCcm128Short(key) => {
+                let tag = encrypt!(aes_ccm_128_8, libcrux_iot_aes::CCM_SHORT_TAG_LEN, key);
+                Tag::AesCcm128Short(tag)
+            }
+            Key::AesCcm256(key) => {
+                let tag = encrypt!(aes_ccm_256, libcrux_iot_aes::TAG_LEN, key);
+                Tag::AesCcm256(tag)
+            }
+            Key::AesCcm256Short(key) => {
+                let tag = encrypt!(aes_ccm_256_8, libcrux_iot_aes::CCM_SHORT_TAG_LEN, key);
+                Tag::AesCcm256Short(tag)
             }
         }
     }
@@ -129,24 +168,27 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
             return self.0.aead().decrypt_in_place(k, nonce, message, tag, aad);
         };
 
+        macro_rules! decrypt {
+            ($module:ident, $key:expr) => {
+                libcrux_iot_aes::portable::$module::decrypt(
+                    $key,
+                    nonce,
+                    flatten(&aad),
+                    message,
+                    tag,
+                )
+                .map_err(|_| embedded_cal::DecryptionFailed)?
+            };
+        }
+
         match key {
             Key::Direct(_) => unreachable!(),
-            Key::AesGcm128(key) => libcrux_iot_aes::portable::aes_gcm_128::decrypt(
-                key,
-                nonce,
-                flatten(&aad),
-                message,
-                tag,
-            )
-            .map_err(|_| embedded_cal::DecryptionFailed)?,
-            Key::AesGcm256(key) => libcrux_iot_aes::portable::aes_gcm_256::decrypt(
-                key,
-                nonce,
-                flatten(&aad),
-                message,
-                tag,
-            )
-            .map_err(|_| embedded_cal::DecryptionFailed)?,
+            Key::AesGcm128(key) => decrypt!(aes_gcm_128, key),
+            Key::AesGcm256(key) => decrypt!(aes_gcm_256, key),
+            Key::AesCcm128(key) => decrypt!(aes_ccm_128, key),
+            Key::AesCcm128Short(key) => decrypt!(aes_ccm_128_8, key),
+            Key::AesCcm256(key) => decrypt!(aes_ccm_256, key),
+            Key::AesCcm256Short(key) => decrypt!(aes_ccm_256_8, key),
         }
 
         Ok(())
@@ -157,36 +199,53 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
     fn key_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.key_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::AES_128_KEY_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::AES_256_KEY_LEN,
+            AeadAlgorithm::AesGcm128 | AeadAlgorithm::AesCcm128 | AeadAlgorithm::AesCcm128Short => {
+                libcrux_iot_aes::AES_128_KEY_LEN
+            }
+            AeadAlgorithm::AesCcm256 | AeadAlgorithm::AesCcm256Short | AeadAlgorithm::AesGcm256 => {
+                libcrux_iot_aes::AES_256_KEY_LEN
+            }
         }
     }
 
     fn tag_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.tag_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::TAG_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::TAG_LEN,
+            AeadAlgorithm::AesGcm128
+            | AeadAlgorithm::AesGcm256
+            | AeadAlgorithm::AesCcm128
+            | AeadAlgorithm::AesCcm256 => libcrux_iot_aes::TAG_LEN,
+            AeadAlgorithm::AesCcm128Short | AeadAlgorithm::AesCcm256Short => {
+                libcrux_iot_aes::CCM_SHORT_TAG_LEN
+            }
         }
     }
 
     fn nonce_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.nonce_length(),
-            AeadAlgorithm::AesGcm128 => libcrux_iot_aes::NONCE_LEN,
-            AeadAlgorithm::AesGcm256 => libcrux_iot_aes::NONCE_LEN,
+            AeadAlgorithm::AesCcm128
+            | AeadAlgorithm::AesCcm128Short
+            | AeadAlgorithm::AesCcm256
+            | AeadAlgorithm::AesCcm256Short
+            | AeadAlgorithm::AesGcm128
+            | AeadAlgorithm::AesGcm256 => libcrux_iot_aes::NONCE_LEN,
         }
     }
 }
 
 impl<EC: ExtenderConfig> Clone for AeadAlgorithm<EC> {
-    // This is the default implemnentation, but we can't derive it because EC is not clone. (We
+    // This is the default implementation, but we can't derive it because EC is not clone. (We
     // don't expect it to, but we'd need "minimal derives" in Rust to make it derivable).
     fn clone(&self) -> Self {
         match self {
             Self::Direct(arg0) => Self::Direct(arg0.clone()),
             Self::AesGcm128 => Self::AesGcm128,
             Self::AesGcm256 => Self::AesGcm256,
+            Self::AesCcm128 => Self::AesCcm128,
+            Self::AesCcm128Short => Self::AesCcm128Short,
+            Self::AesCcm256 => Self::AesCcm256,
+            Self::AesCcm256Short => Self::AesCcm256Short,
         }
     }
 }
@@ -198,6 +257,10 @@ impl<EC: ExtenderConfig> core::fmt::Debug for AeadAlgorithm<EC> {
             Self::Direct(arg0) => arg0.fmt(f),
             Self::AesGcm128 => f.write_str("AesGcm128"),
             Self::AesGcm256 => f.write_str("AesGcm256"),
+            Self::AesCcm128 => f.write_str("AesCcm128"),
+            Self::AesCcm128Short => f.write_str("AesCcm128Short"),
+            Self::AesCcm256 => f.write_str("AesCcm256"),
+            Self::AesCcm256Short => f.write_str("AesCcm256Short"),
         }
     }
 }
@@ -222,6 +285,10 @@ impl<EC: ExtenderConfig> AsRef<[u8]> for Tag<EC> {
             Tag::Direct(tag) => tag.as_ref(),
             Tag::AesGcm128(tag) => tag.as_ref(),
             Tag::AesGcm256(tag) => tag.as_ref(),
+            Tag::AesCcm128(tag) => tag.as_ref(),
+            Tag::AesCcm128Short(tag) => tag.as_ref(),
+            Tag::AesCcm256(tag) => tag.as_ref(),
+            Tag::AesCcm256Short(tag) => tag.as_ref(),
         }
     }
 }
