@@ -133,7 +133,7 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 
 pub enum HashAlgorithm<EC: ExtenderConfig> {
     // FIXME: Ideally we'd employ some witness type of <EC::Base as Sha2Short>::SUPPORTED
-    // to render this uninhabited when unused.
+    // to render this uninhabited when unused -- but so far, we just don't construct it then.
     Sha256,
     Direct(HashAlgorithmOf<EC::Base>),
 }
@@ -187,7 +187,7 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
         let number: i128 = number.into();
 
         match number {
-            -16 => Some(HashAlgorithm::Sha256),
+            -16 if <EC::Base as Sha2Short>::SUPPORTED => Some(HashAlgorithm::Sha256),
             _ => HashAlgorithmOf::<EC::Base>::from_cose_number(number).map(HashAlgorithm::Direct),
         }
     }
