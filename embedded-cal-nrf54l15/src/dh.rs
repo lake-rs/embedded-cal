@@ -2,9 +2,7 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 use embedded_cal::DhAlgorithm as _;
-use embedded_cal::p256::{
-    P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y,
-};
+use embedded_cal::p256::{P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge};
 use nrf_pac::common::{RW, Reg};
 use nrf_pac::cracencore::vals::{Selcurve, Swapbytes};
 use rand_core::Rng as _;
@@ -52,6 +50,12 @@ const MG_SLOT_K: u32 = 8;
 const MG_SLOT_OUT: u32 = 10;
 // OPBYTESM1 for X448: 56-byte scalars → 55.
 const X448_BYTES_M1: u16 = 55;
+
+// Slot indices for ECC point decompression (PK_OP_ECC_PT_DECOMP = 0x27, sdk-nrf regs_commands.h).
+const PKE_OPCODE_ECC_PT_DECOMP: u8 = 0x27;
+const SLOT_DECOMP_X: u32 = 6;
+const SLOT_DECOMP_PTR_B: u32 = 8;
+const SLOT_DECOMP_Y: u32 = 10;
 
 // Big-endian slot address (P-256): data at end of slot.
 #[inline(always)]
@@ -332,6 +336,54 @@ impl super::Nrf54l15Cal {
             Some((&X448_PRIME_P, &X448_COEFF_A)),
         )
     }
+
+    // Recovers the y-coordinate of a P-256 point from its x-coordinate
+    pub(super) fn cracen_point_decompress(
+        &mut self,
+        x: &[u8; 32],
+    ) -> Result<[u8; 32], embedded_cal::ImportError> {
+        self.wait_pk_ready();
+
+        self.cracen_core.pk().command().write(|w| {
+            w.set_opeaddr(PKE_OPCODE_ECC_PT_DECOMP);
+            w.set_opbytesm1(BYTES_M1);
+            w.set_selcurve(Selcurve::P256);
+            w.set_swapbytes(Swapbytes::SWAPPED);
+            w.set_flaga(false);
+        });
+
+        self.wait_pk_ready();
+
+        // Safety: slot address is derived from a slot constant, statically in PKE RAM range;
+        unsafe {
+            write_pke_le(slot_addr(SLOT_DECOMP_X), x);
+        }
+
+        self.cracen_core.pk().pointers().write(|w| {
+            w.set_opptra(SLOT_DECOMP_X as u8);
+            w.set_opptrb(SLOT_DECOMP_PTR_B as u8);
+            w.set_opptrc(SLOT_DECOMP_Y as u8);
+        });
+
+        self.cracen_core.pk().control().write(|w| {
+            w.set_start(true);
+            w.set_clearirq(true);
+        });
+
+        self.wait_pk_ready();
+
+        let status = self.cracen_core.pk().status().read();
+        if status.errorflags() != 0 || status.failptr() != 0 {
+            return Err(embedded_cal::ImportError);
+        }
+
+        let mut y = [0u8; 32];
+        // Safety: slot address is derived from a slot constant, statically in PKE RAM range;
+        unsafe {
+            read_pke_le(slot_addr(SLOT_DECOMP_Y), &mut y);
+        }
+        Ok(y)
+    }
 }
 
 impl embedded_cal::DhProvider for super::Nrf54l15Cal {
@@ -406,7 +458,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
         let y = match alg {
             DhAlgorithm::EcdhP256 => {
                 let x32: [u8; 32] = x[..32].try_into().expect("slice is always 32 bytes");
-                p256_recover_y(&x32)?
+                self.cracen_point_decompress(&x32)?
             }
             DhAlgorithm::X25519 | DhAlgorithm::X448 => [0u8; 32],
         };

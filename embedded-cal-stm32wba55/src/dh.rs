@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 use embedded_cal::p256::{
-    B, P, P256_GX, P256_GY, P256_ORDER, bytes_to_words, ge, p256_recover_y, words_to_bytes,
+    B, P, P256_COEF_A, P256_GX, P256_GY, P256_ORDER, SQRT_EXP, bytes_to_words, ge, words_to_bytes,
 };
 use rand_core::Rng;
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -32,6 +32,25 @@ const RAM_RESULT_Y: usize = 116;
 
 const PKA_MODE_ECC_MULT: u8 = 0b10_0000;
 const PKA_RAM_WORDS: usize = 667;
+
+// PKA RAM slots for the modular-arithmetic mode (RM0493 sections 28.4.2-28.4.6)
+const PKA_RAM_OFFSET: usize = 0x400;
+const RAM_ARITH_EXP_LEN: usize = (0x400 - PKA_RAM_OFFSET) / 4; // exponent length in bits (mode 0x02 only)
+const RAM_ARITH_OPERAND_LEN: usize = (0x408 - PKA_RAM_OFFSET) / 4; // operand/modulus length in bits (all modes)
+const RAM_ARITH_OPERAND_A: usize = (0xA50 - PKA_RAM_OFFSET) / 4;
+const RAM_ARITH_OPERAND_B: usize = (0xC68 - PKA_RAM_OFFSET) / 4;
+const RAM_ARITH_MODULUS: usize = (0x1088 - PKA_RAM_OFFSET) / 4;
+const RAM_ARITH_RESULT: usize = (0xE78 - PKA_RAM_OFFSET) / 4;
+const RAM_ARITH_MONT_R2: usize = (0x620 - PKA_RAM_OFFSET) / 4; // Montgomery parameter R^2 mod n
+const RAM_EXP_PROTECT_BASE: usize = (0x16C8 - PKA_RAM_OFFSET) / 4;
+const RAM_EXP_PROTECT_EXPONENT: usize = (0x14B8 - PKA_RAM_OFFSET) / 4;
+const RAM_EXP_PROTECT_MODULUS: usize = (0x838 - PKA_RAM_OFFSET) / 4; // also holds the result on output
+const RAM_EXP_PROTECT_PHI: usize = (0xC68 - PKA_RAM_OFFSET) / 4; // Euler's totient of the modulus
+
+const PKA_MODE_MONT_PARAM: u8 = 0b0_0001;
+const PKA_MODE_MOD_ADD: u8 = 0b0_1110;
+const PKA_MODE_MOD_MUL: u8 = 0b1_0000;
+const PKA_MODE_MOD_EXP_PROTECTED: u8 = 0b0_0011;
 
 #[derive(PartialEq, Eq, Debug, Clone, Zeroize)]
 pub enum DhAlgorithm {
@@ -84,6 +103,17 @@ impl super::Stm32wba55Cal {
         }
     }
 
+    // Clears PKA status flags and zeroes PKA RAM
+    fn pka_reset(&mut self) {
+        self.pka.clrfr().write(|w| {
+            w.set_procendfc(true);
+            w.set_ramerrfc(true);
+            w.set_addrerrfc(true);
+            w.set_operrfc(true);
+        });
+        self.pka_zero_ram();
+    }
+
     // Write a 256-bit value (LE word order, LSW first) to PKA RAM.
     fn pka_write_field(&mut self, start: usize, words: &[u32; 8]) {
         for (i, &word) in words.iter().enumerate() {
@@ -106,13 +136,7 @@ impl super::Stm32wba55Cal {
         point_x: &[u32; 8],
         point_y: &[u32; 8],
     ) -> ([u32; 8], [u32; 8]) {
-        self.pka.clrfr().write(|w| {
-            w.set_procendfc(true);
-            w.set_ramerrfc(true);
-            w.set_addrerrfc(true);
-            w.set_operrfc(true);
-        });
-        self.pka_zero_ram();
+        self.pka_reset();
 
         self.pka.ram(RAM_N_LEN).write_value(256);
         self.pka.ram(RAM_P_LEN).write_value(256);
@@ -147,17 +171,143 @@ impl super::Stm32wba55Cal {
         let result_x = self.pka_read_field(RAM_POINT_X);
         let result_y = self.pka_read_field(RAM_RESULT_Y);
 
-        self.pka.clrfr().write(|w| {
-            w.set_procendfc(true);
-            w.set_ramerrfc(true);
-            w.set_addrerrfc(true);
-            w.set_operrfc(true);
-        });
-
-        // Zero PKA RAM to clear the private scalar (RAM_K) and result coordinates.
-        self.pka_zero_ram();
+        // Also scrubs the private scalar (RAM_K) and result coordinates.
+        self.pka_reset();
 
         (result_x, result_y)
+    }
+
+    // Starts a PKA operation in the given mode, waits for completion and asserts no
+    // error flags where raised. Caller MUST write operands into RAM before calling this
+    // and is responsible for cleaning flags/RAM after the whole operation
+    fn pka_run(&mut self, mode: u8) {
+        self.pka.cr().write(|w| {
+            w.set_en(true);
+            w.set_mode(mode);
+            w.set_start(true);
+        });
+
+        while self.pka.sr().read().busy() {}
+
+        // addrerrf/ramerrf only fire on a driver bug (wrong RAM offset, or concurrent RAM
+        // access this synchronous driver never does) — never from operands, so debug-only
+        // is enough. OPERRF is operand/mode-dependent (e.g. an even modulus), so it's
+        // checked too, even though the fixed P-256 prime modulus never trips it today.
+        let sr = self.pka.sr().read();
+        debug_assert!(
+            !sr.addrerrf() && !sr.ramerrf() && !sr.operrf(),
+            "PKA operation (mode {mode:#04x}) failed (SR error flags set)"
+        );
+    }
+
+    // (a + b) mod P (RM0493 section 28.4.3, mode 0x0E)
+    fn pka_add_mod(&mut self, a: &[u32; 8], b: &[u32; 8]) -> [u32; 8] {
+        self.pka_reset();
+
+        self.pka.ram(RAM_ARITH_OPERAND_LEN).write_value(256);
+        self.pka_write_field(RAM_ARITH_OPERAND_A, a);
+        self.pka_write_field(RAM_ARITH_OPERAND_B, b);
+        self.pka_write_field(RAM_ARITH_MODULUS, &P);
+
+        self.pka_run(PKA_MODE_MOD_ADD);
+
+        let result = self.pka_read_field(RAM_ARITH_RESULT);
+
+        self.pka_reset();
+
+        result
+    }
+
+    // (a * b) mod P (RM0493 section 28.4.5)
+    fn pka_mul_mod(&mut self, a: &[u32; 8], b: &[u32; 8]) -> [u32; 8] {
+        let r2 = self.pka_mont_param();
+        let a_mont = self.pka_mont_mul(a, &r2);
+        self.pka_mont_mul(&a_mont, b)
+    }
+
+    // Montgomery parameter R^2 mod P (RM0493 section 28.4.2, mode 0x01),
+    fn pka_mont_param(&mut self) -> [u32; 8] {
+        self.pka_reset();
+
+        self.pka.ram(RAM_ARITH_OPERAND_LEN).write_value(256);
+        self.pka_write_field(RAM_ARITH_MODULUS, &P);
+
+        self.pka_run(PKA_MODE_MONT_PARAM);
+
+        let r2 = self.pka_read_field(RAM_ARITH_MONT_R2);
+
+        self.pka_reset();
+
+        r2
+    }
+
+    // One raw Montgomery-multiplication hardware call (RM0493 section 28.4.5, mode 0x10):
+    fn pka_mont_mul(&mut self, a: &[u32; 8], b: &[u32; 8]) -> [u32; 8] {
+        self.pka_reset();
+
+        self.pka.ram(RAM_ARITH_OPERAND_LEN).write_value(256);
+        self.pka_write_field(RAM_ARITH_OPERAND_A, a);
+        self.pka_write_field(RAM_ARITH_OPERAND_B, b);
+        self.pka_write_field(RAM_ARITH_MODULUS, &P);
+
+        self.pka_run(PKA_MODE_MOD_MUL);
+
+        let result = self.pka_read_field(RAM_ARITH_RESULT);
+
+        self.pka_reset();
+
+        result
+    }
+
+    // Modular exponentiation base^exp mod P on the PKA (RM0493 section 28.4.7, mode 0x03).
+    // Protected mode, not fast mode, so a secret exponent can't leak via timing/power side
+    // channels. It has its own RAM layout and wants Phi = P-1 instead of Montgomery R^2.
+    fn pka_pow_mod(&mut self, base: &[u32; 8], exp: &[u32; 8]) -> [u32; 8] {
+        let mut phi = P;
+        phi[0] -= 1; // P is odd (prime > 2), so P-1 never borrows past the low word
+
+        self.pka_reset();
+
+        self.pka.ram(RAM_ARITH_EXP_LEN).write_value(256);
+        self.pka.ram(RAM_ARITH_OPERAND_LEN).write_value(256);
+        self.pka_write_field(RAM_EXP_PROTECT_BASE, base);
+        self.pka_write_field(RAM_EXP_PROTECT_EXPONENT, exp);
+        self.pka_write_field(RAM_EXP_PROTECT_MODULUS, &P);
+        self.pka_write_field(RAM_EXP_PROTECT_PHI, &phi);
+
+        self.pka_run(PKA_MODE_MOD_EXP_PROTECTED);
+
+        let result = self.pka_read_field(RAM_EXP_PROTECT_MODULUS);
+
+        self.pka_reset();
+
+        result
+    }
+
+    // Recovers the y-coordinate of a P-256 point from its x-coordinate
+    pub(super) fn pka_recover_y(
+        &mut self,
+        x_bytes: &[u8; 32],
+    ) -> Result<[u8; 32], embedded_cal::ImportError> {
+        let x = bytes_to_words(x_bytes);
+
+        if ge(&x, &P) {
+            return Err(embedded_cal::ImportError);
+        }
+
+        let x2 = self.pka_mul_mod(&x, &x);
+        let x3 = self.pka_mul_mod(&x2, &x);
+        let ax = self.pka_mul_mod(&P256_COEF_A, &x);
+        let sum = self.pka_add_mod(&x3, &ax);
+        let rhs = self.pka_add_mod(&sum, &B);
+
+        let y = self.pka_pow_mod(&rhs, &SQRT_EXP);
+
+        if self.pka_mul_mod(&y, &y) != rhs {
+            return Err(embedded_cal::ImportError);
+        }
+
+        Ok(words_to_bytes(&y))
     }
 }
 
@@ -211,7 +361,7 @@ impl embedded_cal::DhProvider for super::Stm32wba55Cal {
         data: &[u8],
     ) -> Result<Self::PublicKey, embedded_cal::ImportError> {
         let x: [u8; 32] = data.try_into().map_err(|_| embedded_cal::ImportError)?;
-        let y = p256_recover_y(&x)?;
+        let y = self.pka_recover_y(&x)?;
         Ok(PublicKey { alg, x, y })
     }
 

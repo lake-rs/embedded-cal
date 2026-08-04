@@ -31,7 +31,7 @@ impl EccVector {
             .into();
         let alice_public = cal.public_key(&alice_private);
         let bob_private = cal
-            .import_secretkey_bytes(alg, self.bob_private)
+            .import_secretkey_bytes(alg.clone(), self.bob_private)
             .expect("failed to load Bob's secret key")
             .into();
         let bob_public = cal.public_key(&bob_private);
@@ -45,6 +45,17 @@ impl EccVector {
             cal.export_publickey_bytes(&bob_public).as_ref(),
             self.bob_public,
             "Bob's public key not exported as expected"
+        );
+
+        // Round-trip Alice's public key through import_publickey_bytes
+        let alice_public_reimported = cal
+            .import_publickey_bytes(alg, self.alice_public)
+            .expect("failed to import Alice's public key");
+        assert_eq!(
+            cal.export_publickey_bytes(&alice_public_reimported)
+                .as_ref(),
+            self.alice_public,
+            "Alice's public key did not round-trip through import_publickey_bytes"
         );
 
         let shared_ab = cal
