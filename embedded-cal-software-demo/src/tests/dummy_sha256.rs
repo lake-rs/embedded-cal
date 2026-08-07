@@ -37,6 +37,7 @@ impl embedded_cal::Cal for DummySha256 {
     type AeadProvider = EmptyCal<false>;
     type HashProvider = EmptyCal<false>;
     type HmacProvider = EmptyCal<false>;
+    type SignProvider = EmptyCal<false>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         &mut self.0
@@ -51,6 +52,10 @@ impl embedded_cal::Cal for DummySha256 {
     }
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
+        &mut self.0
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
         &mut self.0
     }
 }

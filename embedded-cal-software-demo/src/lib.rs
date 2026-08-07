@@ -33,6 +33,7 @@ impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
     type AeadProvider = AeadProviderOf<EC::Base>;
     type HashProvider = Self;
     type HmacProvider = Self;
+    type SignProvider = SignProviderOf<EC::Base>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self.0.dh()
@@ -48,6 +49,10 @@ impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
         self
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
+        self.0.sign()
     }
 }
 

@@ -38,6 +38,7 @@ impl embedded_cal::Cal for Stm32wba55Cal {
     type AeadProvider = Self;
     type HashProvider = EmptyCal<false>;
     type HmacProvider = Self;
+    type SignProvider = EmptyCal<false>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self
@@ -51,6 +52,10 @@ impl embedded_cal::Cal for Stm32wba55Cal {
     }
     fn hmac(&mut self) -> &mut Self::HmacProvider {
         self
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
+        &mut self.empty
     }
 }
 
