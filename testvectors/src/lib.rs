@@ -6,6 +6,7 @@ use hexlit::hex;
 
 pub mod aead;
 pub mod dh;
+pub mod sign;
 
 pub use aead::{
     test_aead_aesccm_16_64_128, test_aead_aesccm_16_64_256, test_aead_aesgcm_128,

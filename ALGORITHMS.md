@@ -53,3 +53,11 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
 | HKDF on HMAC w/ SHA-256 | blanket | to be moved into implementations |
+
+# Sign
+
+| Algorithm | Implementation | Notes |
+|-----------|----------------|-------|
+| ECDSA on curve P-256 | rustcrypto | public-key import via compact (x-only) representation is unverified |
+| ECDSA on curve P-256 | stm32wba55 | using EcdsaP256 plumbing for acceleration |
+| ECDSA on curve P-256 | nrf54l15 | using EcdsaP256 plumbing for acceleration |

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
+pub mod ecdsa;
 pub mod hash;
 
 /// Sum of all traits that a hardware accelerator can provide.

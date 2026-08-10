@@ -31,6 +31,7 @@ impl<EC: ExtenderConfig> Cal for Extender<EC> {
     type HashProvider = Self;
     // FIXME: This should just be provided as well.
     type HmacProvider = HmacProviderOf<EC::Base>;
+    type SignProvider = SignProviderOf<EC::Base>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self.0.dh()
@@ -43,5 +44,8 @@ impl<EC: ExtenderConfig> Cal for Extender<EC> {
     }
     fn hmac(&mut self) -> &mut Self::HmacProvider {
         self.0.hmac()
+    }
+    fn sign(&mut self) -> &mut Self::SignProvider {
+        self.0.sign()
     }
 }

@@ -34,6 +34,10 @@
     Sha256,
 ./embedded-cal-rustcrypto/src/hash.rs
     Direct(BA),
+./embedded-cal-rustcrypto/src/sign.rs
+    EcdsaP256,
+./embedded-cal-rustcrypto/src/sign.rs
+    Direct(BA),
 ./embedded-cal-software-demo/src/hash.rs
     // FIXME: Ideally we'd employ some witness type of <EC::Base as Sha2Short>::SUPPORTED
 ./embedded-cal-software-demo/src/hash.rs
@@ -44,6 +48,8 @@
     Direct(HashAlgorithmOf<EC::Base>),
 ./embedded-cal-software-demo/src/hmac.rs
     HmacSha256,
+./embedded-cal-software-demo/src/sign.rs
+    EcdsaP256,
 ./embedded-cal-stm32wba55/src/aead.rs
     AesCcm16_64_128,
 ./embedded-cal-stm32wba55/src/aead.rs

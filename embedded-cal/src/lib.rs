@@ -12,6 +12,7 @@ mod hash;
 mod hkdf;
 mod hmac;
 mod rng;
+mod sign;
 // FIXME: Once we start API stability, this should be a dedicated crate.
 pub mod plumbing;
 
@@ -27,6 +28,10 @@ pub use hash::{HashAlgorithm, HashProvider, test_hash_algorithm_sha256};
 pub use hkdf::{HkdfError, HkdfProvider};
 pub use hmac::{HmacAlgorithm, HmacProvider, test_hmac_algorithm_hmacsha256};
 pub use rng::test_tryrng;
+pub use sign::{
+    SignAlgorithm, SignProvider, SignatureInvalid, test_sign_algorithm_ecdsa_p256,
+    test_sign_selftest,
+};
 
 #[allow(
     type_alias_bounds,
@@ -66,6 +71,14 @@ pub mod accessor {
     pub type HmacKeyOf<C: Cal> = <<C as Cal>::HmacProvider as HmacProvider>::Key;
     pub type HmacStateOf<C: Cal> = <<C as Cal>::HmacProvider as HmacProvider>::State;
     pub type HmacOutputOf<C: Cal> = <<C as Cal>::HmacProvider as HmacProvider>::Output;
+
+    pub type SignProviderOf<C: Cal> = <C as Cal>::SignProvider;
+    pub type SignAlgorithmOf<C: Cal> = <<C as Cal>::SignProvider as SignProvider>::Algorithm;
+    pub type SignVisibleSecretKeyOf<C: Cal> =
+        <<C as Cal>::SignProvider as SignProvider>::VisibleSecretKey;
+    pub type SignSignatureOf<C: Cal> = <<C as Cal>::SignProvider as SignProvider>::Signature;
+    pub type SignSecretKeyOf<C: Cal> = <<C as Cal>::SignProvider as SignProvider>::SecretKey;
+    pub type SignPublicKeyOf<C: Cal> = <<C as Cal>::SignProvider as SignProvider>::PublicKey;
 }
 
 /// Cryptographic abstraction provider that encompasses all features abstracted by the
@@ -95,9 +108,11 @@ pub trait Cal {
     type AeadProvider: AeadProvider;
     type HashProvider: HashProvider;
     type HmacProvider: HmacProvider;
+    type SignProvider: SignProvider;
 
     fn dh(&mut self) -> &mut Self::DhProvider;
     fn aead(&mut self) -> &mut Self::AeadProvider;
     fn hash(&mut self) -> &mut Self::HashProvider;
     fn hmac(&mut self) -> &mut Self::HmacProvider;
+    fn sign(&mut self) -> &mut Self::SignProvider;
 }

@@ -6,6 +6,7 @@ mod aead;
 mod descriptor;
 mod dh;
 mod microcode;
+mod sign;
 mod try_rng;
 
 use descriptor::{DescriptorChain, Input, Output};
@@ -31,6 +32,7 @@ impl embedded_cal::Cal for Nrf54l15Cal {
     type AeadProvider = Self;
     type HashProvider = EmptyCal<false>;
     type HmacProvider = EmptyCal<false>;
+    type SignProvider = EmptyCal<false>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self
@@ -45,6 +47,10 @@ impl embedded_cal::Cal for Nrf54l15Cal {
     }
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
+        &mut self.empty
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
         &mut self.empty
     }
 }

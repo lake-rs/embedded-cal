@@ -31,7 +31,36 @@ const RAM_K: usize = 936;
 const RAM_RESULT_Y: usize = 116;
 
 const PKA_MODE_ECC_MULT: u8 = 0b10_0000;
-const PKA_RAM_WORDS: usize = 667;
+// Total PKA RAM size (RM0493 / ST HAL `stm32wbaxx_hal_pka.c`, `PKA->RAM[1334]`),
+const PKA_RAM_WORDS: usize = 1334;
+
+// PKA RAM slot indices for ECDSA-P256 signature generation (PKA_MODE_ECDSA_SIGN = 0x24).
+const RAM_SIGN_PRIVATE_D: usize = 714;
+const RAM_SIGN_HASH_E: usize = 762;
+const RAM_SIGN_OUT_ERROR: usize = 760;
+const RAM_SIGN_OUT_R: usize = 204;
+const RAM_SIGN_OUT_S: usize = 226;
+
+// PKA RAM slot indices for ECDSA-P256 signature verification (PKA_MODE_ECDSA_VERIFY = 0x26).
+const RAM_VERIF_ORDER_NB_BITS: usize = 2;
+const RAM_VERIF_MOD_NB_BITS: usize = 50;
+const RAM_VERIF_A_SIGN: usize = 26;
+const RAM_VERIF_A: usize = 28;
+const RAM_VERIF_MOD_P: usize = 52;
+const RAM_VERIF_POINT_X: usize = 158;
+const RAM_VERIF_POINT_Y: usize = 180;
+const RAM_VERIF_PUBKEY_X: usize = 958;
+const RAM_VERIF_PUBKEY_Y: usize = 980;
+const RAM_VERIF_SIG_R: usize = 824;
+const RAM_VERIF_SIG_S: usize = 538;
+const RAM_VERIF_HASH_E: usize = 1002;
+const RAM_VERIF_ORDER_N: usize = 802;
+const RAM_VERIF_OUT_RESULT: usize = 116;
+
+const PKA_MODE_ECDSA_SIGN: u8 = 0x24;
+const PKA_MODE_ECDSA_VERIFY: u8 = 0x26;
+// PKA "no error" / "signature valid" sentinel written to the mode's OUT_ERROR / OUT_RESULT slot
+const PKA_NO_ERROR: u32 = 0xD60D;
 
 #[derive(PartialEq, Eq, Debug, Clone, Zeroize)]
 pub enum DhAlgorithm {
@@ -158,6 +187,145 @@ impl super::Stm32wba55Cal {
         self.pka_zero_ram();
 
         (result_x, result_y)
+    }
+
+    // Full ECDSA-P256 signature generation on the STM32WBA55 PKA (PKA_MODE_ECDSA_SIGN = 0x24,
+    // "protected" i.e. side-channel-hardened per RM0493). `d` (private scalar), `k` (per-signature
+    // nonce), and `h` (message digest) are little-endian word arrays (see `bytes_to_words`).
+    // Returns `None` if the hardware reports the nonce was unusable (its signature generation
+    // failed, e.g. r or s reduced to zero); per FIPS 186-5's signature generation algorithm, the
+    // caller should resample `k` and retry. Zeroes all of PKA RAM (including the private scalar)
+    // before returning either way.
+    pub(super) fn pka_ecdsa_sign(
+        &mut self,
+        d: &[u32; 8],
+        k: &[u32; 8],
+        h: &[u32; 8],
+    ) -> Option<([u32; 8], [u32; 8])> {
+        self.pka.clrfr().write(|w| {
+            w.set_procendfc(true);
+            w.set_ramerrfc(true);
+            w.set_addrerrfc(true);
+            w.set_operrfc(true);
+        });
+        self.pka_zero_ram();
+
+        self.pka.ram(RAM_N_LEN).write_value(256);
+        self.pka.ram(RAM_P_LEN).write_value(256);
+        self.pka
+            .ram(RAM_A_SIGN)
+            .write_value(CoefSign::Negative as u32);
+        self.pka_write_field(RAM_A, &P256_COEF_A_MAGNITUDE);
+        self.pka_write_field(RAM_B, &B);
+        self.pka_write_field(RAM_P, &P);
+        self.pka_write_field(RAM_N, &P256_ORDER);
+        self.pka_write_field(RAM_POINT_X, &P256_GX);
+        self.pka_write_field(RAM_POINT_Y, &P256_GY);
+        self.pka_write_field(RAM_K, k);
+        self.pka_write_field(RAM_SIGN_HASH_E, h);
+        self.pka_write_field(RAM_SIGN_PRIVATE_D, d);
+
+        self.pka.cr().write(|w| {
+            w.set_en(true);
+            w.set_mode(PKA_MODE_ECDSA_SIGN);
+            w.set_start(true);
+        });
+
+        while self.pka.sr().read().busy() {}
+
+        let sr = self.pka.sr().read();
+        debug_assert!(
+            !sr.addrerrf() && !sr.ramerrf(),
+            "PKA ECDSA sign failed (SR error flags set)"
+        );
+
+        // Per ST HAL's PKA_CheckError: OUT_ERROR != PKA_NO_ERROR means the operation needs to be
+        // repeated (unusable nonce), not necessarily a hardware fault.
+        let unusable_nonce = self.pka.ram(RAM_SIGN_OUT_ERROR).read() != PKA_NO_ERROR;
+        let result = if unusable_nonce {
+            None
+        } else {
+            let r = self.pka_read_field(RAM_SIGN_OUT_R);
+            let s = self.pka_read_field(RAM_SIGN_OUT_S);
+            Some((r, s))
+        };
+
+        self.pka.clrfr().write(|w| {
+            w.set_procendfc(true);
+            w.set_ramerrfc(true);
+            w.set_addrerrfc(true);
+            w.set_operrfc(true);
+        });
+        // Zero PKA RAM to clear the private key (RAM_SIGN_PRIVATE_D) and nonce (RAM_K).
+        self.pka_zero_ram();
+
+        result
+    }
+
+    // Full ECDSA-P256 signature verification on the STM32WBA55 PKA (PKA_MODE_ECDSA_VERIFY =
+    // 0x26). `qx`/`qy` (public key), `r`/`s` (signature), and `h` (message digest) are
+    // little-endian word arrays.
+    pub(super) fn pka_ecdsa_verify(
+        &mut self,
+        qx: &[u32; 8],
+        qy: &[u32; 8],
+        h: &[u32; 8],
+        r: &[u32; 8],
+        s: &[u32; 8],
+    ) -> Result<(), embedded_cal::SignatureInvalid> {
+        self.pka.clrfr().write(|w| {
+            w.set_procendfc(true);
+            w.set_ramerrfc(true);
+            w.set_addrerrfc(true);
+            w.set_operrfc(true);
+        });
+        self.pka_zero_ram();
+
+        self.pka.ram(RAM_VERIF_ORDER_NB_BITS).write_value(256);
+        self.pka.ram(RAM_VERIF_MOD_NB_BITS).write_value(256);
+        self.pka
+            .ram(RAM_VERIF_A_SIGN)
+            .write_value(CoefSign::Negative as u32);
+        self.pka_write_field(RAM_VERIF_A, &P256_COEF_A_MAGNITUDE);
+        self.pka_write_field(RAM_VERIF_MOD_P, &P);
+        self.pka_write_field(RAM_VERIF_ORDER_N, &P256_ORDER);
+        self.pka_write_field(RAM_VERIF_POINT_X, &P256_GX);
+        self.pka_write_field(RAM_VERIF_POINT_Y, &P256_GY);
+        self.pka_write_field(RAM_VERIF_PUBKEY_X, qx);
+        self.pka_write_field(RAM_VERIF_PUBKEY_Y, qy);
+        self.pka_write_field(RAM_VERIF_SIG_R, r);
+        self.pka_write_field(RAM_VERIF_SIG_S, s);
+        self.pka_write_field(RAM_VERIF_HASH_E, h);
+
+        self.pka.cr().write(|w| {
+            w.set_en(true);
+            w.set_mode(PKA_MODE_ECDSA_VERIFY);
+            w.set_start(true);
+        });
+
+        while self.pka.sr().read().busy() {}
+
+        let sr = self.pka.sr().read();
+        debug_assert!(
+            !sr.addrerrf() && !sr.ramerrf(),
+            "PKA ECDSA verify failed (SR error flags set)"
+        );
+
+        let valid = self.pka.ram(RAM_VERIF_OUT_RESULT).read() == PKA_NO_ERROR;
+
+        self.pka.clrfr().write(|w| {
+            w.set_procendfc(true);
+            w.set_ramerrfc(true);
+            w.set_addrerrfc(true);
+            w.set_operrfc(true);
+        });
+        self.pka_zero_ram();
+
+        if valid {
+            Ok(())
+        } else {
+            Err(embedded_cal::SignatureInvalid)
+        }
     }
 }
 

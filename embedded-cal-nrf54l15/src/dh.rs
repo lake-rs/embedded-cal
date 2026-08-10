@@ -38,6 +38,31 @@ const SLOT_POINT_Y: u32 = 13;
 const SLOT_RESULT_X: u32 = 10;
 const SLOT_RESULT_Y: u32 = 11;
 
+// Opcodes for full ECDSA-P256 sign/verify
+//
+// Their operand slots are fixed by the microcode
+const PKE_OPCODE_ECDSA_SIGN: u8 = 0x30;
+const PKE_OPCODE_ECDSA_VERIFY: u8 = 0x31;
+
+// Slots for PK_OP_ECDSA_GEN (sdk-nrf op_slots.h: OP_SLOT_ECDSA_SGN_*).
+const SLOT_ECDSA_SGN_D: u32 = 6;
+const SLOT_ECDSA_SGN_K: u32 = 7;
+const SLOT_ECDSA_SGN_R: u32 = 10;
+const SLOT_ECDSA_SGN_S: u32 = 11;
+const SLOT_ECDSA_SGN_H: u32 = 12;
+
+// Slots for PK_OP_ECDSA_VER (sdk-nrf op_slots.h: OP_SLOT_ECDSA_VER_*).
+const SLOT_ECDSA_VER_QX: u32 = 8;
+const SLOT_ECDSA_VER_QY: u32 = 9;
+const SLOT_ECDSA_VER_R: u32 = 10;
+const SLOT_ECDSA_VER_S: u32 = 11;
+const SLOT_ECDSA_VER_H: u32 = 12;
+
+// STATUS.ERRORFLAGS bits (relative to the field's own lsb) that `cracen_ecdsa_sign` retries the
+// nonce on, rather than treating as a hard failure (sdk-nrf ba414_status.c).
+const ERRORFLAGS_INVALID_SIGNATURE: u16 = 1 << 5;
+const ERRORFLAGS_NOT_INVERTIBLE: u16 = 1 << 7;
+
 // Slot indices for Montgomery curve point multiplication (PK_OP_MG_PTMUL = 0x28, sdk-nrf regs_commands.h).
 // Little-endian; operands sit at the START of the slot (no P256_SLOT_OFFSET equivalent).
 // Montgomery uses the default BA414ep pointer registers (OP_SLOT_PTR_A/B/C from sdk-nrf op_slots.h).
@@ -331,6 +356,125 @@ impl super::Nrf54l15Cal {
             true,
             Some((&X448_PRIME_P, &X448_COEFF_A)),
         )
+    }
+
+    // Full ECDSA-P256 signature generation on the CRACEN BA414ep PKE engine (PK_OP_ECDSA_GEN).
+    // `d` (private scalar), `k` (per-signature nonce), and `h` (message digest) are big-endian
+    // byte arrays. Returns `None` if the hardware reports the nonce was unusable (it has no
+    // modular inverse, or the resulting `r`/`s` component reduced to zero); per FIPS 186-5's
+    // signature generation algorithm, the caller should resample `k` and retry. Zeroes the
+    // private scalar slot in PKE RAM before returning either way.
+    pub(super) fn cracen_ecdsa_sign(
+        &mut self,
+        d: &[u8; 32],
+        k: &[u8; 32],
+        h: &[u8; 32],
+    ) -> Option<([u8; 32], [u8; 32])> {
+        self.wait_pk_ready();
+
+        self.cracen_core.pk().command().write(|w| {
+            w.set_opeaddr(PKE_OPCODE_ECDSA_SIGN);
+            w.set_opbytesm1(BYTES_M1);
+            w.set_selcurve(Selcurve::P256);
+            w.set_swapbytes(Swapbytes::SWAPPED);
+            // Blind the nonce and projective coordinates (matches sdk-nrf's
+            // SX_PK_OP_FLAGS_ECC_CM countermeasure flags declared on CMD_ECDSA_GEN).
+            w.set_randke(true);
+            w.set_randproj(true);
+        });
+
+        self.wait_pk_ready();
+
+        // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
+        unsafe {
+            write_pke_le(slot_addr(SLOT_ECDSA_SGN_D), d);
+            write_pke_le(slot_addr(SLOT_ECDSA_SGN_K), k);
+            write_pke_le(slot_addr(SLOT_ECDSA_SGN_H), h);
+        }
+
+        self.cracen_core.pk().control().write(|w| {
+            w.set_start(true);
+            w.set_clearirq(true);
+        });
+
+        self.wait_pk_ready();
+
+        let status = self.cracen_core.pk().status().read();
+        let errorflags = status.errorflags();
+        let unusable_nonce =
+            errorflags & (ERRORFLAGS_INVALID_SIGNATURE | ERRORFLAGS_NOT_INVERTIBLE) != 0;
+        debug_assert!(
+            unusable_nonce || (errorflags == 0 && status.failptr() == 0),
+            "CRACEN PKE ECDSA sign failed (errorflags={:#x}, failptr={:#x})",
+            errorflags,
+            status.failptr(),
+        );
+
+        let result = if unusable_nonce {
+            None
+        } else {
+            let mut r = [0u8; 32];
+            let mut s = [0u8; 32];
+            // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
+            unsafe {
+                read_pke_le(slot_addr(SLOT_ECDSA_SGN_R), &mut r);
+                read_pke_le(slot_addr(SLOT_ECDSA_SGN_S), &mut s);
+            }
+            Some((r, s))
+        };
+
+        // Safety: slot address is derived from a slot constant, statically in PKE RAM range;
+        unsafe {
+            for i in 0..8u32 {
+                pke_ram_word(slot_addr(SLOT_ECDSA_SGN_D) + i * 4).write_value(0u32);
+            }
+        }
+        result
+    }
+
+    // Full ECDSA-P256 signature verification on the CRACEN BA414ep PKE engine (PK_OP_ECDSA_VER).
+    // `qx`/`qy` (public key), `r`/`s` (signature), and `h` (message digest) are big-endian byte
+    // arrays.
+    pub(super) fn cracen_ecdsa_verify(
+        &mut self,
+        qx: &[u8; 32],
+        qy: &[u8; 32],
+        h: &[u8; 32],
+        r: &[u8; 32],
+        s: &[u8; 32],
+    ) -> Result<(), embedded_cal::SignatureInvalid> {
+        self.wait_pk_ready();
+
+        self.cracen_core.pk().command().write(|w| {
+            w.set_opeaddr(PKE_OPCODE_ECDSA_VERIFY);
+            w.set_opbytesm1(BYTES_M1);
+            w.set_selcurve(Selcurve::P256);
+            w.set_swapbytes(Swapbytes::SWAPPED);
+        });
+
+        self.wait_pk_ready();
+
+        // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
+        unsafe {
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_QX), qx);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_QY), qy);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_R), r);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_S), s);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_H), h);
+        }
+
+        self.cracen_core.pk().control().write(|w| {
+            w.set_start(true);
+            w.set_clearirq(true);
+        });
+
+        self.wait_pk_ready();
+
+        let status = self.cracen_core.pk().status().read();
+        if status.errorflags() != 0 {
+            return Err(embedded_cal::SignatureInvalid);
+        }
+        Ok(())
     }
 }
 

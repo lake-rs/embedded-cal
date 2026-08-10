@@ -8,7 +8,7 @@
     reason = "folling algorithm convention"
 )]
 
-use embedded_cal::empty::EmptyCal;
+use embedded_cal::{empty::EmptyCal, plumbing::ecdsa};
 
 /// A minimal testable version of SHA256-but-no-blocks-or-dummy.
 ///
@@ -37,6 +37,7 @@ impl embedded_cal::Cal for DummySha256 {
     type AeadProvider = EmptyCal<false>;
     type HashProvider = EmptyCal<false>;
     type HmacProvider = EmptyCal<false>;
+    type SignProvider = EmptyCal<false>;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         &mut self.0
@@ -51,6 +52,10 @@ impl embedded_cal::Cal for DummySha256 {
     }
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
+        &mut self.0
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
         &mut self.0
     }
 }
@@ -137,5 +142,54 @@ impl embedded_cal::plumbing::hash::Sha2Short for DummySha256 {
         for (i, word) in instance.into_iter().enumerate() {
             target[4 * i..][..4].copy_from_slice(&word.to_be_bytes());
         }
+    }
+}
+
+// FIXME: SHould we have an impl for EcdsaP256 for Dummy?
+impl ecdsa::EcdsaP256 for DummySha256 {
+    fn p256_mult(
+        &mut self,
+        _scalar: &[u8; 32],
+        _px: &[u8; 32],
+        _py: &[u8; 32],
+    ) -> ([u8; 32], [u8; 32]) {
+        todo!()
+    }
+
+    fn ecdsa_sign(
+        &mut self,
+        _d: &[u8; 32],
+        _nounce: &[u8; 32],
+        _h: &[u8; 32],
+    ) -> Option<([u8; 32], [u8; 32])> {
+        todo!()
+    }
+
+    fn ecdsa_verify(
+        &mut self,
+        _qx: &[u8; 32],
+        _qy: &[u8; 32],
+        _h: &[u8; 32],
+        _r: &[u8; 32],
+        _s: &[u8; 32],
+    ) -> Result<(), embedded_cal::SignatureInvalid> {
+        todo!()
+    }
+}
+
+// FIXME: SHould we have an impl for rand_core::TryRng for Dummy?
+impl rand_core::TryRng for DummySha256 {
+    type Error = core::convert::Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        todo!()
+    }
+
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        todo!()
+    }
+
+    fn try_fill_bytes(&mut self, _dst: &mut [u8]) -> Result<(), Self::Error> {
+        todo!()
     }
 }

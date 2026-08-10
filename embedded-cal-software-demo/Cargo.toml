@@ -14,6 +14,7 @@ version.workspace = true
 [dependencies]
 embedded-cal = { version = "0.1.0", path = "../embedded-cal" }
 rand_core.workspace = true
+zeroize = { version = "1.8.2", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 testvectors.path = "../testvectors"

@@ -80,4 +80,23 @@ mod tests {
             v.test_with(state.cal.dh());
         }
     }
+
+    #[test]
+    fn test_sign_ecdsa_p256(state: &mut super::TestState) {
+        use embedded_cal::{SignAlgorithm, accessor::SignAlgorithmOf};
+
+        embedded_cal::test_sign_algorithm_ecdsa_p256::<
+            embedded_cal_software_demo::Extender<ImplementSha256Short>,
+        >();
+
+        let es256 = SignAlgorithmOf::<
+            embedded_cal_software_demo::Extender<ImplementSha256Short>,
+        >::from_cose_number(-7i8)
+        .unwrap();
+        embedded_cal::test_sign_selftest(&mut state.cal, es256);
+
+        for v in testvectors::sign::ECDSA_P256 {
+            v.test_with(&mut state.cal);
+        }
+    }
 }
