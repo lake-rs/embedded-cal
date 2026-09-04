@@ -4,6 +4,7 @@
 mod aead;
 mod dh;
 mod hash;
+mod hmac;
 mod rng;
 
 use digest::Digest;
@@ -62,7 +63,7 @@ impl<Base: embedded_cal::Cal> embedded_cal::Cal for RustcryptoCalExtender<Base> 
     type DhProvider = Self;
     type AeadProvider = Self;
     type HashProvider = Self;
-    type HmacProvider = HmacProviderOf<Base>;
+    type HmacProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self
@@ -74,7 +75,7 @@ impl<Base: embedded_cal::Cal> embedded_cal::Cal for RustcryptoCalExtender<Base> 
         self
     }
     fn hmac(&mut self) -> &mut Self::HmacProvider {
-        self.base.hmac()
+        self
     }
 }
 
@@ -121,6 +122,21 @@ mod tests {
 
         embedded_cal::test_hash_algorithm_sha256::<HashAlgorithmOf<RustcryptoCal>>();
         testvectors::test_hash_algorithm_sha256(&mut cal);
+    }
+
+    #[test]
+    fn test_hmac_sha256() {
+        let mut cal = RustcryptoCal::new();
+
+        embedded_cal::test_hmac_algorithm_hmacsha256::<HmacAlgorithmOf<RustcryptoCal>>();
+        testvectors::test_hmac_sha256(&mut cal);
+    }
+
+    #[test]
+    fn test_hkdf_sha256() {
+        let mut cal = RustcryptoCal::new();
+
+        testvectors::test_hkdf_sha256(&mut cal);
     }
 
     #[test]

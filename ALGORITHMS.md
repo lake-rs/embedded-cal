@@ -47,9 +47,12 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 |-----------|----------------|-------|
 | HMAC w/ SHA-256 | rustcrypto | |
 | HMAC w/ SHA-256 | software-demo | |
+| HMAC w/ SHA-256 | stm32wba55 | |
 
 # HKDF
 
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
-| HKDF on HMAC w/ SHA-256 | blanket | to be moved into implementations |
+| HKDF on HMAC w/ SHA-256 | rustcrypto | **not** using any SHA-256 acceleration |
+| HKDF on HMAC w/ SHA-256 | software-demo | |
+| HKDF on HMAC w/ SHA-256 | stm32wba55 | |

@@ -5,6 +5,7 @@
 ./embedded-cal-rustcrypto/src/aead.rs:impl<Base: Cal> AeadProvider for RustcryptoCalExtender<Base> {
 ./embedded-cal-rustcrypto/src/dh.rs:impl<Base: Cal> DhProvider for RustcryptoCalExtender<Base> {
 ./embedded-cal-rustcrypto/src/hash.rs:impl<Base: Cal> HashProvider for RustcryptoCalExtender<Base> {
+./embedded-cal-rustcrypto/src/hmac.rs:impl<Base: Cal> HmacProvider for RustcryptoCalExtender<Base> {
 ./embedded-cal-software-demo/src/hash.rs:impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 ./embedded-cal-software-demo/src/hmac.rs:impl<EC: ExtenderConfig> HmacProvider for Extender<EC> {
 ./embedded-cal-stm32wba55/src/aead.rs:impl embedded_cal::AeadProvider for super::Stm32wba55Cal {
