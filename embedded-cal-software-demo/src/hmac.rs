@@ -2,32 +2,53 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 use embedded_cal::{HashProvider, HmacProvider, plumbing::hash::SHA2SHORT_BLOCK_SIZE};
+use embedded_cal::accessor::HashAlgorithmOf;
 
 use crate::hash::{HashAlgorithm, HashResult};
 
 use super::{Extender, ExtenderConfig};
 
 /// HMAC algorithm identifier for software HMAC over [`Extender`].
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum HmacAlgorithm {
-    HmacSha256,
+#[derive(PartialEq, Eq)]
+pub enum HmacAlgorithm<EC: ExtenderConfig> {
+    HmacSha256(HashAlgorithmOf<EC::Base>),
 }
 
-impl embedded_cal::HmacAlgorithm for HmacAlgorithm {
+// Sadly, none of those can be derived because minimal derives don't work
+
+impl<EC: ExtenderConfig> Clone for HmacAlgorithm<EC> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::HmacSha256(sha256) => Self::HmacSha256(sha256.clone()),
+        }
+    }
+}
+
+impl<EC: ExtenderConfig> core::fmt::Debug for HmacAlgorithm<EC> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::HmacSha256(sha256) => f.debug_tuple("HmacSha256").field(sha256).finish(),
+        }
+    }
+}
+
+impl<EC: ExtenderConfig> embedded_cal::HmacAlgorithm for HmacAlgorithm<EC> {
     const MAX_LEN: usize = 32;
 
     type MaxLenBuf = [u8; 32];
 
     fn len(&self) -> usize {
         match self {
-            HmacAlgorithm::HmacSha256 => 32,
+            // FIXME: If we generalize here, can use info from inner
+            HmacAlgorithm::HmacSha256(_) => 32,
         }
     }
 
     #[inline]
     fn from_cose_number(number: impl Into<i128>) -> Option<Self> {
-        match number.into() {
-            5 => Some(HmacAlgorithm::HmacSha256),
+        let sha256 = HashAlgorithmOf::<Self>::from_cose_number(-16);
+        match (number.into(), sha256) {
+            (5, Some(sha256)) => Some(HmacAlgorithm::HmacSha256(sha256)),
             _ => None,
         }
     }
@@ -78,19 +99,21 @@ impl AsRef<[u8]> for HmacResult {
 }
 
 impl<EC: ExtenderConfig> HmacProvider for Extender<EC> {
-    type Algorithm = HmacAlgorithm;
+    type Algorithm = HmacAlgorithm<EC>;
     type Key = HmacKey<EC>;
     type State = HmacState<EC>;
     type Output = HmacResult;
 
     fn load_from_keydata(&mut self, algorithm: Self::Algorithm, key: &[u8]) -> Self::Key {
+        use embedded_cal::HashAlgorithm;
+
         match algorithm {
-            HmacAlgorithm::HmacSha256 => {
+            HmacAlgorithm::HmacSha256(alg) => {
                 // Normalise key to exactly SHA2SHORT_BLOCK_SIZE bytes.
                 // If key is longer than the block size, hash it first (RFC 2104).
                 let mut key_block = [0u8; SHA2SHORT_BLOCK_SIZE];
                 if key.len() > SHA2SHORT_BLOCK_SIZE {
-                    let hashed = HashProvider::hash(self, HashAlgorithm::Sha256, key);
+                    let hashed = HashProvider::hash(self, alg, key);
                     let h = hashed.as_ref();
                     debug_assert_eq!(h.len(), 32, "SHA-256 must produce 32 bytes");
                     key_block[..h.len()].copy_from_slice(h);
@@ -111,7 +134,7 @@ impl<EC: ExtenderConfig> HmacProvider for Extender<EC> {
                 }
 
                 // Start inner hash: H((key XOR ipad) || ...)
-                let mut inner = HashProvider::init(self, HashAlgorithm::Sha256);
+                let mut inner = HashProvider::init(self, alg);
                 HashProvider::update(self, &mut inner, &ipad_block);
 
                 HmacKey::HmacSha256 { inner, outer_key }
