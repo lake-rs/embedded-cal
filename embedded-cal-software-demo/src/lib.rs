@@ -72,6 +72,33 @@ impl<EC: ExtenderConfig> embedded_cal::plumbing::ec::Ec for Extender<EC> {
     }
 }
 
+impl<EC: ExtenderConfig> embedded_cal::plumbing::hash::Sha2Short for Extender<EC> {
+    const SUPPORTED: bool = <EC::Base as embedded_cal::plumbing::hash::Sha2Short>::SUPPORTED;
+    const SEND_PADDING: bool = <EC::Base as embedded_cal::plumbing::hash::Sha2Short>::SEND_PADDING;
+    const FIRST_CHUNK_SIZE: usize =
+        <EC::Base as embedded_cal::plumbing::hash::Sha2Short>::FIRST_CHUNK_SIZE;
+    const UPDATE_MULTICHUNK: bool =
+        <EC::Base as embedded_cal::plumbing::hash::Sha2Short>::UPDATE_MULTICHUNK;
+
+    type State = <EC::Base as embedded_cal::plumbing::hash::Sha2Short>::State;
+
+    fn init(&mut self, variant: embedded_cal::plumbing::hash::Sha2ShortVariant) -> Self::State {
+        self.0.init(variant)
+    }
+
+    fn update(&mut self, instance: &mut Self::State, data: &[u8]) {
+        self.0.update(instance, data)
+    }
+
+    fn finalize(&mut self, instance: Self::State, last_chunk: &[u8], target: &mut [u8]) {
+        self.0.finalize(instance, last_chunk, target)
+    }
+}
+
+impl<EC: ExtenderConfig> embedded_cal::plumbing::hash::Hash for Extender<EC> {}
+
+impl<EC: ExtenderConfig> embedded_cal::plumbing::Plumbing for Extender<EC> {}
+
 #[cfg(test)]
 pub(crate) mod tests {
     pub(crate) mod dummy_sha256;
