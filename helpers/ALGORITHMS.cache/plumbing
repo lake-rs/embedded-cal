@@ -1,6 +1,6 @@
 ./embedded-cal-nrf54l15/src/lib.rs:impl embedded_cal::plumbing::Plumbing for Nrf54l15Cal {}
 ./embedded-cal-rustcrypto/src/lib.rs:impl<Base: embedded_cal::Cal + embedded_cal::plumbing::Plumbing> embedded_cal::plumbing::Plumbing
 ./embedded-cal-rustcrypto/src/lib.rs:        fn f(_cal: impl embedded_cal::plumbing::Plumbing) {}
-./embedded-cal-software-demo/src/tests/dummy_sha256.rs:impl embedded_cal::plumbing::Plumbing for DummySha256 {}
+./embedded-cal-software-demo/src/lib.rs:impl<EC: ExtenderConfig> embedded_cal::plumbing::Plumbing for Extender<EC> {}
 ./embedded-cal-stm32wba55/src/lib.rs:impl embedded_cal::plumbing::Plumbing for Stm32wba55Cal {}
 ./embedded-cal/src/empty.rs:impl plumbing::Plumbing for EmptyCal {}

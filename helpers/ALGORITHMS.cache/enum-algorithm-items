@@ -39,9 +39,9 @@
 ./embedded-cal-rustcrypto/src/hmac.rs
     Direct(BA),
 ./embedded-cal-software-demo/src/hash.rs
-    // FIXME: Ideally we'd employ some witness type of <EC::Base as Sha2Short>::SUPPORTED
+    // FIXME: Ideally we'd employ some witness type of IMPLEMENT_SHA2SHORT to render this uninhabited when
 ./embedded-cal-software-demo/src/hash.rs
-    // to render this uninhabited when unused.
+    // unused.
 ./embedded-cal-software-demo/src/hash.rs
     Sha256,
 ./embedded-cal-software-demo/src/hash.rs
