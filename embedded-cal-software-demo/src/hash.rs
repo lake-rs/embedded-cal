@@ -20,6 +20,9 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::State {
         match algorithm {
+            // FIXME here and elsewhere: This generates unreachable code when
+            // IMPLEMENT_SHA2SHORT=false; the way to fix it is to follow up on the witness type
+            // comment in the HashAlgorithm type.
             HashAlgorithm::Sha256 => HashState::Sha256 {
                 written: 0,
                 buffer: [0; _],
@@ -132,8 +135,8 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 }
 
 pub enum HashAlgorithm<EC: ExtenderConfig> {
-    // FIXME: Ideally we'd employ some witness type of <EC::Base as Sha2Short>::SUPPORTED
-    // to render this uninhabited when unused.
+    // FIXME: Ideally we'd employ some witness type of IMPLEMENT_SHA2SHORT to render this uninhabited when
+    // unused.
     Sha256,
     Direct(HashAlgorithmOf<EC::Base>),
 }
@@ -186,8 +189,14 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
     fn from_cose_number(number: impl Into<i128>) -> Option<Self> {
         let number: i128 = number.into();
 
+        // Sanity check: Having the software implementation on top of an implementation without
+        // SHA2 does not make sense. (If dummy_sha256 gets moved in here and is implemented
+        // conditionally, this would become ::SUPPORTED | EC::IMPLEMENT_SHA2PLUMBING or whatever
+        // that knob would be called).
+        const { assert!(EC::IMPLEMENT_SHA2SHORT >= <EC::Base as Sha2Short>::SUPPORTED) };
+
         match number {
-            -16 => Some(HashAlgorithm::Sha256),
+            -16 if EC::IMPLEMENT_SHA2SHORT => Some(HashAlgorithm::Sha256),
             _ => HashAlgorithmOf::<EC::Base>::from_cose_number(number).map(HashAlgorithm::Direct),
         }
     }
@@ -195,7 +204,7 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
     #[inline]
     fn from_ni_id(number: u8) -> Option<Self> {
         match number {
-            1 => Self::from_cose_number(-16),
+            1 if EC::IMPLEMENT_SHA2SHORT => Some(HashAlgorithm::Sha256),
             _ => HashAlgorithmOf::<EC::Base>::from_ni_id(number).map(HashAlgorithm::Direct),
         }
     }
@@ -203,7 +212,7 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
     #[inline]
     fn from_ni_name(name: &str) -> Option<Self> {
         match name {
-            "sha-256" => Self::from_cose_number(-16),
+            "sha-256" if EC::IMPLEMENT_SHA2SHORT => Some(HashAlgorithm::Sha256),
             _ => HashAlgorithmOf::<EC::Base>::from_ni_name(name).map(HashAlgorithm::Direct),
         }
     }
