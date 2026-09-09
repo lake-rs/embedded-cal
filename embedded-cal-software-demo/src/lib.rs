@@ -51,6 +51,27 @@ impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
     }
 }
 
+impl<EC: ExtenderConfig> embedded_cal::plumbing::ec::Ec for Extender<EC> {
+    const MAX_SCALAR_LENGTH: usize =
+        <EC::Base as embedded_cal::plumbing::ec::Ec>::MAX_SCALAR_LENGTH;
+
+    type PrimitivesP256 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesP256;
+    type PrimitivesX25519 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesX25519;
+    type PrimitivesX448 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesX448;
+
+    fn p256(&mut self) -> &mut Self::PrimitivesP256 {
+        self.0.p256()
+    }
+
+    fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
+        self.0.x25519()
+    }
+
+    fn x448(&mut self) -> &mut Self::PrimitivesX448 {
+        self.0.x448()
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     pub(crate) mod dummy_sha256;

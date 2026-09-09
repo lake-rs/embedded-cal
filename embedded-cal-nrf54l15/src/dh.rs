@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
+use embedded_cal::montgomery::{clamp_x448, clamp_x25519, mask_u_x25519};
 use embedded_cal::p256::{
     P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y,
 };
@@ -115,16 +116,6 @@ const X448_COEFF_A: [u8; 56] = [
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 ];
-
-fn clamp_x25519(k: &mut [u8; 32]) {
-    k[0] &= 0xF8;
-    k[31] = (k[31] | 0x40) & 0x7F;
-}
-
-fn clamp_x448(k: &mut [u8; 56]) {
-    k[0] &= 0xFC;
-    k[55] |= 0x80;
-}
 
 #[derive(PartialEq, Eq, Debug, Clone, Zeroize)]
 pub enum DhAlgorithm {
@@ -484,7 +475,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
             }
             DhAlgorithm::X25519 => {
                 let mut x: [u8; _] = data.try_into().map_err(|_| embedded_cal::ImportError)?;
-                x[31] &= 0x7F;
+                mask_u_x25519(&mut x);
                 Ok(PublicKey::X25519(
                     self.x25519().point(x.into(), [0; _].into()),
                 ))
