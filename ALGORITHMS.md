@@ -7,20 +7,20 @@ Currently supported algorithms are:
 
 # AEAD
 
-| Algorithm          | Implementation | Notes                        |
-|--------------------|----------------|------------------------------|
-| A128GCM (AES-GCM)  | libcrux        |                              |
-| A256GCM (AES-GCM)  | libcrux        |                              |
-| AES-CCM-16-128-128 | libcrux        |                              |
-| AES-CCM-16-64-128  | libcrux        |                              |
-| AES-CCM-16-128-256 | libcrux        |                              |
-| AES-CCM-16-64-256  | libcrux        |                              |
-| AES-CCM-16-64-128  | nrf54l15       | limited AAD and message size |
-| AES-CCM-16-64-256  | nrf54l15       | limited AAD and message size |
-| AES-CCM-16-64-128  | stm32wba55     |                              |
-| AES-CCM-16-64-256  | stm32wba55     |                              |
-| AES-CCM-16-64-128  | rustcrypto     | limited or alloc'ed AAD      |
-| AES-CCM-16-64-256  | rustcrypto     | limited or alloc'ed AAD      |
+| Algorithm                                            | Implementation | Notes                        |
+|------------------------------------------------------|----------------|------------------------------|
+| A128GCM (AES-GCM)                                    | libcrux        |                              |
+| A256GCM (AES-GCM)                                    | libcrux        |                              |
+| AES-128-CCM (16-byte tag, 12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-128-CCM (8-byte tag,  12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-256-CCM (16-byte tag, 12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-256-CCM (8-byte tag,  12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-CCM-16-64-128                                    | nrf54l15       | limited AAD and message size |
+| AES-CCM-16-64-256                                    | nrf54l15       | limited AAD and message size |
+| AES-CCM-16-64-128                                    | stm32wba55     |                              |
+| AES-CCM-16-64-256                                    | stm32wba55     |                              |
+| AES-CCM-16-64-128                                    | rustcrypto     | limited or alloc'ed AAD      |
+| AES-CCM-16-64-256                                    | rustcrypto     | limited or alloc'ed AAD      |
 
 Limitation in AAD streaming or message size are subject to ongoing work.
 
