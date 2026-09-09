@@ -196,7 +196,7 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
     fn from_ni_id(number: u8) -> Option<Self> {
         match number {
             1 => Self::from_cose_number(-16),
-            _ => None,
+            _ => HashAlgorithmOf::<EC::Base>::from_ni_id(number).map(HashAlgorithm::Direct),
         }
     }
 
@@ -204,7 +204,7 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
     fn from_ni_name(name: &str) -> Option<Self> {
         match name {
             "sha-256" => Self::from_cose_number(-16),
-            _ => None,
+            _ => HashAlgorithmOf::<EC::Base>::from_ni_name(name).map(HashAlgorithm::Direct),
         }
     }
 }
