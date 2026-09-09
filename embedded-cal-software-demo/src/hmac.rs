@@ -153,18 +153,17 @@ impl<EC: ExtenderConfig> HmacProvider for Extender<EC> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::tests::dummy_sha256;
-
     struct ImplementSha256Short;
 
     impl ExtenderConfig for ImplementSha256Short {
         const IMPLEMENT_SHA2SHORT: bool = true;
-        type Base = dummy_sha256::DummySha256;
+        const IMPLEMENT_SHA2SHORT_PLUMBING: bool = true;
+        type Base = embedded_cal::empty::EmptyCal;
     }
 
     #[test]
-    fn test_hmac_sha256_on_dummy() {
-        let mut cal = Extender::<ImplementSha256Short>(dummy_sha256::DummySha256::new());
+    fn test_hmac_sha256() {
+        let mut cal = Extender::<ImplementSha256Short>(embedded_cal::empty::EmptyCal);
 
         testvectors::test_hmac_sha256(&mut cal);
     }

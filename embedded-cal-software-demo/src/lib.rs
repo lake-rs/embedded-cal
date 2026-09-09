@@ -16,6 +16,7 @@ mod rng;
 
 pub trait ExtenderConfig {
     const IMPLEMENT_SHA2SHORT: bool;
+    const IMPLEMENT_SHA2SHORT_PLUMBING: bool;
 
     type Base: Cal + Plumbing;
 }
@@ -76,8 +77,3 @@ impl<EC: ExtenderConfig> embedded_cal::plumbing::ec::Ec for Extender<EC> {
 impl<EC: ExtenderConfig> embedded_cal::plumbing::hash::Hash for Extender<EC> {}
 
 impl<EC: ExtenderConfig> embedded_cal::plumbing::Plumbing for Extender<EC> {}
-
-#[cfg(test)]
-pub(crate) mod tests {
-    pub(crate) mod dummy_sha256;
-}

@@ -184,10 +184,13 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
         let number: i128 = number.into();
 
         // Sanity check: Having the software implementation on top of an implementation without
-        // SHA2 does not make sense. (If dummy_sha256 gets moved in here and is implemented
-        // conditionally, this would become ::SUPPORTED | EC::IMPLEMENT_SHA2PLUMBING or whatever
-        // that knob would be called).
-        const { assert!(EC::IMPLEMENT_SHA2SHORT >= <EC::Base as Sha2Short>::SUPPORTED) };
+        // SHA2 does not make sense.
+        const {
+            assert!(
+                EC::IMPLEMENT_SHA2SHORT
+                    >= <EC::Base as Sha2Short>::SUPPORTED | EC::IMPLEMENT_SHA2SHORT_PLUMBING
+            )
+        };
 
         match number {
             -16 if EC::IMPLEMENT_SHA2SHORT => Some(HashAlgorithm::Sha256),
@@ -298,18 +301,18 @@ fn sha2_padding(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::dummy_sha256;
 
     struct ImplementSha256Short;
 
     impl ExtenderConfig for ImplementSha256Short {
         const IMPLEMENT_SHA2SHORT: bool = true;
-        type Base = dummy_sha256::DummySha256;
+        const IMPLEMENT_SHA2SHORT_PLUMBING: bool = true;
+        type Base = embedded_cal::empty::EmptyCal;
     }
 
     #[test]
     fn test_hash_algorithm_sha256_on_dummy() {
-        let mut cal = Extender::<ImplementSha256Short>(dummy_sha256::DummySha256::new());
+        let mut cal = Extender::<ImplementSha256Short>(embedded_cal::empty::EmptyCal);
 
         testvectors::test_hash_algorithm_sha256(&mut cal);
     }
