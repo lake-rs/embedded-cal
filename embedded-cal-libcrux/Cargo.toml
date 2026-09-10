@@ -11,11 +11,25 @@ keywords.workspace = true
 categories.workspace = true
 version.workspace = true
 
+[features]
+# The check-secret-independence feature can be used as a lightweight check that secrets are not used
+# in a way that depends on their values. This is achieved with the https://docs.rs/libcrux-secrets crate
+# which provides type-aliases that either point to the normal rust integers, or to specially restricted
+# new-types if the feature is enabled. This feature should only be activated locally or in CI to check
+# for secret independence, and not when depending on the embedded-cal-libcrux crate.
+check-secret-independence = ["libcrux-secrets/check-secret-independence", "libcrux-iot-sha3/check-secret-independence"]
+
 [dependencies]
 embedded-cal.path = "../embedded-cal"
+# depends on unmerged changes of https://github.com/celabshq/libcrux-iot/pull/180
+libcrux-iot-aes = { git = "https://github.com/celabshq/libcrux-iot", rev = "329603cf7474c2ba535ccd0761a05b989a0cfe59" }
+libcrux-iot-sha3 = { git = "https://github.com/celabshq/libcrux-iot.git", rev = "54e2681a39f5d4d79ab5465f2c2341f267ff6ec1" }
+libcrux-iot-p256 = { git = "https://github.com/celabshq/libcrux-iot.git", rev = "a3c6276cf0635e7594ea46d2435e3e4e2feaad90", features = ["expose-hacl"] }
+libcrux-secrets = { version = "0.0.5" }
 libcrux-sha2 = "0.0.7"
-libcrux-aesgcm = "0.0.8"
 libcrux-traits = { version = "0.0.7", features = ["error-in-core"] }
+
+getrandom = { version = "0.4", default-features = false }
 rand_core = "0.10"
 
 [dev-dependencies]

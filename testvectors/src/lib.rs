@@ -6,6 +6,7 @@ use hexlit::hex;
 
 pub mod aead;
 pub mod dh;
+pub mod sha3;
 
 pub use aead::{
     test_aead_aesccm_16_64_128, test_aead_aesccm_16_64_256, test_aead_aesgcm_128,
@@ -218,18 +219,24 @@ pub fn test_hash_algorithm_sha256<Cal: embedded_cal::HashProvider>(cal: &mut Cal
     // embedded_cal::test_hash_algorithm_sha256 (or should we move this in here?)
 
     // If this test is run on a concrete type, we expect it to provide the algorithm.
-    let sha256 = Cal::Algorithm::from_ni_id(1).unwrap();
-
     use embedded_cal::HashAlgorithm;
+    let sha256 = Cal::Algorithm::from_ni_id(1).unwrap();
+    test_hash_algorithm(cal, sha256, SHA256HASHES);
+}
 
-    for (tv_data, tv_result) in SHA256HASHES {
+pub fn test_hash_algorithm<Cal: embedded_cal::HashProvider, const DIGEST_SIZE: usize>(
+    cal: &mut Cal,
+    hash_algorithm: Cal::Algorithm,
+    test_vectors: &[(&[u8], [u8; DIGEST_SIZE])],
+) {
+    for (tv_data, tv_result) in test_vectors {
         assert_eq!(
-            cal.hash(sha256.clone(), tv_data).as_ref(),
+            cal.hash(hash_algorithm.clone(), tv_data).as_ref(),
             tv_result,
             "Hash values mismatch"
         );
 
-        let mut hash = cal.init(sha256.clone());
+        let mut hash = cal.init(hash_algorithm.clone());
         let mid = tv_data.len() / 2;
         let postmid = mid + 1;
         if tv_data.len() < postmid {

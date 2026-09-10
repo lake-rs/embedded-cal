@@ -7,16 +7,20 @@ Currently supported algorithms are:
 
 # AEAD
 
-| Algorithm | Implementation | Notes |
-|-----------|----------------|-------|
-| A128GCM (AES-GCM) | libcrux | alloc'ed AAD |
-| A256GCM (AES-GCM) | libcrux | alloc'ed AAD |
-| AES-CCM-16-64-128 | nrf54l15 | limited AAD and message size |
-| AES-CCM-16-64-256 | nrf54l15 | limited AAD and message size |
-| AES-CCM-16-64-128 | stm32wba55 | |
-| AES-CCM-16-64-256 | stm32wba55 | |
-| AES-CCM-16-64-128 | rustcrypto | limited or alloc'ed AAD |
-| AES-CCM-16-64-256 | rustcrypto | limited or alloc'ed AAD |
+| Algorithm                                            | Implementation | Notes                        |
+|------------------------------------------------------|----------------|------------------------------|
+| A128GCM (AES-GCM)                                    | libcrux        |                              |
+| A256GCM (AES-GCM)                                    | libcrux        |                              |
+| AES-128-CCM (16-byte tag, 12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-128-CCM (8-byte tag,  12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-256-CCM (16-byte tag, 12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-256-CCM (8-byte tag,  12-byte nonce per RFC6655) | libcrux        |                              |
+| AES-CCM-16-64-128                                    | nrf54l15       | limited AAD and message size |
+| AES-CCM-16-64-256                                    | nrf54l15       | limited AAD and message size |
+| AES-CCM-16-64-128                                    | stm32wba55     |                              |
+| AES-CCM-16-64-256                                    | stm32wba55     |                              |
+| AES-CCM-16-64-128                                    | rustcrypto     | limited or alloc'ed AAD      |
+| AES-CCM-16-64-256                                    | rustcrypto     | limited or alloc'ed AAD      |
 
 Limitation in AAD streaming or message size are subject to ongoing work.
 
@@ -30,6 +34,7 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | ECDH on curve P-256 | nrf54l15 | |
 | ECDH on curve X25519 | nrf54l15 | |
 | ECDH on curve X448 | nrf54l15 | |
+| ECDH on P-256 | libcrux || 
 
 # Hash
 
@@ -40,6 +45,10 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | SHA-256 | software-demo | using SHA2-short plumbing for acceleration |
 | SHA2-short | nrf54l15 | providing plumbing |
 | SHA2-short | stm32wba55 | providing plumbing |
+| SHA3-224 | libcrux | |
+| SHA3-256 | libcrux | |
+| SHA3-384 | libcrux | |
+| SHA3-512 | libcrux | |
 
 # HMAC
 
