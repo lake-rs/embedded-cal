@@ -6,10 +6,11 @@
 use defmt_rtt as _;
 use panic_probe as _;
 
-struct ImplementSha256Short;
-impl embedded_cal_software_demo::ExtenderConfig for ImplementSha256Short {
+struct ImplementHighLevel;
+impl embedded_cal_software_demo::ExtenderConfig for ImplementHighLevel {
     const IMPLEMENT_SHA2SHORT: bool = true;
     const IMPLEMENT_SHA2SHORT_PLUMBING: bool = false;
+    const IMPLEMENT_DH: bool = true;
     type Base = embedded_cal_nrf54l15::Nrf54l15Cal;
 }
 struct TestState {
@@ -20,11 +21,10 @@ struct TestState {
 
 fn with_extender(
     state: &mut TestState,
-    cb: impl FnOnce(&mut embedded_cal_software_demo::Extender<ImplementSha256Short>),
+    cb: impl FnOnce(&mut embedded_cal_software_demo::Extender<ImplementHighLevel>),
 ) {
-    let mut cal = embedded_cal_software_demo::Extender::<ImplementSha256Short>::new(
-        state.cal.take().unwrap(),
-    );
+    let mut cal =
+        embedded_cal_software_demo::Extender::<ImplementHighLevel>::new(state.cal.take().unwrap());
 
     cb(&mut cal);
 
@@ -33,7 +33,7 @@ fn with_extender(
 
 #[defmt_test::tests]
 mod tests {
-    use super::ImplementSha256Short;
+    use super::ImplementHighLevel;
     use embedded_cal::Cal;
     use embedded_cal_nrf54l15::Nrf54l15Cal;
 
@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_hash_algorithm_sha256(state: &mut super::TestState) {
         embedded_cal::test_hash_algorithm_sha256::<
-            <embedded_cal_software_demo::Extender<ImplementSha256Short> as embedded_cal::HashProvider>::Algorithm,
+            <embedded_cal_software_demo::Extender<ImplementHighLevel> as embedded_cal::HashProvider>::Algorithm,
         >();
 
         super::with_extender(state, |cal| testvectors::test_hash_algorithm_sha256(cal));
@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn test_hmac_sha256(state: &mut super::TestState) {
         embedded_cal::test_hmac_algorithm_hmacsha256::<
-            <embedded_cal_software_demo::Extender<ImplementSha256Short> as embedded_cal::HmacProvider>::Algorithm,
+            <embedded_cal_software_demo::Extender<ImplementHighLevel> as embedded_cal::HmacProvider>::Algorithm,
         >();
         super::with_extender(state, |cal| testvectors::test_hmac_sha256(cal));
     }

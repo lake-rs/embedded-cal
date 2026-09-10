@@ -10,6 +10,7 @@ struct ImplementSha256Short;
 impl embedded_cal_software_demo::ExtenderConfig for ImplementSha256Short {
     const IMPLEMENT_SHA2SHORT: bool = true;
     const IMPLEMENT_SHA2SHORT_PLUMBING: bool = false;
+    const IMPLEMENT_DH: bool = false;
     type Base = embedded_cal_stm32wba55::Stm32wba55Cal;
 }
 
