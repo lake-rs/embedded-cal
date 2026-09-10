@@ -25,6 +25,10 @@ impl<EC: ExtenderConfig> Extender<EC> {
     pub fn new(base: EC::Base) -> Self {
         Self(base)
     }
+
+    pub fn destruct(self) -> EC::Base {
+        self.0
+    }
 }
 
 pub struct Extender<EC: ExtenderConfig>(EC::Base);
