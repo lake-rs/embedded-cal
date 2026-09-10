@@ -9,6 +9,8 @@ use panic_probe as _;
 struct ImplementSha256Short;
 impl embedded_cal_software_demo::ExtenderConfig for ImplementSha256Short {
     const IMPLEMENT_SHA2SHORT: bool = true;
+    const IMPLEMENT_SHA2SHORT_PLUMBING: bool = false;
+    const IMPLEMENT_DH: bool = false;
     type Base = embedded_cal_stm32wba55::Stm32wba55Cal;
 }
 
@@ -78,6 +80,13 @@ mod tests {
         embedded_cal::test_dh_algorithm_ecdh_p256::<Stm32wba55Cal>();
         for v in testvectors::dh::RFC5903_P256 {
             v.test_with(state.cal.dh());
+        }
+    }
+
+    #[test]
+    fn test_ec_plumbing_p256(state: &mut super::TestState) {
+        for v in testvectors::dh::RFC5903_P256 {
+            v.test_plumbing_p256(&mut state.cal);
         }
     }
 }
