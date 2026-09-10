@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
+use embedded_cal::plumbing::ec::{Ec, EcPrimitives, P256, X448, X25519};
 use embedded_cal::{Cal, DhAlgorithm, DhProvider, accessor::*};
 
 use super::{Extender, ExtenderConfig};
@@ -59,24 +60,47 @@ impl<EC: ExtenderConfig> DhAlgorithm for Algorithm<EC> {
             Algorithm::Direct(d) => d.output_length(),
         }
     }
+
+    fn from_cose_ecdh(curve: impl Into<i128>) -> Option<Self> {
+        let curve: i128 = curve.into();
+
+        match curve.into() {
+            1 if EC::IMPLEMENT_DH => Some(Algorithm::SoftwareP256),
+            4 if EC::IMPLEMENT_DH => Some(Algorithm::SoftwareX25519),
+            5 if EC::IMPLEMENT_DH => Some(Algorithm::SoftwareX448),
+            _ => DhAlgorithmOf::<EC::Base>::from_cose_ecdh(curve).map(Algorithm::Direct),
+        }
+    }
 }
 
-pub enum SecretKey<BSK> {
-    SoftwareP256([u8; 32]),
-    SoftwareX25519([u8; 32]),
-    SoftwareX448([u8; 56]),
-    Direct(BSK),
+pub enum SecretKey<EC: ExtenderConfig> {
+    SoftwareP256(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Scalar,
+    ),
+    SoftwareX25519(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX25519 as EcPrimitives<X25519>>::Scalar,
+    ),
+    SoftwareX448(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX448 as EcPrimitives<X448>>::Scalar,
+    ),
+    Direct(<DhProviderOf<EC::Base> as DhProvider>::SecretKey),
 }
 
-pub enum VisibleSecretKey<BSK> {
-    SoftwareP256([u8; 32]),
-    SoftwareX25519([u8; 32]),
-    SoftwareX448([u8; 56]),
-    Direct(BSK),
+pub enum VisibleSecretKey<EC: ExtenderConfig> {
+    SoftwareP256(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Scalar,
+    ),
+    SoftwareX25519(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX25519 as EcPrimitives<X25519>>::Scalar,
+    ),
+    SoftwareX448(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX448 as EcPrimitives<X448>>::Scalar,
+    ),
+    Direct(<DhProviderOf<EC::Base> as DhProvider>::VisibleSecretKey),
 }
 
-impl<BSK1: Into<BSK2>, BSK2> From<VisibleSecretKey<BSK1>> for SecretKey<BSK2> {
-    fn from(value: VisibleSecretKey<BSK1>) -> Self {
+impl<EC: ExtenderConfig> From<VisibleSecretKey<EC>> for SecretKey<EC> {
+    fn from(value: VisibleSecretKey<EC>) -> Self {
         match value {
             VisibleSecretKey::SoftwareP256(v) => SecretKey::SoftwareP256(v),
             VisibleSecretKey::SoftwareX25519(v) => SecretKey::SoftwareX25519(v),
@@ -86,26 +110,38 @@ impl<BSK1: Into<BSK2>, BSK2> From<VisibleSecretKey<BSK1>> for SecretKey<BSK2> {
     }
 }
 
-pub enum PublicKey<BPK> {
-    SoftwareP256([u8; 32]),
-    SoftwareX25519([u8; 32]),
-    SoftwareX448([u8; 56]),
-    Direct(BPK),
+pub enum PublicKey<EC: ExtenderConfig> {
+    SoftwareP256(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Scalar,
+    ),
+    SoftwareX25519(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX25519 as EcPrimitives<X25519>>::Scalar,
+    ),
+    SoftwareX448(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX448 as EcPrimitives<X448>>::Scalar,
+    ),
+    Direct(<DhProviderOf<EC::Base> as DhProvider>::PublicKey),
 }
 
-pub enum SharedSecret<BSS> {
-    SoftwareP256([u8; 32]),
-    SoftwareX25519([u8; 32]),
-    SoftwareX448([u8; 56]),
-    Direct(BSS),
+pub enum SharedSecret<EC: ExtenderConfig> {
+    SoftwareP256(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Scalar,
+    ),
+    SoftwareX25519(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX25519 as EcPrimitives<X25519>>::Scalar,
+    ),
+    SoftwareX448(
+        <<<EC as ExtenderConfig>::Base as Ec>::PrimitivesX448 as EcPrimitives<X448>>::Scalar,
+    ),
+    Direct(<DhProviderOf<EC::Base> as DhProvider>::SharedSecret),
 }
 
 impl<EC: ExtenderConfig> DhProvider for Extender<EC> {
     type Algorithm = Algorithm<EC>;
-    type VisibleSecretKey = VisibleSecretKey<DhVisibleSecretKeyOf<EC::Base>>;
-    type SecretKey = SecretKey<DhSecretKeyOf<EC::Base>>;
-    type PublicKey = PublicKey<DhPublicKeyOf<EC::Base>>;
-    type SharedSecret = SharedSecret<DhPublicKeyOf<EC::Base>>;
+    type VisibleSecretKey = VisibleSecretKey<EC>;
+    type SecretKey = SecretKey<EC>;
+    type PublicKey = PublicKey<EC>;
+    type SharedSecret = SharedSecret<EC>;
 
     fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
         match alg {
@@ -122,6 +158,7 @@ impl<EC: ExtenderConfig> DhProvider for Extender<EC> {
     ) -> impl AsRef<[u8]> + use<'s, EC> {
         let _ = secretkey;
         todo!("not covered by test vectors");
+        // A real implementation would look very similar to raw_secret_bytes
         #[allow(unreachable_code)]
         &[]
     }
@@ -131,8 +168,21 @@ impl<EC: ExtenderConfig> DhProvider for Extender<EC> {
         alg: Self::Algorithm,
         secret: &[u8],
     ) -> Result<Self::VisibleSecretKey, embedded_cal::ImportError> {
-        let _ = (alg, secret);
-        todo!("not covered by test vectors")
+        match alg {
+            Algorithm::SoftwareP256 => {
+                let p256 = self.0.p256();
+                Ok(VisibleSecretKey::SoftwareP256(
+                    p256.import_scalar_bytes(secret)?,
+                ))
+            }
+            Algorithm::SoftwareX25519 => todo!(),
+            Algorithm::SoftwareX448 => todo!(),
+            Algorithm::Direct(a) => self
+                .0
+                .dh()
+                .import_secretkey_bytes(a, secret)
+                .map(VisibleSecretKey::Direct),
+        }
     }
 
     fn export_publickey_bytes<'p>(
@@ -141,6 +191,7 @@ impl<EC: ExtenderConfig> DhProvider for Extender<EC> {
     ) -> impl AsRef<[u8]> + use<'p, EC> {
         let _ = public;
         todo!("not covered by test vectors");
+        // A real implementation would look very similar to raw_secret_bytes
         #[allow(unreachable_code)]
         &[]
     }
@@ -172,9 +223,35 @@ impl<EC: ExtenderConfig> DhProvider for Extender<EC> {
         &mut self,
         secret: &'s Self::SharedSecret,
     ) -> impl AsRef<[u8]> + use<'s, EC> {
-        let _ = secret;
-        todo!("not covered by test vectors");
-        #[allow(unreachable_code)]
-        &[]
+        enum Local<S1: AsRef<[u8]>, S2: AsRef<[u8]>, S3: AsRef<[u8]>, D: AsRef<[u8]>> {
+            SoftwareP256(S1),
+            SoftwareX25519(S2),
+            SoftwareX448(S3),
+            Direct(D),
+        }
+        impl<S1: AsRef<[u8]>, S2: AsRef<[u8]>, S3: AsRef<[u8]>, D: AsRef<[u8]>> AsRef<[u8]>
+            for Local<S1, S2, S3, D>
+        {
+            fn as_ref(&self) -> &[u8] {
+                match self {
+                    Local::SoftwareP256(v) => v.as_ref(),
+                    Local::SoftwareX25519(v) => v.as_ref(),
+                    Local::SoftwareX448(v) => v.as_ref(),
+                    Local::Direct(v) => v.as_ref(),
+                }
+            }
+        }
+        match secret {
+            SharedSecret::SoftwareP256(s) => {
+                Local::SoftwareP256(self.p256().export_scalar_bytes(s))
+            }
+            SharedSecret::SoftwareX25519(s) => {
+                Local::SoftwareX25519(self.x25519().export_scalar_bytes(s))
+            }
+            SharedSecret::SoftwareX448(s) => {
+                Local::SoftwareX448(self.x448().export_scalar_bytes(s))
+            }
+            SharedSecret::Direct(s) => Local::Direct(self.0.dh().raw_secret_bytes(s)),
+        }
     }
 }
