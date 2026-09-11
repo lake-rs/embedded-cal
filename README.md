@@ -61,9 +61,8 @@ by [Inria-AIO](https://aio.inria.fr/),
 [Cryspen](https://cryspen.com/)
 and [Christian Amsüss (@chrysn)](https://christian.amsuess.com/).
 
-We welcome additional contributors;
-at the current stage, that can mainly happen in the interface designing, scope and requirements discover
-happening [in the issue tracker](https://github.com/lake-rs/embedded-cal/issues).
+See [our contribution guidance](./policies/contributing.md) to contribute;
+in short: we welcome additional contributors!
 
 <!-- There is no requirement that we state this, but it is correct (because copied from the NGI page), and I wouldn't know which parts to leave out. -->
 This project was funded through the [NGI0 Commons Fund](https://nlnet.nl/commonsfund), a fund established by [NLnet](https://nlnet.nl) with financial support from the European Commission's [Next Generation Internet](https://ngi.eu) programme, under the aegis of [DG Communications Networks, Content and Technology](https://commission.europa.eu/about-european-commission/departments-and-executive-agencies/communications-networks-content-and-technology_en) under grant agreement No [101135429](https://cordis.europa.eu/project/id/101135429). Additional funding is made available by the [Swiss State Secretariat for Education, Research and Innovation](https://www.sbfi.admin.ch/sbfi/en/home.html) (SERI).
