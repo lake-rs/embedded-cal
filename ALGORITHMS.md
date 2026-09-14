@@ -34,6 +34,7 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | ECDH on curve P-256 | nrf54l15 | |
 | ECDH on curve X25519 | nrf54l15 | |
 | ECDH on curve X448 | nrf54l15 | |
+| ECDH on P-256 | libcrux || 
 
 # Hash
 

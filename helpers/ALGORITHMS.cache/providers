@@ -1,4 +1,5 @@
 ./embedded-cal-libcrux/src/aead.rs:impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
+./embedded-cal-libcrux/src/dh.rs:impl<EC: ExtenderConfig> DhProvider for Extender<EC> {
 ./embedded-cal-libcrux/src/hash.rs:impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 ./embedded-cal-nrf54l15/src/aead.rs:impl embedded_cal::AeadProvider for super::Nrf54l15Cal {
 ./embedded-cal-nrf54l15/src/dh.rs:impl embedded_cal::DhProvider for super::Nrf54l15Cal {
