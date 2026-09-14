@@ -1,3 +1,4 @@
+./embedded-cal-libcrux/src/rng.rs:impl<C: Plumbing, R> Plumbing for WithRng<C, R> {}
 ./embedded-cal-nrf54l15/src/lib.rs:impl embedded_cal::plumbing::Plumbing for Nrf54l15Cal {}
 ./embedded-cal-rustcrypto/src/lib.rs:impl<Base: embedded_cal::Cal + embedded_cal::plumbing::Plumbing> embedded_cal::plumbing::Plumbing
 ./embedded-cal-rustcrypto/src/lib.rs:        fn f(_cal: impl embedded_cal::plumbing::Plumbing) {}
