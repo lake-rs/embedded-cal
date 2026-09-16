@@ -56,10 +56,8 @@ mod tests {
 
 struct LibcruxTestVector<'a>(&'a EccVector);
 impl<'a> LibcruxTestVector<'a> {
-    /// Runs the test vector by the Cal implementation.
-    ///
-    /// Panics if either the algorithm is not supported, or either direction of running DH does not
-    /// result in the expected shared secret.
+    /// Runs the test vector through the libcrux interface
+    /// instantiated with the given `EcPrimitives` implementation.
     pub fn libcrux_test_with<C: embedded_cal::plumbing::ec::EcPrimitives<P256>>(&self, ec: &mut C) {
         let mut alice_public_computed = [0u8; 64];
         assert!(libcrux_iot_p256::embedded_cal_integration::dh_initiator_ec(
