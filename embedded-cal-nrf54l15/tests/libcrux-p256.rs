@@ -29,12 +29,6 @@ mod tests {
 
     #[init]
     fn init() -> super::TestState {
-        // Initialize the heap
-        use core::mem::MaybeUninit;
-        const HEAP_SIZE: usize = 1024;
-        static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
-        unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
-
         // FIXME: How to make sure there is a exclusive reference for CRACEN_S?
         let board_cal =
             embedded_cal_nrf54l15::Nrf54l15Cal::new(nrf_pac::CRACEN_S, nrf_pac::CRACENCORE_S);
