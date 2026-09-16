@@ -20,10 +20,13 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 
     fn init(&mut self, algorithm: Self::Algorithm) -> Self::State {
         match algorithm {
+            // FIXME here and elsewhere: This generates unreachable code when
+            // IMPLEMENT_SHA2SHORT=false; the way to fix it is to follow up on the witness type
+            // comment in the HashAlgorithm type.
             HashAlgorithm::Sha256 => HashState::Sha256 {
                 written: 0,
                 buffer: [0; _],
-                instance: Sha2Short::init(&mut self.0, Sha2ShortVariant::Sha256),
+                instance: Sha2Short::init(self, Sha2ShortVariant::Sha256),
             },
             HashAlgorithm::Direct(alg) => HashState::Direct(self.0.hash().init(alg)),
         }
@@ -39,21 +42,20 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
             } => {
                 // In the common case of this also being 64, the compiler has all it needs to fold
                 // this in with the line after it.
-                let mut written_in_buffer = if *written < <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE
-                {
+                let mut written_in_buffer = if *written < Self::FIRST_CHUNK_SIZE {
                     // First chunk not yet sent to hardware; all bytes are still buffered.
                     *written
                 } else {
                     // First chunk already sent; remaining bytes cycle through SHA2SHORT_BLOCK_SIZE blocks.
-                    (*written - <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE) % SHA2SHORT_BLOCK_SIZE
+                    (*written - Self::FIRST_CHUNK_SIZE) % SHA2SHORT_BLOCK_SIZE
                 };
 
                 // Not trying to be efficient here: This is a demo implementation.
                 // In particular, this does *not* test sending more than a single buffer multiple in;
                 // that'll be tested soon enough (and easy to fix).
                 loop {
-                    let buffer_max = if *written < <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE {
-                        <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE
+                    let buffer_max = if *written < Self::FIRST_CHUNK_SIZE {
+                        Self::FIRST_CHUNK_SIZE
                     } else {
                         SHA2SHORT_BLOCK_SIZE
                     };
@@ -71,7 +73,7 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
                     if written_in_buffer < buffer_max {
                         return;
                     }
-                    Sha2Short::update(&mut self.0, instance, &buffer[..buffer_max]);
+                    Sha2Short::update(self, instance, &buffer[..buffer_max]);
                     written_in_buffer = 0;
                 }
             }
@@ -87,16 +89,16 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
                 instance,
             } => {
                 // FIXME: deduplicate with update
-                let mut written_in_buffer = if written < <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE {
+                let mut written_in_buffer = if written < Self::FIRST_CHUNK_SIZE {
                     // First chunk not yet sent to hardware; all bytes are still buffered.
                     written
                 } else {
                     // First chunk already sent; remaining bytes cycle through SHA2SHORT_BLOCK_SIZE blocks.
-                    (written - <EC::Base as Sha2Short>::FIRST_CHUNK_SIZE) % SHA2SHORT_BLOCK_SIZE
+                    (written - Self::FIRST_CHUNK_SIZE) % SHA2SHORT_BLOCK_SIZE
                 };
                 // END FIXME
 
-                let (instance, buffer) = if <EC::Base as Sha2Short>::SEND_PADDING {
+                let (instance, buffer) = if Self::SEND_PADDING {
                     let mut padding = [0; _];
                     let padding_size = sha256_padding(written, &mut padding);
                     let mut rewrapped = HashState::Sha256 {
@@ -119,12 +121,7 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
                 };
 
                 let mut output = [0; 32];
-                Sha2Short::finalize(
-                    &mut self.0,
-                    instance,
-                    &buffer[..written_in_buffer],
-                    &mut output,
-                );
+                Sha2Short::finalize(self, instance, &buffer[..written_in_buffer], &mut output);
                 HashResult::Sha256(output)
             }
         }
@@ -132,8 +129,8 @@ impl<EC: ExtenderConfig> HashProvider for Extender<EC> {
 }
 
 pub enum HashAlgorithm<EC: ExtenderConfig> {
-    // FIXME: Ideally we'd employ some witness type of <EC::Base as Sha2Short>::SUPPORTED
-    // to render this uninhabited when unused.
+    // FIXME: Ideally we'd employ some witness type of IMPLEMENT_SHA2SHORT to render this uninhabited when
+    // unused.
     Sha256,
     Direct(HashAlgorithmOf<EC::Base>),
 }
@@ -186,8 +183,17 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
     fn from_cose_number(number: impl Into<i128>) -> Option<Self> {
         let number: i128 = number.into();
 
+        // Sanity check: Having the software implementation on top of an implementation without
+        // SHA2 does not make sense.
+        const {
+            assert!(
+                EC::IMPLEMENT_SHA2SHORT
+                    >= <EC::Base as Sha2Short>::SUPPORTED | EC::IMPLEMENT_SHA2SHORT_PLUMBING
+            )
+        };
+
         match number {
-            -16 => Some(HashAlgorithm::Sha256),
+            -16 if EC::IMPLEMENT_SHA2SHORT => Some(HashAlgorithm::Sha256),
             _ => HashAlgorithmOf::<EC::Base>::from_cose_number(number).map(HashAlgorithm::Direct),
         }
     }
@@ -195,16 +201,16 @@ impl<EC: ExtenderConfig> embedded_cal::HashAlgorithm for HashAlgorithm<EC> {
     #[inline]
     fn from_ni_id(number: u8) -> Option<Self> {
         match number {
-            1 => Self::from_cose_number(-16),
-            _ => None,
+            1 if EC::IMPLEMENT_SHA2SHORT => Some(HashAlgorithm::Sha256),
+            _ => HashAlgorithmOf::<EC::Base>::from_ni_id(number).map(HashAlgorithm::Direct),
         }
     }
 
     #[inline]
     fn from_ni_name(name: &str) -> Option<Self> {
         match name {
-            "sha-256" => Self::from_cose_number(-16),
-            _ => None,
+            "sha-256" if EC::IMPLEMENT_SHA2SHORT => Some(HashAlgorithm::Sha256),
+            _ => HashAlgorithmOf::<EC::Base>::from_ni_name(name).map(HashAlgorithm::Direct),
         }
     }
 }
@@ -221,7 +227,7 @@ pub enum HashState<EC: ExtenderConfig> {
         // (Also as we're an enum, we don't even have to go through hash_buffer_requirements, but
         // the problem is the same)
         buffer: [u8; HASH_WRAPPER_MAX_BLOCKSIZE],
-        instance: <EC::Base as Sha2Short>::State,
+        instance: <Extender<EC> as Sha2Short>::State,
     },
 }
 
@@ -295,18 +301,19 @@ fn sha2_padding(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::dummy_sha256;
 
     struct ImplementSha256Short;
 
     impl ExtenderConfig for ImplementSha256Short {
         const IMPLEMENT_SHA2SHORT: bool = true;
-        type Base = dummy_sha256::DummySha256;
+        const IMPLEMENT_SHA2SHORT_PLUMBING: bool = true;
+        const IMPLEMENT_DH: bool = false;
+        type Base = embedded_cal::empty::EmptyCal;
     }
 
     #[test]
     fn test_hash_algorithm_sha256_on_dummy() {
-        let mut cal = Extender::<ImplementSha256Short>(dummy_sha256::DummySha256::new());
+        let mut cal = Extender::<ImplementSha256Short>(embedded_cal::empty::EmptyCal);
 
         testvectors::test_hash_algorithm_sha256(&mut cal);
     }
