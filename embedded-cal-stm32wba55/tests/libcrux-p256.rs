@@ -24,7 +24,7 @@ mod tests {
     use embedded_cal::plumbing::ec::Ec;
     use testvectors::dh::RFC5903_P256;
 
-    use crate::LibcruxTestVector;
+    use crate::{HEAP, LibcruxTestVector};
 
     #[init]
     fn init() -> super::TestState {
@@ -35,6 +35,11 @@ mod tests {
             stm32_metapac::AES,
             stm32_metapac::PKA,
         );
+        // Initialize the heap
+        use core::mem::MaybeUninit;
+        const HEAP_SIZE: usize = 1024;
+        static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
+        unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
 
         super::TestState { board_cal }
     }
