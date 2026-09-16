@@ -6,11 +6,11 @@ use hexlit::hex;
 pub struct EccVector {
     // extend as needed
     ecdh_curve: i8,
-    alice_private: &'static [u8],
-    alice_public: &'static [u8],
-    bob_private: &'static [u8],
-    bob_public: &'static [u8],
-    shared_secret: &'static [u8],
+    pub alice_private: &'static [u8],
+    pub alice_public: &'static [u8],
+    pub bob_private: &'static [u8],
+    pub bob_public: &'static [u8],
+    pub shared_secret: &'static [u8],
 }
 
 impl EccVector {

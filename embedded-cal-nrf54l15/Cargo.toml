@@ -21,11 +21,15 @@ test = false
 name = "integration"
 harness = false
 
+[[test]]
+name = "libcrux-p256"
+harness = false
+
 [dependencies]
 embedded-cal.path = "../embedded-cal"
 nrf-pac = { version = "0.2.0", features = ["nrf54l15-app", "rt"] }
 rand_core.workspace = true
-zeroize = { version = "1.8.2", default-features = false, features = ["derive"]}
+zeroize = { version = "1.8.2", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
@@ -36,3 +40,7 @@ panic-probe = { version = "1.0", features = ["print-defmt"] }
 defmt-test = "0.4"
 embedded-cal-software-demo.path = "../embedded-cal-software-demo"
 testvectors.path = "../testvectors"
+libcrux-iot-p256 = { git = "https://github.com/celabshq/libcrux-iot.git", branch = "embedded-cal", features = [
+    "embedded-cal",
+] }
+embedded-alloc = "0.6.0"

@@ -21,6 +21,10 @@ test = false
 name = "integration"
 harness = false
 
+[[test]]
+name = "libcrux-p256"
+harness = false
+
 [dependencies]
 embedded-cal.path = "../embedded-cal"
 stm32-metapac = { version = "18.0", features = ["stm32wba55cg", "rt"] }
@@ -36,3 +40,7 @@ defmt-test = "0.4"
 embedded-cal-software-demo.path = "../embedded-cal-software-demo"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 testvectors.path = "../testvectors"
+libcrux-iot-p256 = { git = "https://github.com/celabshq/libcrux-iot.git", branch = "embedded-cal", features = [
+    "embedded-cal",
+] }
+embedded-alloc = "0.6.0"
