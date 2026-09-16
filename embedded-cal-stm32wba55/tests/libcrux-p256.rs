@@ -45,11 +45,19 @@ mod tests {
     }
 
     #[test]
-    fn test_ecc_p256(state: &mut super::TestState) {
+    fn test_ecc_p256_board(state: &mut super::TestState) {
         let ec = state.board_cal.p256();
 
         for v in RFC5903_P256 {
             LibcruxTestVector(v).libcrux_test_with(ec);
+        }
+    }
+
+    #[test]
+    fn test_ecc_p256_software(_state: &mut super::TestState) {
+        let mut ec = libcrux_iot_p256::embedded_cal_integration::LibcruxEc;
+        for v in RFC5903_P256 {
+            LibcruxTestVector(v).libcrux_test_with(&mut ec);
         }
     }
 }
