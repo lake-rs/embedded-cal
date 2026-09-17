@@ -19,33 +19,12 @@ impl EccVector {
     /// Panics if either the algorithm is not supported, or either direction of running DH does not
     /// result in the expected shared secret.
     pub fn test_with<C: embedded_cal::Cal>(&self, cal: &mut C) {
-        use embedded_cal::{DhAlgorithm, DhProvider};
+        use embedded_cal::DhProvider;
 
         let cal = cal.dh();
 
-        let alg = <C::DhProvider as DhProvider>::Algorithm::from_cose_ecdh(self.ecdh_curve)
-            .expect("algorithm not supported by CAL");
-        let alice_private = cal
-            .import_secretkey_bytes(alg.clone(), self.alice_private)
-            .expect("failed to load Alice's secret key")
-            .into();
-        let alice_public = cal.public_key(&alice_private);
-        let bob_private = cal
-            .import_secretkey_bytes(alg, self.bob_private)
-            .expect("failed to load Bob's secret key")
-            .into();
-        let bob_public = cal.public_key(&bob_private);
-
-        assert_eq!(
-            cal.export_publickey_bytes(&alice_public).as_ref(),
-            self.alice_public,
-            "Alice's public key not exported as expected"
-        );
-        assert_eq!(
-            cal.export_publickey_bytes(&bob_public).as_ref(),
-            self.bob_public,
-            "Bob's public key not exported as expected"
-        );
+        let (alice_private, alice_public) = self.test_key_import_export("Alice", cal);
+        let (bob_private, bob_public) = self.test_key_import_export("Bob", cal);
 
         let shared_ab = cal
             .shared_secret(&alice_private, &bob_public)
@@ -61,6 +40,55 @@ impl EccVector {
             cal.raw_secret_bytes(&shared_ba).as_ref(),
             self.shared_secret
         );
+    }
+
+    /// Test key import/export functionality of [`embedded_cal::DhProvider`].
+    ///
+    /// `name` must be either `Alice` or `Bob`.
+    fn test_key_import_export<C: embedded_cal::DhProvider>(
+        &self,
+        name: &'static str,
+        cal: &mut C,
+    ) -> (C::SecretKey, C::PublicKey) {
+        use embedded_cal::DhAlgorithm;
+        let alg =
+            C::Algorithm::from_cose_ecdh(self.ecdh_curve).expect("algorithm not supported by CAL");
+
+        let (private_bytes, public_bytes) = match name {
+            "Alice" => (self.alice_private, self.alice_public),
+            "Bob" => (self.bob_private, self.bob_public),
+            _ => panic!("name must be Alice or Bob"),
+        };
+
+        let private_visible = cal
+            .import_secretkey_bytes(alg.clone(), private_bytes)
+            .unwrap_or_else(|_| panic!("failed to load {name}'s secret key"));
+
+        assert_eq!(
+            cal.export_secretkey_bytes(&private_visible).as_ref(),
+            private_bytes,
+            "{name}'s secret key did not round-trip through import/export"
+        );
+
+        let private = private_visible.into();
+        let public = cal.public_key(&private);
+
+        assert_eq!(
+            cal.export_publickey_bytes(&public).as_ref(),
+            public_bytes,
+            "{name}'s public key not exported as expected"
+        );
+
+        let public_imported = cal
+            .import_publickey_bytes(alg.clone(), public_bytes)
+            .unwrap_or_else(|_| panic!("failed to import {name}'s public key"));
+        assert_eq!(
+            cal.export_publickey_bytes(&public_imported).as_ref(),
+            public_bytes,
+            "{name}'s public key did not round-trip through import/export"
+        );
+
+        (private, public)
     }
 }
 

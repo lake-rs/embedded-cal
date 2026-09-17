@@ -12,6 +12,10 @@
     AesCcm256,
 ./embedded-cal-libcrux/src/aead.rs
     AesCcm256Short,
+./embedded-cal-libcrux/src/dh.rs
+    P256,
+./embedded-cal-libcrux/src/dh.rs
+    Direct(BA),
 ./embedded-cal-libcrux/src/hash.rs
     Direct(HashAlgorithmOf<EC::Base>),
 ./embedded-cal-libcrux/src/hash.rs

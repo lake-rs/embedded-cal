@@ -254,41 +254,48 @@ impl<EC: ExtenderConfig> AsRef<[u8]> for HashResult<EC> {
 
 #[cfg(test)]
 mod tests {
+    use embedded_cal::empty::EmptyCal;
+    use rand::rngs::StdRng;
+
     use super::*;
 
     struct TestConfig;
 
     impl ExtenderConfig for TestConfig {
-        type Base = embedded_cal::empty::EmptyCal;
+        type Base = WithRng<EmptyCal, StdRng>;
     }
 
     #[test]
     fn test_hash_algorithm_sha256() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithRng::new(EmptyCal, rand::make_rng()));
         testvectors::test_hash_algorithm_sha256(&mut cal);
     }
 
     #[test]
     fn test_hash_algorithm_sha3_224() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithRng::new(EmptyCal, rand::make_rng()));
+
         testvectors::sha3::test_hash_algorithm_sha3_224(&mut cal);
     }
 
     #[test]
     fn test_hash_algorithm_sha3_256() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithRng::new(EmptyCal, rand::make_rng()));
+
         testvectors::sha3::test_hash_algorithm_sha3_256(&mut cal);
     }
 
     #[test]
     fn test_hash_algorithm_sha3_384() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithRng::new(EmptyCal, rand::make_rng()));
+
         testvectors::sha3::test_hash_algorithm_sha3_384(&mut cal);
     }
 
     #[test]
     fn test_hash_algorithm_sha3_512() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithRng::new(EmptyCal, rand::make_rng()));
+
         testvectors::sha3::test_hash_algorithm_sha3_512(&mut cal);
     }
 }

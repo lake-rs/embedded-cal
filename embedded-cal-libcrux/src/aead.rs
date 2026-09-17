@@ -296,23 +296,25 @@ impl<EC: ExtenderConfig> AsRef<[u8]> for Tag<EC> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Extender, ExtenderConfig};
+    use embedded_cal::empty::EmptyCal;
+
+    use crate::{Extender, ExtenderConfig, WithRng};
 
     struct TestConfig;
 
     impl ExtenderConfig for TestConfig {
-        type Base = embedded_cal::empty::EmptyCal;
+        type Base = WithRng<EmptyCal, rand::rngs::StdRng>;
     }
 
     #[test]
     fn test_aes_gcm_128_encrypt_decrypt() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithRng::new(EmptyCal, rand::make_rng()));
         testvectors::test_aead_aesgcm_128(&mut cal);
     }
 
     #[test]
     fn test_aes_gcm_256_encrypt_decrypt() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithRng::new(EmptyCal, rand::make_rng()));
         testvectors::test_aead_aesgcm_256(&mut cal);
     }
 }
