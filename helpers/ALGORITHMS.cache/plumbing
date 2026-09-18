@@ -1,4 +1,5 @@
 ./embedded-cal-nrf54l15/src/lib.rs:impl embedded_cal::plumbing::Plumbing for Nrf54l15Cal {}
+./embedded-cal-rand/src/lib.rs:impl<C: Plumbing, R> Plumbing for WithRng<C, R> {}
 ./embedded-cal-rustcrypto/src/lib.rs:impl<Base: embedded_cal::Cal + embedded_cal::plumbing::Plumbing> embedded_cal::plumbing::Plumbing
 ./embedded-cal-rustcrypto/src/lib.rs:        fn f(_cal: impl embedded_cal::plumbing::Plumbing) {}
 ./embedded-cal-software-demo/src/tests/dummy_sha256.rs:impl embedded_cal::plumbing::Plumbing for DummySha256 {}

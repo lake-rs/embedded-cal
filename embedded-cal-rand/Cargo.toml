@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
+[package]
+name = "embedded-cal-rand"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[dependencies]
+embedded-cal.path = "../embedded-cal"
+
+rand_core.workspace = true
+
+rand = {version = "0.10", optional = true, features = ["std_rng", "sys_rng"], default-features = false }
+
+[features]
+## Enables the [`WithRng::new_with_sys()`] constructor.
+with_sys = ["dep:rand"]

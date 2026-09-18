@@ -65,3 +65,13 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | HKDF on HMAC w/ SHA-256 | rustcrypto | **not** using any SHA-256 acceleration |
 | HKDF on HMAC w/ SHA-256 | software-demo | **not** using any SHA-256 acceleration|
 | HKDF on HMAC w/ SHA-256 | stm32wba55 | |
+
+# RNG
+
+… has no algorithms in the same sense as the others, but is provided by these implementations:
+
+| Implementation     | Notes |
+|--------------------|-------|
+| embedded-cal-rand  | mixes in an existing RNG, or (feature-gated) takes the system one |
+| nrf54l15 | using CRACENCORE peripheral |
+| stm32wba55 | using RNG peripheral |

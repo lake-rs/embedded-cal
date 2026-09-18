@@ -257,19 +257,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use embedded_cal::Cal;
+    use embedded_cal::{Cal, empty::EmptyCal};
 
     use crate::{Extender, ExtenderConfig};
+    use embedded_cal_rand::WithSysRng;
 
     struct TestConfig;
 
     impl ExtenderConfig for TestConfig {
-        type Base = embedded_cal::empty::EmptyCal;
+        type Base = WithSysRng<EmptyCal>;
     }
 
     #[test]
     fn test_dh_ecdh_p256() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithSysRng::new_with_sys(EmptyCal));
 
         embedded_cal::test_dh_algorithm_ecdh_p256::<Extender<TestConfig>>();
         for v in testvectors::dh::RFC5903_P256 {
