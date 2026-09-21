@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
+[package]
+name = "embedded-cal-examples"
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[dependencies]
+embedded-cal.workspace = true
+
+defmt-or-log = { version = "0.2.3", default-features = false }
+log = { version = "0.4", optional = true }
+defmt = { version = "1.0", optional = true }
+
+colog = { version = "1.4", optional = true }
+
+embedded-cal-rustcrypto = { workspace = true, optional = true, features = ["standalone"] }
+embedded-cal-libcrux = { workspace = true, optional = true, features = ["standalone"] }
+
+[[bin]]
+name = "demo"
+required-features = ["log-standalone"]
+
+[features]
+backend-rustcrypto = ["dep:embedded-cal-rustcrypto"]
+backend-libcrux = ["dep:embedded-cal-libcrux"]
+log-standalone = ["log", "colog"]
+log = ["defmt-or-log/log", "dep:log"]
+defmt = ["defmt-or-log/defmt", "dep:defmt"]
