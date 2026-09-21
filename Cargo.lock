@@ -571,7 +571,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "embedded-cal-demo"
+name = "embedded-cal-examples"
 version = "0.2.0-alpha.1"
 dependencies = [
  "colog",
@@ -609,6 +609,7 @@ dependencies = [
  "defmt-rtt",
  "defmt-test",
  "embedded-cal",
+ "embedded-cal-examples",
  "embedded-cal-software-demo",
  "nrf-pac",
  "panic-probe",
@@ -665,6 +666,7 @@ dependencies = [
  "defmt-rtt",
  "defmt-test",
  "embedded-cal",
+ "embedded-cal-examples",
  "embedded-cal-software-demo",
  "panic-probe",
  "rand_core",
