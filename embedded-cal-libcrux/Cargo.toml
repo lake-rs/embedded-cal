@@ -39,3 +39,6 @@ embedded-cal-rand = { workspace = true, features = ["new_from_sys"], optional = 
 [dev-dependencies]
 testvectors.path = "../testvectors"
 embedded-cal-rand = { path = "../embedded-cal-rand", features = ["new_from_sys"] }
+
+[package.metadata.docs.rs]
+all-features = true

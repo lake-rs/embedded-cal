@@ -49,3 +49,6 @@ alloc = []
 
 ## Enables the `Standalone::standalone()` constructor.
 standalone = ["embedded-cal-rand"]
+
+[package.metadata.docs.rs]
+all-features = true

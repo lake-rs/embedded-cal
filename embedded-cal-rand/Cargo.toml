@@ -22,3 +22,6 @@ rand = {version = "0.10", optional = true, features = ["std_rng", "sys_rng"], de
 [features]
 ## Enables the [`WithRng::new_with_sys()`] constructor.
 new_from_sys = ["dep:rand"]
+
+[package.metadata.docs.rs]
+all-features = true
