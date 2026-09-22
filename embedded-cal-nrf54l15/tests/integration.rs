@@ -125,4 +125,9 @@ mod tests {
             v.test_plumbing_x448(state.cal.as_mut().unwrap());
         }
     }
+
+    #[test]
+    fn test_demo(state: &mut super::TestState) {
+        embedded_cal_examples::show_examples(state.cal.as_mut().unwrap());
+    }
 }

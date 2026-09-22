@@ -88,4 +88,9 @@ mod tests {
             v.test_plumbing_p256(&mut state.cal);
         }
     }
+
+    #[test]
+    fn test_demo(state: &mut super::TestState) {
+        embedded_cal_examples::show_examples(&mut state.cal);
+    }
 }
