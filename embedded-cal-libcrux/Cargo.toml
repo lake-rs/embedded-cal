@@ -3,9 +3,10 @@
 
 [package]
 name = "embedded-cal-libcrux"
+description = "Software implementation of embedded-cal based on libcrux"
+
 edition.workspace = true
 license.workspace = true
-readme.workspace = true
 repository.workspace = true
 keywords.workspace = true
 categories.workspace = true

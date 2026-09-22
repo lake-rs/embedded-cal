@@ -3,9 +3,10 @@
 
 [package]
 name = "embedded-cal-software-demo"
+description = "Software implementation of embedded-cal for tests, research and illustration"
+
 edition.workspace = true
 license.workspace = true
-readme.workspace = true
 repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
