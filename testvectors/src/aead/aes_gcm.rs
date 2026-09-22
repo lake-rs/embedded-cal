@@ -7,7 +7,7 @@ use hexlit::hex;
 
 use crate::aead::AeadCase;
 
-pub const AES_GCM_128: &[AeadCase] = &[
+const AES_GCM_128: &[AeadCase] = &[
     // tcId: 1
     AeadCase {
         alg_cose: 1,
@@ -122,7 +122,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
 ];
 
-pub const AES_GCM_256: &[AeadCase] = &[
+const AES_GCM_256: &[AeadCase] = &[
     // tcId: 91
     AeadCase {
         alg_cose: 3,
@@ -234,3 +234,15 @@ pub const AES_GCM_256: &[AeadCase] = &[
         tag: &hex!("00000000000000000000000000000000"),
     },
 ];
+
+pub fn test_128(cal: &mut impl embedded_cal::AeadProvider) {
+    for case in AES_GCM_128 {
+        case.test(cal);
+    }
+}
+
+pub fn test_256(cal: &mut impl embedded_cal::AeadProvider) {
+    for case in AES_GCM_256 {
+        case.test(cal);
+    }
+}
