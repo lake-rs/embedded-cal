@@ -11,6 +11,9 @@ fn main() {
         feature = "backend-libcrux" => {
             embedded_cal_libcrux::Standalone::standalone()
         }
+        feature = "backend-empty" => {
+            embedded_cal::empty::EmptyCal
+        }
         _ => const { panic!("No --features=backend-… option selected") },
     };
 
