@@ -3,8 +3,36 @@
 pub mod aes_ccm;
 pub mod aes_gcm;
 
-struct AeadCase {
+use embedded_cal::{AeadAlgorithm, AeadProvider, Cal, accessor::*};
+
+struct KnownAlgorithm {
     alg_cose: i16,
+    tag_length: usize,
+    key_length: usize,
+    nonce_length: usize,
+}
+
+impl KnownAlgorithm {
+    fn construct<C: Cal>(&self, _cal: &mut C) -> AeadAlgorithmOf<C> {
+        let Some(alg) = AeadAlgorithmOf::<C>::from_cose_number(self.alg_cose) else {
+            panic!("expected algorithm could not be constructed by Cal");
+        };
+        alg
+    }
+
+    /// Builds the algorithm for the Cal and tests whether it has the expected lengths.
+    fn test_properties<C: Cal>(&self, cal: &mut C) {
+        // If we grow more constructors, this will also test their equivalence.
+
+        let alg = self.construct(cal);
+        assert_eq!(alg.tag_length(), self.tag_length);
+        assert_eq!(alg.key_length(), self.key_length);
+        assert_eq!(alg.nonce_length(), self.nonce_length);
+    }
+}
+
+struct AeadCase {
+    alg: &'static KnownAlgorithm,
     key: &'static [u8],
     nonce: &'static [u8],
     // The tester will chunk this up arbitrarily
@@ -15,15 +43,30 @@ struct AeadCase {
 }
 
 impl AeadCase {
-    fn test_with_chunker<Cal: embedded_cal::AeadProvider>(
+    fn test_with_chunker<Cal: embedded_cal::Cal>(
         &self,
         cal: &mut Cal,
         aad: impl embedded_cal::AadGenerator + Copy,
     ) {
-        use embedded_cal::AeadAlgorithm;
+        let alg = self.alg.construct(cal);
+        // Sanity checks for test vector authors
+        assert_eq!(
+            self.alg.key_length,
+            self.key.len(),
+            "Test key is not of the exepected shape"
+        );
+        assert_eq!(
+            self.alg.tag_length,
+            self.tag.len(),
+            "Test tag is not of the exepected shape"
+        );
+        assert_eq!(
+            self.alg.nonce_length,
+            self.nonce.len(),
+            "Test nonce is not of the exepected shape"
+        );
 
-        let alg = Cal::Algorithm::from_cose_number(self.alg_cose)
-            .expect("algorithm not present for test");
+        let cal = cal.aead();
 
         let key = cal.load_from_keydata(alg, self.key);
 
@@ -56,7 +99,7 @@ impl AeadCase {
         );
     }
 
-    fn test<Cal: embedded_cal::AeadProvider>(&self, cal: &mut Cal) {
+    fn test<Cal: embedded_cal::Cal>(&self, cal: &mut Cal) {
         self.test_with_chunker(cal, self.aad);
 
         // FIXME: Which chunkings make sense?

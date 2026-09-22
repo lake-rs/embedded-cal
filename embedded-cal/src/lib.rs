@@ -120,10 +120,7 @@ mod rng;
 // FIXME: Once we start API stability, this should be a dedicated crate.
 pub mod plumbing;
 
-pub use aead::{
-    AadGenerator, AeadAlgorithm, AeadProvider, DecryptionFailed,
-    test_aead_algorithm_aesccm_16_64_128,
-};
+pub use aead::{AadGenerator, AeadAlgorithm, AeadProvider, DecryptionFailed};
 pub use dh::{
     DhAlgorithm, DhProvider, IncompatibleKeys, test_dh_algorithm_ecdh_p256, test_dh_selftest,
 };
