@@ -15,7 +15,11 @@ pub struct AeadCase {
 }
 
 impl AeadCase {
-    fn test<Cal: embedded_cal::AeadProvider>(&self, cal: &mut Cal) {
+    fn test_with_chunker<Cal: embedded_cal::AeadProvider>(
+        &self,
+        cal: &mut Cal,
+        aad: impl embedded_cal::AadGenerator + Copy,
+    ) {
         use embedded_cal::AeadAlgorithm;
 
         let alg = Cal::Algorithm::from_cose_number(self.alg_cose)
@@ -27,9 +31,9 @@ impl AeadCase {
         let buf = &mut buf[..self.plaintext.len()];
         buf.copy_from_slice(self.plaintext);
 
-        // FIXME: try again with chunked AAD
+        // FIXME: assert aad == self.aad
 
-        let produced_tag = cal.encrypt_in_place(&key, self.nonce, buf, self.aad);
+        let produced_tag = cal.encrypt_in_place(&key, self.nonce, buf, aad);
         assert_eq!(
             produced_tag.as_ref(),
             self.tag,
@@ -43,13 +47,27 @@ impl AeadCase {
             self.ciphertext, buf
         );
 
-        cal.decrypt_in_place(&key, self.nonce, buf, self.tag, self.aad)
+        cal.decrypt_in_place(&key, self.nonce, buf, self.tag, aad)
             .unwrap();
         assert_eq!(
             buf, self.plaintext,
             "decryption mismatch: expected {:02x?}, got {:02x?}",
             self.plaintext, buf
         );
+    }
+
+    fn test<Cal: embedded_cal::AeadProvider>(&self, cal: &mut Cal) {
+        self.test_with_chunker(cal, self.aad);
+
+        // FIXME: Which chunkings make sense?
+        for firstpart in [1, 15, 16, 17] {
+            if self.aad.len() > firstpart {
+                self.test_with_chunker(
+                    cal,
+                    [&self.aad[..firstpart], &self.aad[firstpart..]].as_slice(),
+                );
+            }
+        }
     }
 }
 
