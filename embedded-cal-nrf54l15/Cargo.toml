@@ -4,7 +4,7 @@
 [package]
 name = "embedded-cal-nrf54l15"
 edition.workspace = true
-license = "(MIT OR Apache-2.0) AND MIT OR Apache-2.0"
+license = "(MIT OR Apache-2.0) AND LicenseRef-Nordic-5-Clause"
 readme.workspace = true
 repository.workspace = true
 keywords.workspace = true
