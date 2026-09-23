@@ -310,12 +310,12 @@ mod tests {
     #[test]
     fn test_aes_gcm_128_encrypt_decrypt() {
         let mut cal = Extender::<TestConfig>::new(WithSysRng::new_from_sys(EmptyCal));
-        testvectors::aead::aes_gcm::test_128(&mut cal);
+        embedded_cal_testvectors::aead::aes_gcm::test_128(&mut cal);
     }
 
     #[test]
     fn test_aes_gcm_256_encrypt_decrypt() {
         let mut cal = Extender::<TestConfig>::new(WithSysRng::new_from_sys(EmptyCal));
-        testvectors::aead::aes_gcm::test_256(&mut cal);
+        embedded_cal_testvectors::aead::aes_gcm::test_256(&mut cal);
     }
 }

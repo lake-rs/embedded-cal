@@ -9,7 +9,7 @@ use embedded_cal::plumbing::ec::P256;
 use embedded_cal_nrf54l15::Nrf54l15Cal;
 use nrf_pac as _;
 use panic_probe as _;
-use testvectors::dh::EccVector;
+use embedded_cal_testvectors::dh::EccVector;
 
 // XXX: `libcrux-iot-p256` still depends on a version of `libcrux-hacl-rs`
 // that needs a global allocator.
@@ -23,7 +23,7 @@ struct TestState {
 #[defmt_test::tests]
 mod tests {
     use embedded_cal::plumbing::ec::Ec;
-    use testvectors::dh::RFC5903_P256;
+    use embedded_cal_testvectors::dh::RFC5903_P256;
 
     use super::*;
 

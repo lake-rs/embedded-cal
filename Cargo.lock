@@ -607,6 +607,7 @@ version = "0.2.0-alpha.2"
 dependencies = [
  "embedded-cal",
  "embedded-cal-rand",
+ "embedded-cal-testvectors",
  "libcrux-iot-aes",
  "libcrux-iot-p256",
  "libcrux-iot-sha3",
@@ -614,7 +615,6 @@ dependencies = [
  "libcrux-sha2",
  "libcrux-traits",
  "rand_core",
- "testvectors",
 ]
 
 [[package]]
@@ -630,11 +630,11 @@ dependencies = [
  "embedded-cal",
  "embedded-cal-examples",
  "embedded-cal-software-demo",
+ "embedded-cal-testvectors",
  "libcrux-iot-p256",
  "nrf-pac",
  "panic-probe",
  "rand_core",
- "testvectors",
  "zeroize",
 ]
 
@@ -656,13 +656,13 @@ dependencies = [
  "digest",
  "embedded-cal",
  "embedded-cal-rand",
+ "embedded-cal-testvectors",
  "generic-array",
  "heapless",
  "hmac",
  "p256",
  "rand_core",
  "sha2",
- "testvectors",
  "x25519-dalek",
  "zeroize",
 ]
@@ -672,8 +672,8 @@ name = "embedded-cal-software-demo"
 version = "0.2.0-alpha.2"
 dependencies = [
  "embedded-cal",
+ "embedded-cal-testvectors",
  "rand_core",
- "testvectors",
 ]
 
 [[package]]
@@ -689,12 +689,21 @@ dependencies = [
  "embedded-cal",
  "embedded-cal-examples",
  "embedded-cal-software-demo",
+ "embedded-cal-testvectors",
  "libcrux-iot-p256",
  "panic-probe",
  "rand_core",
  "stm32-metapac",
- "testvectors",
  "zeroize",
+]
+
+[[package]]
+name = "embedded-cal-testvectors"
+version = "0.2.0-alpha.2"
+dependencies = [
+ "embedded-cal",
+ "hexlit",
+ "rand_core",
 ]
 
 [[package]]
@@ -1593,15 +1602,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "testvectors"
-version = "0.2.0-alpha.2"
-dependencies = [
- "embedded-cal",
- "hexlit",
- "rand_core",
 ]
 
 [[package]]

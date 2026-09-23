@@ -36,6 +36,7 @@ mod tests {
     use super::ImplementSha256Short;
     use embedded_cal::Cal;
     use embedded_cal_nrf54l15::Nrf54l15Cal;
+    use embedded_cal_testvectors as testvectors;
 
     #[init]
     fn init() -> super::TestState {
