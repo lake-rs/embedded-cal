@@ -61,3 +61,7 @@ It can be used in different ways:
   but the final application is not yet in place,
   calling `embedded_cal_examples::show_examples()` can be an easy way to demonstrate that the back-end is available and functional.
 
+## Contributing, license and other metadata
+
+See the [main project README](https://github.com/lake-rs/embedded-cal/blob/main/README.md)
+for metadata topics such as supported Rust versions (MSRV), citing embedded-cal, licenses, and how to contribute.
