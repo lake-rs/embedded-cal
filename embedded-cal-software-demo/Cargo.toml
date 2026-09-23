@@ -4,6 +4,7 @@
 [package]
 name = "embedded-cal-software-demo"
 description = "Software implementation of embedded-cal for tests, research and illustration"
+documentation = "https://docs.rs/embedded-cal-software-demo/"
 
 edition.workspace = true
 license.workspace = true

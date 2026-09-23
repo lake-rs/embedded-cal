@@ -4,6 +4,7 @@
 [package]
 name = "embedded-cal-stm32wba55"
 description = "Implementation of embedded-cal for STM32WBA55 hardware"
+documentation = "https://docs.rs/embedded-cal-stm32wba55/"
 
 edition.workspace = true
 license.workspace = true

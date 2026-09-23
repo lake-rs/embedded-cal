@@ -3,6 +3,8 @@
 
 [package]
 name = "embedded-cal-examples"
+documentation = "https://docs.rs/embedded-cal-examples/"
+
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

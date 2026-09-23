@@ -4,6 +4,7 @@
 [package]
 name = "embedded-cal"
 description = "A Cryptographic Abstraction Layer (CAL) for embedded systems"
+documentation = "https://docs.rs/embedded-cal/"
 
 license.workspace = true
 edition.workspace = true
