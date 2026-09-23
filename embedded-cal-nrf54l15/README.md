@@ -8,6 +8,11 @@ SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 See [the embedded-cal documentation](https://docs.rs/embedded-cal/) for a high-level overview,
 including usage and setup instructions.
 
+## ⚠️ Security note
+
+This crate provides cryptographic primitives based on hardware features.
+It has not undergone any external audit.
+
 ## Contributing, license and other metadata
 
 See the [main project README](https://github.com/lake-rs/embedded-cal/blob/main/README.md)

@@ -4,6 +4,7 @@
 [package]
 name = "embedded-cal-nrf54l15"
 description = "Implementation of embedded-cal for nRF54L15 hardware"
+documentation = "https://docs.rs/embedded-cal-nrf54l15/"
 
 edition.workspace = true
 license = "(MIT OR Apache-2.0) AND LicenseRef-Nordic-5-Clause"

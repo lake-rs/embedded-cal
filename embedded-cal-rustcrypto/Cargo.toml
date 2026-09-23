@@ -4,6 +4,7 @@
 [package]
 name = "embedded-cal-rustcrypto"
 description = "Software implementation of embedded-cal based on RustCrypto libraries"
+documentation = "https://docs.rs/embedded-cal-rustcrypto/"
 
 edition.workspace = true
 license.workspace = true

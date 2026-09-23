@@ -13,6 +13,12 @@ See [the embedded-cal documentation](https://docs.rs/embedded-cal/) for a high-l
 for a detailed list of which module supports which operations,
 or the [crate's documentation on initialization](https://docs.rs/embedded-cal-libcrux/latest/embedded_cal_libcrux/type.Standalone.html#method.standalone).
 
+## ⚠️ Security note
+
+This crate provides cryptographic primitives from crates that have not received an external audit,
+and whose formal proofs are not stable.
+See the dependencies' README files for the state per cryptographic operation.
+
 ## Contributing, license and other metadata
 
 See the [main project README](https://github.com/lake-rs/embedded-cal/blob/main/README.md)

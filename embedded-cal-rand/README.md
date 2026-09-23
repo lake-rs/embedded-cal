@@ -15,9 +15,16 @@ This crate provides two things:
 * With the feature `new_from_sys`,
   a constructor for such a wrapper that uses the [`rand` crate](https://docs.rs/rand/latest/rand/fn.make_rng.html) for easy setup.
 
+  ⚠️ Security note: The [`make_rng` function](https://docs.rs/rand/latest/rand/fn.make_rng.html) used in this feature comes with own security notes [through the use of `ThreadRng`](https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html#security).
+
 ## Using this crate
 
 This crate is rarely used directly,
 because implementations of embedded-cal on embedded systems generally also provide access to that platform's random number generator,
 and software implementations used on standard systems provide their own constructors for standalone operation that includes a random number generator.
 (The latter are the main motivation for this crate, as standalone functionality is implemented in terms of this crate).
+
+## Contributing, license and other metadata
+
+See the [main project README](https://github.com/lake-rs/embedded-cal/blob/main/README.md)
+for metadata topics such as supported Rust versions (MSRV), citing embedded-cal, licenses, and how to contribute.

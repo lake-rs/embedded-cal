@@ -4,6 +4,7 @@
 [package]
 name = "embedded-cal-rand"
 description = "Making a cryptographically secure random number generator accessible in embedded-cal"
+documentation = "https://docs.rs/embedded-cal-rand/"
 
 edition.workspace = true
 license.workspace = true
