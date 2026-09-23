@@ -70,17 +70,17 @@ mod tests {
 
     #[test]
     fn test_tryrng(state: &mut super::TestState) {
-        embedded_cal::test_tryrng(&mut state.cal.as_mut().unwrap());
+        testvectors::rng::test(&mut state.cal.as_mut().unwrap());
     }
 
     #[test]
     fn test_aead_aesccm_16_64_128(state: &mut super::TestState) {
-        testvectors::test_aead_aesccm_16_64_128(state.cal.as_mut().unwrap().aead());
+        testvectors::aead::aes_ccm::test_16_64_128(state.cal.as_mut().unwrap().aead());
     }
 
     #[test]
     fn test_aead_aesccm_16_64_256(state: &mut super::TestState) {
-        testvectors::test_aead_aesccm_16_64_256(state.cal.as_mut().unwrap().aead());
+        testvectors::aead::aes_ccm::test_16_64_256(state.cal.as_mut().unwrap().aead());
     }
 
     #[test]
