@@ -5,12 +5,26 @@
 //! Source: <https://github.com/C2SP/wycheproof/blob/ee7b4f7e611928cbe163dc6f5e54527bfd166f34/testvectors_v1/aes_gcm_test.json>
 use hexlit::hex;
 
-use crate::aead::AeadCase;
+use crate::aead::{AeadCase, KnownAlgorithm};
 
-pub const AES_GCM_128: &[AeadCase] = &[
+const AES_GCM_128_ALG: KnownAlgorithm = KnownAlgorithm {
+    alg_cose: 1,
+    tag_length: 16,
+    key_length: 16,
+    nonce_length: 12,
+};
+
+const AES_GCM_256_ALG: KnownAlgorithm = KnownAlgorithm {
+    alg_cose: 3,
+    tag_length: 16,
+    key_length: 32,
+    nonce_length: 12,
+};
+
+const AES_GCM_128: &[AeadCase] = &[
     // tcId: 1
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("5b9604fe14eadba931b0ccf34843dab9"),
         nonce: &hex!("028318abc1824029138141a2"),
         aad: &[],
@@ -20,7 +34,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 2
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("5b9604fe14eadba931b0ccf34843dab9"),
         nonce: &hex!("921d2507fa8007b7bd067d34"),
         aad: &hex!("00112233445566778899aabbccddeeff"),
@@ -30,7 +44,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 4
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("bedcfb5a011ebc84600fcb296c15af0d"),
         nonce: &hex!("438a547a94ea88dce46c6c85"),
         aad: &[],
@@ -40,7 +54,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 5
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("384ea416ac3c2f51a76e7d8226346d4e"),
         nonce: &hex!("b30c084727ad1c592ac21d12"),
         aad: &[],
@@ -50,7 +64,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 15
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("bb571c160132b0c8d5d190d0bc356ddc"),
         nonce: &hex!("2596c440cf0232950ec66bc4"),
         aad: &[],
@@ -64,7 +78,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 24
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("4a30eac07b788b7354a90e6448f56676"),
         nonce: &hex!("c359d567616b6384ac20a43f"),
         aad: &[],
@@ -78,7 +92,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 28
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("c4b03435b91fc52e09eff27e4dc3fb42"),
         nonce: &hex!("5046e7e08f0747e1efccb09e"),
         aad: &hex!(
@@ -90,7 +104,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 33
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("bf2056baaf45c5a00a733b49f10b7dd0"),
         nonce: &hex!("fef1b243b44ba92b47c6626b"),
         aad: &hex!(
@@ -102,7 +116,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 39
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("00112233445566778899aabbccddeeff"),
         nonce: &hex!("000000000000000000000000"),
         aad: &[],
@@ -112,7 +126,7 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
     // tcId: 40
     AeadCase {
-        alg_cose: 1,
+        alg: &AES_GCM_128_ALG,
         key: &hex!("00112233445566778899aabbccddeeff"),
         nonce: &hex!("ffffffffffffffffffffffff"),
         aad: &[],
@@ -122,10 +136,10 @@ pub const AES_GCM_128: &[AeadCase] = &[
     },
 ];
 
-pub const AES_GCM_256: &[AeadCase] = &[
+const AES_GCM_256: &[AeadCase] = &[
     // tcId: 91
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("92ace3e348cd821092cd921aa3546374299ab46209691bc28b8752d17f123c20"),
         nonce: &hex!("00112233445566778899aabb"),
         aad: &hex!("00000000ffffffff"),
@@ -135,7 +149,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 92
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("29d3a44f8723dc640239100c365423a312934ac80239212ac3df3421a2098123"),
         nonce: &hex!("00112233445566778899aabb"),
         aad: &hex!("aabbccddeeff"),
@@ -145,7 +159,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 93
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("80ba3192c803ce965ea371d5ff073cf0f43b6a2ab576b208426e11409c09b9b0"),
         nonce: &hex!("4da5bf8dfd5852c1ea12379d"),
         aad: &[],
@@ -155,7 +169,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 94
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("cc56b680552eb75008f5484b4cb803fa5063ebd6eab91f6ab6aef4916a766273"),
         nonce: &hex!("99e23ec48985bccdeeab60f1"),
         aad: &[],
@@ -165,7 +179,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 101
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("cdccfe3f46d782ef47df4e72f0c02d9c7f774def970d23486f11a57f54247f17"),
         nonce: &hex!("376187894605a8d45e30de51"),
         aad: &hex!("956846a209e087ed"),
@@ -175,7 +189,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 109
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("7f7c5804a680f61924966725dba2a80d85267c2e03c7c234b045b24ec8e23528"),
         nonce: &hex!("2d9bf8b636f337d265b0904c"),
         aad: &[],
@@ -189,7 +203,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 113
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("4f62e56f7b15035f427849714beb97e6acf88371e1f69b388129bb447273d6b8"),
         nonce: &hex!("137d5c98a92f6dcee4f29d7c"),
         aad: &[],
@@ -203,7 +217,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 124
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("e40003d6e08ab80b4bfc8400ef112945a901ec64a1b6536ca92665090d608bc4"),
         nonce: &hex!("9f095dafe6f6e0fbafbbe02e"),
         aad: &hex!(
@@ -215,7 +229,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 128
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("00112233445566778899aabbccddeeff102132435465768798a9bacbdcedfe0f"),
         nonce: &hex!("000000000000000000000000"),
         aad: &[],
@@ -225,7 +239,7 @@ pub const AES_GCM_256: &[AeadCase] = &[
     },
     // tcId: 129
     AeadCase {
-        alg_cose: 3,
+        alg: &AES_GCM_256_ALG,
         key: &hex!("00112233445566778899aabbccddeeff102132435465768798a9bacbdcedfe0f"),
         nonce: &hex!("ffffffffffffffffffffffff"),
         aad: &[],
@@ -234,3 +248,17 @@ pub const AES_GCM_256: &[AeadCase] = &[
         tag: &hex!("00000000000000000000000000000000"),
     },
 ];
+
+pub fn test_128(cal: &mut impl embedded_cal::Cal) {
+    AES_GCM_128_ALG.test_properties(cal);
+    for case in AES_GCM_128 {
+        case.test(cal);
+    }
+}
+
+pub fn test_256(cal: &mut impl embedded_cal::Cal) {
+    AES_GCM_256_ALG.test_properties(cal);
+    for case in AES_GCM_256 {
+        case.test(cal);
+    }
+}

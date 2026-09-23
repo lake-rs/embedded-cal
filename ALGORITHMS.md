@@ -9,18 +9,18 @@ Currently supported algorithms are:
 
 | Algorithm                                            | Implementation | Notes                        |
 |------------------------------------------------------|----------------|------------------------------|
-| A128GCM (AES-GCM)                                    | libcrux        |                              |
-| A256GCM (AES-GCM)                                    | libcrux        |                              |
-| AES-128-CCM (16-byte tag, 12-byte nonce per RFC6655) | libcrux        |                              |
-| AES-128-CCM (8-byte tag,  12-byte nonce per RFC6655) | libcrux        |                              |
-| AES-256-CCM (16-byte tag, 12-byte nonce per RFC6655) | libcrux        |                              |
-| AES-256-CCM (8-byte tag,  12-byte nonce per RFC6655) | libcrux        |                              |
-| AES-CCM-16-64-128                                    | nrf54l15       | limited AAD and message size |
-| AES-CCM-16-64-256                                    | nrf54l15       | limited AAD and message size |
-| AES-CCM-16-64-128                                    | stm32wba55     |                              |
-| AES-CCM-16-64-256                                    | stm32wba55     |                              |
-| AES-CCM-16-64-128                                    | rustcrypto     | limited or alloc'ed AAD      |
-| AES-CCM-16-64-256                                    | rustcrypto     | limited or alloc'ed AAD      |
+| A128GCM (AES-GCM)                                    | [libcrux]        |                              |
+| A256GCM (AES-GCM)                                    | [libcrux]        |                              |
+| AES-128-CCM (16-byte tag, 12-byte nonce per RFC6655) | [libcrux]        |                              |
+| AES-128-CCM (8-byte tag,  12-byte nonce per RFC6655) | [libcrux]        |                              |
+| AES-256-CCM (16-byte tag, 12-byte nonce per RFC6655) | [libcrux]        |                              |
+| AES-256-CCM (8-byte tag,  12-byte nonce per RFC6655) | [libcrux]        |                              |
+| AES-CCM-16-64-128                                    | [nrf54l15]       | limited AAD and message size |
+| AES-CCM-16-64-256                                    | [nrf54l15]       | limited AAD and message size |
+| AES-CCM-16-64-128                                    | [stm32wba55]     |                              |
+| AES-CCM-16-64-256                                    | [stm32wba55]     |                              |
+| AES-CCM-16-64-128                                    | [rustcrypto]     | limited or alloc'ed AAD      |
+| AES-CCM-16-64-256                                    | [rustcrypto]     | limited or alloc'ed AAD      |
 
 Limitation in AAD streaming or message size are subject to ongoing work.
 
@@ -28,43 +28,43 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
-| ECDH on curve P-256 | rustcrypto | |
-| ECDH on curve X25519 | rustcrypto | |
-| ECDH on curve P-256 | stm32wba55 | |
-| ECDH on curve P-256 | nrf54l15 | |
-| ECDH on curve X25519 | nrf54l15 | |
-| ECDH on curve X448 | nrf54l15 | |
-| ECDH on P-256 | libcrux || 
+| ECDH on curve P-256 | [rustcrypto] | |
+| ECDH on curve X25519 | [rustcrypto] | |
+| ECDH on curve P-256 | [stm32wba55] | |
+| ECDH on curve P-256 | [nrf54l15] | |
+| ECDH on curve X25519 | [nrf54l15] | |
+| ECDH on curve X448 | [nrf54l15] | |
+| ECDH on P-256 | [libcrux] || 
 
 # Hash
 
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
-| SHA-256 | libcrux | |
-| SHA-256 | rustcrypto | |
-| SHA-256 | software-demo | optionally providing and using SHA2-short plumbing |
-| SHA2-short | nrf54l15 | providing plumbing |
-| SHA2-short | stm32wba55 | providing plumbing |
-| SHA3-224 | libcrux | |
-| SHA3-256 | libcrux | |
-| SHA3-384 | libcrux | |
-| SHA3-512 | libcrux | |
+| SHA-256 | [libcrux] | |
+| SHA-256 | [rustcrypto] | |
+| SHA-256 | [software-demo] | optionally providing and using SHA2-short plumbing |
+| SHA2-short | [nrf54l15] | providing plumbing |
+| SHA2-short | [stm32wba55] | providing plumbing |
+| SHA3-224 | [libcrux] | |
+| SHA3-256 | [libcrux] | |
+| SHA3-384 | [libcrux] | |
+| SHA3-512 | [libcrux] | |
 
 # HMAC
 
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
-| HMAC w/ SHA-256 | rustcrypto | |
-| HMAC w/ SHA-256 | software-demo | |
-| HMAC w/ SHA-256 | stm32wba55 | |
+| HMAC w/ SHA-256 | [rustcrypto] | |
+| HMAC w/ SHA-256 | [software-demo] | |
+| HMAC w/ SHA-256 | [stm32wba55] | |
 
 # HKDF
 
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
-| HKDF on HMAC w/ SHA-256 | rustcrypto | **not** using any SHA-256 acceleration |
-| HKDF on HMAC w/ SHA-256 | software-demo | **not** using any SHA-256 acceleration|
-| HKDF on HMAC w/ SHA-256 | stm32wba55 | |
+| HKDF on HMAC w/ SHA-256 | [rustcrypto] | **not** using any SHA-256 acceleration |
+| HKDF on HMAC w/ SHA-256 | [software-demo] | **not** using any SHA-256 acceleration|
+| HKDF on HMAC w/ SHA-256 | [stm32wba55] | |
 
 # RNG
 
@@ -72,6 +72,13 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 
 | Implementation     | Notes |
 |--------------------|-------|
-| embedded-cal-rand  | mixes in an existing RNG, or (feature-gated) takes the system one |
-| nrf54l15 | using CRACENCORE peripheral |
-| stm32wba55 | using RNG peripheral |
+| [embedded-cal-rand] | mixes in an existing RNG, or (feature-gated) takes the system one |
+| [nrf54l15] | using CRACENCORE peripheral |
+| [stm32wba55] | using RNG peripheral |
+
+[libcrux]: https://crates.io/crates/embedded-cal-libcrux
+[nrf54l15]: https://crates.io/crates/embedded-cal-nrf54l15
+[stm32wba55]: https://crates.io/crates/embedded-cal-stm32wba55
+[rustcrypto]: https://crates.io/crates/embedded-cal-rustcrypto
+[software-demo]: https://crates.io/crates/embedded-cal-software-demo
+[embedded-cal-rand]: https://crates.io/crates/embedded-cal-rand

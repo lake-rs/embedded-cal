@@ -128,10 +128,3 @@ impl AadGenerator for &[&[u8]] {
         self.iter().copied()
     }
 }
-
-pub fn test_aead_algorithm_aesccm_16_64_128<AP: AeadProvider>() {
-    let cose_10 = AP::Algorithm::from_cose_number(10i8).expect(
-        "test for type claiming AES-CCM-16-64-128 compatibility did not recognize COSE number 10",
-    );
-    assert_eq!(cose_10.tag_length(), 8)
-}

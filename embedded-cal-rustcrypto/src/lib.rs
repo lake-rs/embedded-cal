@@ -160,7 +160,7 @@ mod tests {
     fn test_aead_aesccm_16_64_128() {
         let mut cal = Standalone::standalone();
 
-        testvectors::test_aead_aesccm_16_64_128(&mut cal);
+        testvectors::aead::aes_ccm::test_16_64_128(&mut cal);
     }
 
     #[test]
@@ -192,7 +192,7 @@ mod tests {
     fn test_aead_aesccm_16_64_256() {
         let mut cal = Standalone::standalone();
 
-        testvectors::test_aead_aesccm_16_64_256(&mut cal);
+        testvectors::aead::aes_ccm::test_16_64_256(&mut cal);
     }
 
     #[test]
