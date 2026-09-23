@@ -22,3 +22,5 @@ pub use hkdf::sha2::test_hkdf_sha256;
 pub mod aead;
 pub mod dh;
 pub use hash::sha3;
+
+pub mod rng;

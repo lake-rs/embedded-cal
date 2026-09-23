@@ -16,3 +16,4 @@ version.workspace = true
 [dependencies]
 embedded-cal.workspace = true
 hexlit = "0.5.5"
+rand_core.workspace = true

@@ -116,7 +116,6 @@ mod error;
 mod hash;
 mod hkdf;
 mod hmac;
-mod rng;
 // FIXME: Once we start API stability, this should be a dedicated crate.
 pub mod plumbing;
 
@@ -128,7 +127,6 @@ pub use error::ImportError;
 pub use hash::{HashAlgorithm, HashProvider, test_hash_algorithm_sha256};
 pub use hkdf::{HkdfError, HkdfProvider};
 pub use hmac::{HmacAlgorithm, HmacProvider, test_hmac_algorithm_hmacsha256};
-pub use rng::test_tryrng;
 
 #[allow(
     type_alias_bounds,

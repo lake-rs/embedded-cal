@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn test_tryrng(state: &mut super::TestState) {
-        embedded_cal::test_tryrng(&mut state.cal);
+        testvectors::rng::test(&mut state.cal);
     }
 
     #[test]
