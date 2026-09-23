@@ -42,7 +42,7 @@ defmt-test = "0.4"
 embedded-cal-examples.path = "../embedded-cal-examples"
 embedded-cal-software-demo.path = "../embedded-cal-software-demo"
 testvectors.path = "../testvectors"
-libcrux-iot-p256 = { git = "https://github.com/celabshq/libcrux-iot.git", branch = "embedded-cal", features = [
+libcrux-iot-p256 = { version = "0.0.1-alpha.1", features = [
     "embedded-cal",
 ] }
 embedded-alloc = "0.6.0"

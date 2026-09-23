@@ -589,23 +589,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "embedded-cal"
-version = "0.2.0-alpha.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2d77a40928916e0ed5a222976c9b229e5f37371a9d8ca073a7341cdd2d20894"
-dependencies = [
- "hax-lib 0.4.0",
- "rand_core",
-]
-
-[[package]]
 name = "embedded-cal-examples"
 version = "0.2.0-alpha.1"
 dependencies = [
  "colog",
  "defmt",
  "defmt-or-log",
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "embedded-cal-libcrux",
  "embedded-cal-rustcrypto",
  "log",
@@ -615,10 +605,10 @@ dependencies = [
 name = "embedded-cal-libcrux"
 version = "0.2.0-alpha.1"
 dependencies = [
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "embedded-cal-rand",
  "libcrux-iot-aes",
- "libcrux-iot-p256 0.0.1-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libcrux-iot-p256",
  "libcrux-iot-sha3",
  "libcrux-secrets",
  "libcrux-sha2",
@@ -637,10 +627,10 @@ dependencies = [
  "defmt-rtt",
  "defmt-test",
  "embedded-alloc",
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "embedded-cal-examples",
  "embedded-cal-software-demo",
- "libcrux-iot-p256 0.0.1-alpha.1 (git+https://github.com/celabshq/libcrux-iot.git?branch=embedded-cal)",
+ "libcrux-iot-p256",
  "nrf-pac",
  "panic-probe",
  "rand_core",
@@ -652,7 +642,7 @@ dependencies = [
 name = "embedded-cal-rand"
 version = "0.2.0-alpha.1"
 dependencies = [
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "rand",
  "rand_core",
 ]
@@ -664,7 +654,7 @@ dependencies = [
  "aes",
  "ccm",
  "digest",
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "embedded-cal-rand",
  "generic-array",
  "heapless",
@@ -681,7 +671,7 @@ dependencies = [
 name = "embedded-cal-software-demo"
 version = "0.2.0-alpha.1"
 dependencies = [
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "rand_core",
  "testvectors",
 ]
@@ -696,10 +686,10 @@ dependencies = [
  "defmt-rtt",
  "defmt-test",
  "embedded-alloc",
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "embedded-cal-examples",
  "embedded-cal-software-demo",
- "libcrux-iot-p256 0.0.1-alpha.1 (git+https://github.com/celabshq/libcrux-iot.git?branch=embedded-cal)",
+ "libcrux-iot-p256",
  "panic-probe",
  "rand_core",
  "stm32-metapac",
@@ -1068,19 +1058,7 @@ version = "0.0.1-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fca6d049fb4e824bc808b2e0caa7e411155a8bcedd3cc60b61a7c6702790b00"
 dependencies = [
- "libcrux-hacl-rs",
- "libcrux-macros",
- "libcrux-secrets",
- "libcrux-sha2",
- "libcrux-traits",
-]
-
-[[package]]
-name = "libcrux-iot-p256"
-version = "0.0.1-alpha.1"
-source = "git+https://github.com/celabshq/libcrux-iot.git?branch=embedded-cal#61e113205f746b5caeb777ea38f15164e90f5337"
-dependencies = [
- "embedded-cal 0.2.0-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "embedded-cal",
  "libcrux-hacl-rs",
  "libcrux-macros",
  "libcrux-secrets",
@@ -1621,7 +1599,7 @@ dependencies = [
 name = "testvectors"
 version = "0.2.0-alpha.1"
 dependencies = [
- "embedded-cal 0.2.0-alpha.1",
+ "embedded-cal",
  "hexlit",
  "rand_core",
 ]
