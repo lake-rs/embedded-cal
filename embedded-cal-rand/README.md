@@ -15,6 +15,8 @@ This crate provides two things:
 * With the feature `new_from_sys`,
   a constructor for such a wrapper that uses the [`rand` crate](https://docs.rs/rand/latest/rand/fn.make_rng.html) for easy setup.
 
+  ⚠️ Security note: The [`make_rng` function](https://docs.rs/rand/latest/rand/fn.make_rng.html) used in this feature comes with own security notes [through the use of `ThreadRng`](https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html#security).
+
 ## Using this crate
 
 This crate is rarely used directly,

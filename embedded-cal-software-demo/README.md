@@ -18,6 +18,10 @@ It may also (but currently does not) provide tools for debugging individual part
 (e.g. for bypassing a hardware's provided HKDF mechanisms but using its hash acceleration),
 which generally makes no sense in production software<!-- unless that discovers a bug in the hardware, but then the Rust implementation of that driver should disable the faulty component, at least conditionally -->.
 
+## ⚠️ Security warning
+
+This crate is **not** intended for production use, see above.
+
 ## Contributing, license and other metadata
 
 See the [main project README](https://github.com/lake-rs/embedded-cal/blob/main/README.md)
