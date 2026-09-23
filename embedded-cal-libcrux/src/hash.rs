@@ -360,7 +360,7 @@ mod tests {
     /// Test that the `update_with_classified` API type-checks.
     #[test]
     fn test_update_with_classified_sha3_256() {
-        let mut cal = Extender::<TestConfig>::new(embedded_cal::empty::EmptyCal);
+        let mut cal = Extender::<TestConfig>::new(WithSysRng::new_from_sys(EmptyCal));
         let mut state = cal.init(HashAlgorithm::Sha3_256);
         cal.update_with_classified(&mut state, [0; 200].classify_ref());
         let _result = cal.finalize(state);
