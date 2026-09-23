@@ -8,6 +8,7 @@
 
 use embedded_cal::{Cal, accessor::*, plumbing::Plumbing};
 
+mod ec;
 mod hash;
 mod hash_plumbing;
 mod hkdf;
@@ -17,6 +18,8 @@ mod rng;
 pub trait ExtenderConfig {
     const IMPLEMENT_SHA2SHORT: bool;
     const IMPLEMENT_SHA2SHORT_PLUMBING: bool;
+    // FIXME: Granularity?
+    const IMPLEMENT_DH: bool;
 
     type Base: Cal + Plumbing;
 }
@@ -35,13 +38,13 @@ pub struct Extender<EC: ExtenderConfig>(EC::Base);
 
 // All the required trait impls come from the modules.
 impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
-    type DhProvider = DhProviderOf<EC::Base>;
+    type DhProvider = Self;
     type AeadProvider = AeadProviderOf<EC::Base>;
     type HashProvider = Self;
     type HmacProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
-        self.0.dh()
+        self
     }
 
     fn aead(&mut self) -> &mut Self::AeadProvider {
