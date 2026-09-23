@@ -3,9 +3,10 @@
 
 [package]
 name = "embedded-cal-libcrux"
+description = "Software implementation of embedded-cal based on libcrux"
+
 edition.workspace = true
 license.workspace = true
-readme.workspace = true
 repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
@@ -24,17 +25,20 @@ standalone = ["embedded-cal-rand"]
 
 [dependencies]
 embedded-cal.workspace = true
-libcrux-iot-aes = { git = "https://github.com/celabshq/libcrux-iot", branch = "embedded-cal" }
-libcrux-iot-sha3 = { git = "https://github.com/celabshq/libcrux-iot.git", branch = "embedded-cal" }
-libcrux-iot-p256 = { git = "https://github.com/celabshq/libcrux-iot.git", branch = "embedded-cal", features = ["expose-hacl"] }
-libcrux-secrets = { version = "0.0.5" }
-libcrux-sha2 = "0.0.7"
-libcrux-traits = { version = "0.0.7", features = ["error-in-core"] }
+libcrux-iot-aes = "0.0.1-alpha.1"
+libcrux-iot-sha3 = "0.0.1-alpha.1"
+libcrux-iot-p256 = { version = "0.0.1-alpha.1", features = ["expose-hacl"] }
+libcrux-secrets = "0.0.6"
+libcrux-sha2 = "0.0.8"
+libcrux-traits = "0.0.8"
 
 rand_core.workspace = true
 
-embedded-cal-rand = { path = "../embedded-cal-rand", features = ["new_from_sys"], optional = true }
+embedded-cal-rand = { workspace = true, features = ["new_from_sys"], optional = true }
 
 [dev-dependencies]
 testvectors.path = "../testvectors"
 embedded-cal-rand = { path = "../embedded-cal-rand", features = ["new_from_sys"] }
+
+[package.metadata.docs.rs]
+all-features = true

@@ -5,32 +5,55 @@ SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 # `embedded-cal`: A Cryptographic Abstraction Layer (CAL) for embedded systems
 
-*An embedded systems-friendly verified crypto provider.*
+*An embedded-systems-friendly verified crypto provider.*
 
-Embedded-cal develops a verified implementation of the cryptographic provider in Rust which is compatible with popular embedded platforms. This cryptographic provider will be 1) fast on popular embedded platforms; 2) resistant to certain classes of side-channel attacks; 3) usable without the Rust standard library. The module will lever the available hardware acceleration support of popular microcontroller units for embedded systems and fill in the gaps in hardware support through software implementations. The module will be formally verified for secret independence using the hax framework, a verification tool for high assurance code.
+embedded-cal is an abstraction for providers of cryptographic operations designed for the Rust language,
+and comes with a verified implementation which is compatible with popular embedded platforms.
+Using it, applications can be 1) fast on popular embedded platforms; 2) resistant to certain classes of side-channel attacks; 3) usable without the Rust standard library. Implementations for specific hardware make hardware acceleration support available for popular microcontroller units. The libcrux based software implementation fills in the gaps in hardware support, and includes formally verified for secret independence using the hax framework, a verification tool for high assurance code.
 
-## Implementation roadmap
+## Components
 
-The coarse components of this project as planned are:
+Components of this project are the following crates:
 
-* Rust trait(s) that make a collection of cryptographic algorithms accessible.
-* Implementations of that trait for different hardware accelations in embedded devices.
-* Formally verified software implementations that are usable when no hardware acceleration is present.
+* [`embedded-cal`](https://crates.io/crates/embedded-cal): 
+  The main component, in which the abstraction interface is defined.
+  Its [documentation](https://docs.rs/embedded-cal/) goes into the details of the interfaces,
+  including the [main `Cal` trait](https://docs.rs/embedded-cal/latest/embedded_cal/trait.Cal.html).
 
-Typical implementers of the traits
-will be MCU- or -family specific back-ends that can be provided
-by the device's HAL crate, or made available through an embedded operating system
-such as [Ariel OS](https://ariel-os.org).
+* Hardware implementations for [nRF54L15](https://crates.io/crates/embedded-cal-nrf54l15)
+  and [STM32WBA55](https://crates.io/crates/embedded-cal-stm32wba55).
+  
+  Due to the stackable architecture of embedded-cal,
+  those do not need to implement all high-level operations
+  (which is not just repetitive but also error-prone),
+  but can rely on software implementations to complete them.
+
+* The main software implementation is [embedded-cal-libcrux](https://crates.io/crates/embedded-cal-libcrux).
+  It provides both full algorithms and implementations that build on building blocks that are closer to hardware.
+
+* The [embedded-cal-software-demo](https://crates.io/crates/embedded-cal-software-demo) crate is used
+  as a staging ground for exploration of the combination of hardware and software features.
+  It is not designed for production use,
+  but its exploratory implementations can be useful to understand features,
+  or to compare hardware accelerations that are not yet available in the libcrux version.
+
+* The [embedded-cal-rustcrypto](https://crates.io/crates/embedded-cal-rustcrypto) crate
+  makes many operations from RustCrypto available.
+  It does not compose high-level operations from possibly accelerated operations.
+  Its main use is to easily make algorithms available that already have a Rust implementation,
+  and to make it easy to start using embedded-cal.
+
+While the software implementations can be instanciated standalone,
+hardware accelerated implementations need platform specific initialization.
+Those crates can be initialized in bare-metal setups as illustrated in their tests,
+or provided as utility by an embedded operating systems like [Ariel OS](https://ariel-os.org).
 
 Typical users of the traits
-will be network and security protocol implementations
+are network and security protocol implementations
 such as
 [Lakers](https://github.com/lake-rs/lakers/),
 [libOSCORE](https://gitlab.com/oscore/liboscore)
 or implementations of [SUIT](https://datatracker.ietf.org/doc/draft-ietf-suit-manifest/).
-
-The project is currently being launched,
-and expected to become usable before the end of 2025.
 
 ## MSRV
 

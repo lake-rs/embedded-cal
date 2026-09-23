@@ -20,6 +20,12 @@ hax-lib = "0.4.0"
 rand_core = { version = "0.10", default-features = false }
 embedded-cal = { version = "0.2.0-alpha.1", path = "./embedded-cal" }
 
+# We don't need to list all lockstepped workspace crates here, just those that
+# are being depended on.
+#
+# (And not all of them will be version-lockstepped forever.).
+embedded-cal-rand = { version = "0.2.0-alpha.1", path = "./embedded-cal-rand" }
+
 # used by embedded-cal-exampless
 embedded-cal-rustcrypto = { version = "0.2.0-alpha.1", path = "./embedded-cal-rustcrypto" }
 embedded-cal-libcrux = { version = "0.2.0-alpha.1", path = "./embedded-cal-libcrux" }
@@ -28,3 +34,6 @@ embedded-cal-libcrux = { version = "0.2.0-alpha.1", path = "./embedded-cal-libcr
 # patch until libcrux-secrets 0.0.6 is released
 # we need the patch here to patch the secrets version used by libcrux-iot-sha3 and libcrux-iot-aes
 libcrux-secrets = { git = "https://github.com/celabshq/libcrux.git", rev = "10a65cfa9175e8f78198f24ba450c17090622945" }
+
+[workspace.metadata.release]
+sign-tag = true

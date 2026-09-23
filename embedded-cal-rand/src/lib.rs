@@ -33,6 +33,11 @@ impl<C, R> WithRng<C, R> {
 #[cfg(feature = "new_from_sys")]
 impl<C> WithRng<C, rand::rngs::StdRng> {
     /// Constructs an extender that uses an [`rand::rngs::StdRng`] seeded from the system.
+    ///
+    /// ## Security
+    ///
+    /// This uses the [`rand::make_rng()`] function; see there and the [`rand::ThreadRng`]
+    /// documentation for security considerations.
     pub fn new_from_sys(cal: C) -> Self {
         WithRng {
             cal,

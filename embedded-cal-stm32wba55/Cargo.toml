@@ -3,9 +3,10 @@
 
 [package]
 name = "embedded-cal-stm32wba55"
+description = "Implementation of embedded-cal for STM32WBA55 hardware"
+
 edition.workspace = true
 license.workspace = true
-readme.workspace = true
 repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
