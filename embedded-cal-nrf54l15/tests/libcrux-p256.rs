@@ -7,9 +7,9 @@ use defmt_rtt as _;
 use embedded_alloc::LlffHeap as Heap;
 use embedded_cal::plumbing::ec::P256;
 use embedded_cal_nrf54l15::Nrf54l15Cal;
+use embedded_cal_testvectors::dh::EccVector;
 use nrf_pac as _;
 use panic_probe as _;
-use embedded_cal_testvectors::dh::EccVector;
 
 // XXX: `libcrux-iot-p256` still depends on a version of `libcrux-hacl-rs`
 // that needs a global allocator.

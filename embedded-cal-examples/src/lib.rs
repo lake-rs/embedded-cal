@@ -88,10 +88,22 @@ pub fn show_ecdh_example<C: embedded_cal::Cal>(cal: &mut C) {
 /// Runs through AEAD test vectors for some known algorithms
 pub fn show_aead_tests<C: embedded_cal::Cal>(cal: &mut C) {
     let aead_algs = [
-        (1, embedded_cal_testvectors::aead::aes_gcm::test_128 as fn(&mut C)),
-        (3, embedded_cal_testvectors::aead::aes_gcm::test_256 as fn(&mut C)),
-        (10, embedded_cal_testvectors::aead::aes_ccm::test_16_64_128 as fn(&mut C)),
-        (11, embedded_cal_testvectors::aead::aes_ccm::test_16_64_256 as fn(&mut C)),
+        (
+            1,
+            embedded_cal_testvectors::aead::aes_gcm::test_128 as fn(&mut C),
+        ),
+        (
+            3,
+            embedded_cal_testvectors::aead::aes_gcm::test_256 as fn(&mut C),
+        ),
+        (
+            10,
+            embedded_cal_testvectors::aead::aes_ccm::test_16_64_128 as fn(&mut C),
+        ),
+        (
+            11,
+            embedded_cal_testvectors::aead::aes_ccm::test_16_64_256 as fn(&mut C),
+        ),
     ];
     let mut any = false;
     for (algnum, fun) in aead_algs {
@@ -100,7 +112,11 @@ pub fn show_aead_tests<C: embedded_cal::Cal>(cal: &mut C) {
         };
         any = true;
 
-        info!("Running AEAD test vectors of COSE algorithm {} ({:?})", algnum, Debug2Format(&alg));
+        info!(
+            "Running AEAD test vectors of COSE algorithm {} ({:?})",
+            algnum,
+            Debug2Format(&alg)
+        );
         fun(cal);
     }
     if any {

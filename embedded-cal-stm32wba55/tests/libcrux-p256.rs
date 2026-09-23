@@ -7,8 +7,8 @@ use defmt_rtt as _;
 use embedded_alloc::LlffHeap as Heap;
 use embedded_cal::plumbing::ec::P256;
 use embedded_cal_stm32wba55::Stm32wba55Cal;
-use panic_probe as _;
 use embedded_cal_testvectors::dh::EccVector;
+use panic_probe as _;
 
 // XXX: `libcrux-iot-p256` still depends on a version of `libcrux-hacl-rs`
 // that needs a global allocator.
