@@ -3,6 +3,7 @@
 
 [package]
 name = "embedded-cal-examples"
+description = "Example library and application building on embedded-cal"
 documentation = "https://docs.rs/embedded-cal-examples/"
 
 edition.workspace = true
@@ -11,8 +12,6 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 version.workspace = true
-
-description = "Example library and application building on embedded-cal"
 
 [dependencies]
 embedded-cal.workspace = true
