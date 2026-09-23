@@ -22,6 +22,10 @@ test = false
 name = "integration"
 harness = false
 
+[[test]]
+name = "libcrux-p256"
+harness = false
+
 [dependencies]
 embedded-cal.workspace = true
 stm32-metapac = { version = "18.0", features = ["stm32wba55cg", "rt"] }
@@ -38,3 +42,7 @@ embedded-cal-software-demo.path = "../embedded-cal-software-demo"
 embedded-cal-examples.path = "../embedded-cal-examples"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 testvectors.path = "../testvectors"
+libcrux-iot-p256 = { version = "0.0.1-alpha.1", features = [
+    "embedded-cal",
+] }
+embedded-alloc = "0.6.0"
