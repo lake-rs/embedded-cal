@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+//! Test vectors and functions for various aspects of embedded-cal
+//!
+//! While the main contribution of this crate is having the test vectors, they are accompanied by
+//! functions by which it can be evaluated whether or not an implementation performs the operations
+//! correctly.
+//!
+//! In the interest of simplicity, the tests panic: Those tests failing is enough of a rare
+//! occurrence that panic information will suffice, compared to more elaborate returning of results
+//! (which would enable continuing after a failed instance).
 #![no_std]
 
 // FIXME: Change to public as part of refactoring
