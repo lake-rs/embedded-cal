@@ -582,7 +582,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "hax-lib 0.4.0",
  "rand_core",
@@ -590,7 +590,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal-examples"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "colog",
  "defmt",
@@ -603,7 +603,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal-libcrux"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "embedded-cal",
  "embedded-cal-rand",
@@ -619,7 +619,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal-nrf54l15"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
@@ -640,7 +640,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal-rand"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "embedded-cal",
  "rand",
@@ -649,7 +649,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal-rustcrypto"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "aes",
  "ccm",
@@ -669,7 +669,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal-software-demo"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "embedded-cal",
  "rand_core",
@@ -678,7 +678,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-cal-stm32wba55"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
@@ -1597,7 +1597,7 @@ dependencies = [
 
 [[package]]
 name = "testvectors"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "embedded-cal",
  "hexlit",
