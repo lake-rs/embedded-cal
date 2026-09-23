@@ -7,7 +7,6 @@ description = "Test vectors and functions for various aspects of embedded-cal"
 
 edition.workspace = true
 license.workspace = true
-readme.workspace = true
 repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
