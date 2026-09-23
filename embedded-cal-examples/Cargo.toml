@@ -24,6 +24,7 @@ colog = { version = "1.4", optional = true }
 
 embedded-cal-rustcrypto = { workspace = true, optional = true, features = ["standalone"] }
 embedded-cal-libcrux = { workspace = true, optional = true, features = ["standalone"] }
+embedded-cal-testvectors.path = "../embedded-cal-testvectors"
 
 [[bin]]
 name = "demo"

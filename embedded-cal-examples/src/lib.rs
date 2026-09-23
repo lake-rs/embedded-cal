@@ -23,6 +23,8 @@ pub fn show_examples(cal: &mut impl embedded_cal::Cal) {
     show_sha256_example(cal);
 
     show_ecdh_example(cal);
+
+    show_aead_tests(cal);
 }
 
 /// Hashes a "hello world" string with the SHA-256 hash, if available.
@@ -81,4 +83,29 @@ pub fn show_ecdh_example<C: embedded_cal::Cal>(cal: &mut C) {
     }
 
     warn!("No matching ECDH algorithm found.");
+}
+
+/// Runs through AEAD test vectors for some known algorithms
+pub fn show_aead_tests<C: embedded_cal::Cal>(cal: &mut C) {
+    let aead_algs = [
+        (1, embedded_cal_testvectors::aead::aes_gcm::test_128 as fn(&mut C)),
+        (3, embedded_cal_testvectors::aead::aes_gcm::test_256 as fn(&mut C)),
+        (10, embedded_cal_testvectors::aead::aes_ccm::test_16_64_128 as fn(&mut C)),
+        (11, embedded_cal_testvectors::aead::aes_ccm::test_16_64_256 as fn(&mut C)),
+    ];
+    let mut any = false;
+    for (algnum, fun) in aead_algs {
+        let Some(alg): Option<AeadAlgorithmOf<C>> = AeadAlgorithm::from_cose_number(algnum) else {
+            continue;
+        };
+        any = true;
+
+        info!("Running AEAD test vectors of COSE algorithm {} ({:?})", algnum, Debug2Format(&alg));
+        fun(cal);
+    }
+    if any {
+        info!("All AEAD tests passed.");
+    } else {
+        warn!("No AEAD algorithms for which tests cases are known are supproted by the cal.");
+    }
 }

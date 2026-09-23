@@ -598,6 +598,7 @@ dependencies = [
  "embedded-cal",
  "embedded-cal-libcrux",
  "embedded-cal-rustcrypto",
+ "embedded-cal-testvectors",
  "log",
 ]
 
