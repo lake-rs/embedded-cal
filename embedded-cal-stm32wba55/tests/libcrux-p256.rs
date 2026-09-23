@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+//! This test demonstrates how embedded-cal's plumbing interfaces can be used to provide hardware
+//! acceleration into libcrux's internals. A version thereof that provides the full embedded-cal
+//! functionality is being developed in <https://github.com/lake-rs/embedded-cal/pull/128>.
 #![no_std]
 #![no_main]
 
