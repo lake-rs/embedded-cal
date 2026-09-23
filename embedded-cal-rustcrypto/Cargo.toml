@@ -33,7 +33,7 @@ embedded-cal-rand = { workspace = true, features = ["new_from_sys"], optional = 
 
 [dev-dependencies]
 embedded-cal-rand = { workspace = true, features = ["new_from_sys"] }
-embedded-cal-testvectors.path = "../embedded-cal-testvectors"
+embedded-cal-testvectors.workspace = true
 
 [features]
 ## Enables the use of the system allocator for AEAD algorithms.

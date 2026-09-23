@@ -18,4 +18,4 @@ embedded-cal.workspace = true
 rand_core.workspace = true
 
 [dev-dependencies]
-embedded-cal-testvectors.path = "../embedded-cal-testvectors"
+embedded-cal-testvectors.workspace = true

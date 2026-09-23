@@ -53,6 +53,7 @@ embedded-cal = { version = "0.2.0-alpha.2", path = "./embedded-cal" }
 #
 # (And not all of them will be version-lockstepped forever.).
 embedded-cal-rand = { version = "0.2.0-alpha.2", path = "./embedded-cal-rand" }
+embedded-cal-testvectors = { version = "0.2.0-alpha.2", path = "./embedded-cal-testvectors" }
 
 # used by embedded-cal-exampless
 embedded-cal-rustcrypto = { version = "0.2.0-alpha.2", path = "./embedded-cal-rustcrypto" }
