@@ -26,7 +26,7 @@ jobs:
     - name: run `cargo check`
       run: RUSTFLAGS="-D warnings" cargo check --workspace
     - name: Check embedded-cal-libcrux secret independence
-      run: RUSTFLAGS="-D warnings" cargo check -p embedded-cal-libcrux --features check-secret-independence
+      run: RUSTFLAGS="-D warnings" cargo check --tests -p embedded-cal-libcrux --features check-secret-independence 
     - name: run `cargo clippy`
       run: cargo clippy --workspace -- --deny clippy::all
     - name: run `cargo doc`

@@ -10,8 +10,8 @@
 //! embedded-cal-libcrux crate, you can re-prove that the SHA-3 is indeed secret
 //! independent on the source code level.
 //!
-//! To use a SHA-3 digest as a [`libcrux-secrets::U8`][U8] type, you can match on the (non-exhaustive) variants
-//! of the [`HashResult`]. Note that currently only the `Sha3` variants are using the [libcrux-secrets][ls] crate.  
+//! To use a SHA-3 digest as a [`libcrux-secrets::U8`][U8] type, you can call the [`HashResult::as_classified`] method.
+//! Note that currently only the `Sha3` variants are using the [libcrux-secrets][ls] crate.  
 //! This can beneficial when, e.g., interacting with other libcrux APIs that require libcrux-secrets type
 //! to make use of the `check-secret-independence` feature.
 //!
