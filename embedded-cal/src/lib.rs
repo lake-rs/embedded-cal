@@ -111,10 +111,10 @@
 //! full DH key establishment out of it). Also, different algorithms can be served by different
 //! components.
 //!
-//! While currently no implementations use it, the library is designed *with resident secrets in
-//! mind*: Keys are never required to be visible to the user, by virtue of using associated types
-//! in many places. This way, implementations based on secure elements can use either encapsulated
-//! keys or key slot handles.
+//! The library is designed *with resident secrets in mind* (event though currently, no
+//! implementations provide that): Keys are never required to be visible to the user, by virtue of
+//! using associated types in many places. This way, implementations based on secure elements can
+//! use either encapsulated keys or key slot handles.
 #![no_std]
 
 pub mod empty;
