@@ -11,6 +11,16 @@ embedded-cal is an abstraction for providers of cryptographic operations designe
 and comes with a verified implementation which is compatible with popular embedded platforms.
 Using it, applications can be 1) fast on popular embedded platforms; 2) resistant to certain classes of side-channel attacks; 3) usable without the Rust standard library. Implementations for specific hardware make hardware acceleration support available for popular microcontroller units. The libcrux based software implementation fills in the gaps in hardware support, and includes formally verified for secret independence using the hax framework, a verification tool for high assurance code.
 
+## Documentation and getting started
+
+The main documentation resides with the code, and is [rendered on docs.rs](https://docs.rs/embedded-cal/) for all versions and crates.
+An overview of all the crates is given below.
+
+<!-- absolute URI is needed because this gets copied onto crates.io -->
+Additionally, the [guided tour](https://github.com/lake-rs/embedded-cal/blob/main/GUIDED_TOUR.md) is available
+to get an impression of how the library is used,
+including running it in bare-metal setups.
+
 ## Components
 
 Components of this project are the following crates:

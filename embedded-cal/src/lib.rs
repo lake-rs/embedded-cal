@@ -30,11 +30,18 @@
 //!     Ariel OS and RIOT OS).
 //!   * On `std` systems, you can use software based implementations, which (while fundamentally
 //!     composable) generally offer a feature for ready-to-use construction (e.g.
-//!     `embedded_cal_libcrux::Standalone::standalone()` or
-//!     `embedded_cal_rustcrypto::Standalone::standalone()`.
-//! * When developing on bare metal, an implementation such as `embedded-cal-nrf54l15` can be
-//!   constructed from the underlying hardware registers, and later augmented with software layers.
-//!   An example of doing this can be found in FIXME.
+//!     [`embedded_cal_libcrux::Standalone::standalone()`](https://docs.rs/embedded-cal-libcrux/latest/embedded_cal_libcrux/type.Standalone.html#method.standalone)
+//!     or
+//!     [`embedded_cal_rustcrypto::Standalone::standalone()`](https://docs.rs/embedded-cal-rustcrypto/latest/embedded_cal_rustcrypto/type.Standalone.html#method.standalone).
+//! * When developing on bare metal, an implementation such as
+//!   [`embedded-cal-nrf54l15`](https://docs.rs/embedded-cal-nrf54l15/latest/embedded_cal_nrf54l15/struct.Nrf54l15Cal.html)
+//!   can be constructed from the underlying hardware registers, and later augmented with software
+//!   layers.
+//!
+//! Examples of these are in
+//! [`embedded-cal-examples/src/bin/demo.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/bin/demo.rs)
+//! -- depending on the components selected by features, the `Cal` instance is constructed through
+//! a standalone constructor or by composition.
 //!
 //! ### … as a high-level library author
 //!
@@ -42,6 +49,12 @@
 //!
 //! Where possible, it is recommended to take short-lived references to a `Cal`, because this
 //! enables users to go with a lock-free exclusive version where that is an advantage.
+//!
+//! An example of this is in
+//! [`embedded-cal-examples/src/lib.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/lib.rs):
+//! Some of the operations work from a selection of algorithms for agility,
+//! some pick fixed algorithm (and fail if it is unsupported; with future Rust versions this can
+//! [become a build time failure](https://github.com/lake-rs/embedded-cal/issues/144)),
 //!
 //! ### … when wrapping hardware
 //!
@@ -62,8 +75,9 @@
 //!
 //! Provide an easy single type implementing [`Cal`]. Configuration should happen outside of the
 //! RTOS, typically in system-wide build configuration. By default, it is recommended to build from
-//! whichever accelerated type is available for the hardware, and use `embedded-cal-libcrux` to
-//! fill gaps.
+//! whichever accelerated type is available for the hardware, and use
+//! [`embedded-cal-libcrux`](https://docs.rs/embedded-cal-nrf54l15/latest/embedded_cal_nrf54l15/struct.Nrf54l15Cal.html)
+//! to fill gaps.
 //!
 //! On many systems, that type needs to be a singleton and can not be shared (e.g. because it needs
 //! exclusive access to some registers).
@@ -101,10 +115,10 @@
 //! full DH key establishment out of it). Also, different algorithms can be served by different
 //! components.
 //!
-//! While currently no implementations use it, the library is designed *with resident secrets in
-//! mind*: Keys are never required to be visible to the user, by virtue of using associated types
-//! in many places. This way, implementations based on secure elements can use either encapsulated
-//! keys or key slot handles.
+//! The library is designed *with resident secrets in mind* (event though currently, no
+//! implementations provide that): Keys are never required to be visible to the user, by virtue of
+//! using associated types in many places. This way, implementations based on secure elements can
+//! use either encapsulated keys or key slot handles.
 #![no_std]
 
 pub mod empty;

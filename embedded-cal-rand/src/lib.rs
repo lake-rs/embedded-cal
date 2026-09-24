@@ -36,7 +36,8 @@ impl<C> WithRng<C, rand::rngs::StdRng> {
     ///
     /// ## Security
     ///
-    /// This uses the [`rand::make_rng()`] function; see there and the [`rand::ThreadRng`]
+    /// This uses the [`rand::make_rng()`] function; see there and the
+    /// [`rand::ThreadRng`](https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html#security)
     /// documentation for security considerations.
     pub fn new_from_sys(cal: C) -> Self {
         WithRng {

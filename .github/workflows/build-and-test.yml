@@ -33,6 +33,12 @@ jobs:
       run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace
     - name: run `cargo test`
       run: cargo test
+    - name: Run examples with all configurations
+      run: |
+        cargo run --package embedded-cal-examples --bin demo --features backend-rustcrypto,backend-libcrux,log-standalone
+        cargo run --package embedded-cal-examples --bin demo --features backend-rustcrypto,log-standalone
+        cargo run --package embedded-cal-examples --bin demo --features backend-libcrux,log-standalone
+        cargo run --package embedded-cal-examples --bin demo --features backend-empty,log-standalone
 
   check-hw-backends:
     name: Check hardware back-ends compile
