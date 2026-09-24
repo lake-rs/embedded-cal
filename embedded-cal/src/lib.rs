@@ -30,10 +30,13 @@
 //!     Ariel OS and RIOT OS).
 //!   * On `std` systems, you can use software based implementations, which (while fundamentally
 //!     composable) generally offer a feature for ready-to-use construction (e.g.
-//!     `embedded_cal_libcrux::Standalone::standalone()` or
-//!     `embedded_cal_rustcrypto::Standalone::standalone()`.
-//! * When developing on bare metal, an implementation such as `embedded-cal-nrf54l15` can be
-//!   constructed from the underlying hardware registers, and later augmented with software layers.
+//!     [`embedded_cal_libcrux::Standalone::standalone()`](https://docs.rs/embedded-cal-libcrux/latest/embedded_cal_libcrux/type.Standalone.html#method.standalone)
+//!     or
+//!     [`embedded_cal_rustcrypto::Standalone::standalone()`](https://docs.rs/embedded-cal-rustcrypto/latest/embedded_cal_rustcrypto/type.Standalone.html#method.standalone).
+//! * When developing on bare metal, an implementation such as
+//! [`embedded-cal-nrf54l15`](https://docs.rs/embedded-cal-nrf54l15/latest/embedded_cal_nrf54l15/struct.Nrf54l15Cal.html)
+//! can be constructed from the underlying hardware registers, and later augmented with software
+//! layers.
 //!
 //! Examples of these are in
 //! [`embedded-cal-examples/src/bin/demo.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/bin/demo.rs)
@@ -72,8 +75,9 @@
 //!
 //! Provide an easy single type implementing [`Cal`]. Configuration should happen outside of the
 //! RTOS, typically in system-wide build configuration. By default, it is recommended to build from
-//! whichever accelerated type is available for the hardware, and use `embedded-cal-libcrux` to
-//! fill gaps.
+//! whichever accelerated type is available for the hardware, and use
+//! [`embedded-cal-libcrux`](https://docs.rs/embedded-cal-nrf54l15/latest/embedded_cal_nrf54l15/struct.Nrf54l15Cal.html)
+//! to fill gaps.
 //!
 //! On many systems, that type needs to be a singleton and can not be shared (e.g. because it needs
 //! exclusive access to some registers).
