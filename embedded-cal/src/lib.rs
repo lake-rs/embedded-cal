@@ -34,9 +34,9 @@
 //!     or
 //!     [`embedded_cal_rustcrypto::Standalone::standalone()`](https://docs.rs/embedded-cal-rustcrypto/latest/embedded_cal_rustcrypto/type.Standalone.html#method.standalone).
 //! * When developing on bare metal, an implementation such as
-//! [`embedded-cal-nrf54l15`](https://docs.rs/embedded-cal-nrf54l15/latest/embedded_cal_nrf54l15/struct.Nrf54l15Cal.html)
-//! can be constructed from the underlying hardware registers, and later augmented with software
-//! layers.
+//!   [`embedded-cal-nrf54l15`](https://docs.rs/embedded-cal-nrf54l15/latest/embedded_cal_nrf54l15/struct.Nrf54l15Cal.html)
+//!   can be constructed from the underlying hardware registers, and later augmented with software
+//!   layers.
 //!
 //! Examples of these are in
 //! [`embedded-cal-examples/src/bin/demo.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/bin/demo.rs)
