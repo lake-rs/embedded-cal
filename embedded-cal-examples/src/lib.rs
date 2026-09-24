@@ -48,7 +48,9 @@ pub fn show_sha256_example(cal: &mut impl embedded_cal::Cal) {
 // See https://github.com/lake-rs/embedded-cal/issues/131 on why this needs a full generic rather
 // than just an impl.
 pub fn show_ecdh_example<C: embedded_cal::Cal>(cal: &mut C) {
-    info!("Looking to find a matching ECDH curve for Diffie-Hellman key establishment based on a set of public key options.");
+    info!(
+        "Looking to find a matching ECDH curve for Diffie-Hellman key establishment based on a set of public key options."
+    );
     // In an actual protocol, these could be public static keys offered by the peer.
     let peer_keys = [
         (1, &b"the p256 key offered by the peer"[..]),
