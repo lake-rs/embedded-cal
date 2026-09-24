@@ -35,9 +35,10 @@
 //! * When developing on bare metal, an implementation such as `embedded-cal-nrf54l15` can be
 //!   constructed from the underlying hardware registers, and later augmented with software layers.
 //!
-//!   An example of this is in
-//!   [`embedded-cal-examples/src/bin/demo.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/bin/demo.rs) --
-//!   in that case, using crate features to switch between different available back-ends.
+//! Examples of these are in
+//! [`embedded-cal-examples/src/bin/demo.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/bin/demo.rs)
+//! -- depending on the components selected by features, the `Cal` instance is constructed through
+//! a standalone constructor or by composition.
 //!
 //! ### … as a high-level library author
 //!
