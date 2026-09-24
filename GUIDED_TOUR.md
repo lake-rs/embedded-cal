@@ -73,13 +73,16 @@ use rand_core::TryCryptoRng;
 
 /// A person in your address book.
 struct Friend {
+    // Heap allocation is used for simplicity of the example; the example can be rewritten in a way
+    // that makes do stack allocation only.
     name: String,
     public_key: Vec<u8>,
     public_key_curve: i16,
     preferred_symmetric_algorithm: i16,
 }
 
-fn encrypt<C: Cal + TryCryptoRng>(
+/// Encrypts a message for a friend in a style inspired by COSE Direct ECDH.
+fn encrypt_message<C: Cal + TryCryptoRng>(
     cal: &mut C,
     recipient: &Friend,
     plaintext: &[u8],
@@ -108,7 +111,7 @@ fn encrypt<C: Cal + TryCryptoRng>(
         .expect("both items were constructed on the same curve");
     let key_bytes = cal.dh().raw_secret_bytes(&key);
 
-    // Similar to ECDH, we set up the AEAD steps:
+    // … and load it into AEAD with similar steps as used before in ECDH:
     let aead_alg = AeadAlgorithmOf::<C>::from_cose_number(recipient.preferred_symmetric_algorithm)
         .ok_or("Friend's preferred algorithm is not supported")?;
     let key = cal
@@ -136,6 +139,7 @@ fn encrypt<C: Cal + TryCryptoRng>(
     // In COSE, the tag is always placed right behind the ciphertext.
     message.extend_from_slice(tag.as_ref());
 
+    // All data is now ready to be used.
     Ok(message)
 }
 ```
@@ -171,7 +175,7 @@ fn main() {
         preferred_symmetric_algorithm: 3,
     };
 
-    let message = encrypt(&mut cal, &bob, "Hello Bob!".as_bytes()).unwrap();
+    let message = encrypt_message(&mut cal, &bob, "Hello Bob!".as_bytes()).unwrap();
 
     println!("Writing to NFC tag: {:02x?}", message);
 }
@@ -185,3 +189,66 @@ Writing to NFC tag: [88, f4, db, c7, 48, 69, af, 80, 16, 10, f5, 1a, 18, ae, a1,
 ```
 
 ## Exploring embedded
+
+The `encrypt_message()` function as written would already work on embedded devices,
+but would generally be rather slow and consume more power than needed.
+
+Let's explore the [algorithm list](./ALGORITHMS.md) to find suitable hardware.
+At the time of writing, both the nRF54L15 and the STM32WBA55 implementation support ECDH operations on curve P-256,
+but neither has AES-GCM support implemented for embedded-cal.
+So we will need to combine the hardware implementation with the libcrux software implementation;
+conveniently, AES is often fast enough in software,
+so we still save the large amount of time needed for the ECDH operation.
+
+As before on the PC, let's try things out first.
+Connect an nRF54L15 to your PC via USB, and run the following commands.
+(You can also use an STM32WBA55, just substitute the name in the commands).
+
+Some debugging tips:
+
+- If your Rust compiler complains that it "can't find crate for `core`",
+  make sure that you have [rustup](https://rustup.rs/) installed (and not just your distribution's Rust compiler),
+  and follow the hints given in the error message.
+- If there are any warnings around setup, the [probe-rs documentation](https://probe.rs/docs/getting-started/probe-setup/) will help you get your setup ready.
+
+```console
+$ git clone https://github.com/lake-rs/embedded-cal/
+$ cd embedded-cal/embedded-cal-nrf54l15
+$ cargo test
+```
+
+Beyond compiling, this connects to the board's built-in debugger,
+and runs the embedded-cal test suite to the extent that the hardware supports it.
+While not showing the output,
+it also runs the very same code of the embedded-cal-examples that we used before on the computer.
+
+## Beyond initial exploration
+
+Setting up a full application is beyond the scope of an introductory tutorial;
+the embassy project has [good newcomer documentation](https://embassy.dev/book/#_for_beginners).
+
+Beyond that setup, the pieces you need in your full application you can find in the [platform's tests](./embedded-cal-nrf54l15/tests/integration.rs):
+
+```rust
+use embedded_cal_nrf54l15::Nrf54l15Cal;
+
+let base_cal = Nrf54l15Cal::new(nrf_pac::CRACEN_S, nrf_pac::CRACENCORE_S);
+```
+
+Layering libcrux on top of it is illustrated in [the example we used previously](./embedded-cal-examples/src/bin/demo.rs):
+
+```rust
+use embedded_cal_libcrux::{Extender, ExtenderConfig};
+
+struct LibcruxConfig;
+impl ExtenderConfig for LibcruxConfig {
+    type Base = Nrf54l15Cal;
+}
+
+let mut cal = Extender::<LibcruxConfig>::new(base_cal);
+```
+
+With that `cal` instance, you can run the same `encrypt_message()` function as you did on your computer.
+
+As an alternative to going through a full project setup,
+small own code examples can be tried more easily by modifying your platform's test functions to include your example code.
