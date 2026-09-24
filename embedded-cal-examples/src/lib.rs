@@ -60,7 +60,7 @@ pub fn show_ecdh_example<C: embedded_cal::Cal>(cal: &mut C) {
     ];
 
     for (crvnum, peer_pub) in peer_keys.iter().rev() {
-        let Some(crv): Option<DhAlgorithmOf<C>> = DhAlgorithm::from_cose_ecdh(*crvnum) else {
+        let Some(crv) = DhAlgorithmOf::<C>::from_cose_ecdh(*crvnum) else {
             continue;
         };
         info!("Agreeing to use curve {}", crvnum);
