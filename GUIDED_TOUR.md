@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT OR Apache-2.0
+SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+-->
+
 # embedded-cal: A Guided Tour
 
 This text accompanies novice users of embedded-cal through its components,
