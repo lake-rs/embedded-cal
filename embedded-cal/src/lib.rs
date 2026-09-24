@@ -34,7 +34,10 @@
 //!     `embedded_cal_rustcrypto::Standalone::standalone()`.
 //! * When developing on bare metal, an implementation such as `embedded-cal-nrf54l15` can be
 //!   constructed from the underlying hardware registers, and later augmented with software layers.
-//!   An example of doing this can be found in FIXME.
+//!
+//!   An example of this is in
+//!   [`embedded-cal-examples/src/bin/demo.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/bin/demo.rs) --
+//!   in that case, using crate features to switch between different available back-ends.
 //!
 //! ### … as a high-level library author
 //!
@@ -42,6 +45,12 @@
 //!
 //! Where possible, it is recommended to take short-lived references to a `Cal`, because this
 //! enables users to go with a lock-free exclusive version where that is an advantage.
+//!
+//! An example of this is in
+//! [`embedded-cal-examples/src/lib.rs`](https://github.com/lake-rs/embedded-cal/blob/main/embedded-cal-examples/src/lib.rs):
+//! Some of the operations work from a selection of algorithms for agility,
+//! some pick fixed algorithm (and fail if it is unsupported; with future Rust versions this can
+//! [become a build time failure](https://github.com/lake-rs/embedded-cal/issues/144)),
 //!
 //! ### … when wrapping hardware
 //!
