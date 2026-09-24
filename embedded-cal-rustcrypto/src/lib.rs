@@ -131,6 +131,8 @@ impl<Base: embedded_cal::Cal + embedded_cal::plumbing::Plumbing> embedded_cal::p
 
 #[cfg(test)]
 mod tests {
+    use embedded_cal_testvectors as testvectors;
+
     use super::*;
 
     #[test]

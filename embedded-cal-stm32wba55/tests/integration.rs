@@ -23,6 +23,8 @@ mod tests {
     use super::ImplementSha256Short;
     use embedded_cal::Cal;
     use embedded_cal_stm32wba55::Stm32wba55Cal;
+    use embedded_cal_testvectors as testvectors;
+
     #[init]
     fn init() -> super::TestState {
         let base = embedded_cal_stm32wba55::Stm32wba55Cal::new(

@@ -42,7 +42,7 @@ defmt-test = "0.4"
 embedded-cal-software-demo.path = "../embedded-cal-software-demo"
 embedded-cal-examples.path = "../embedded-cal-examples"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
-testvectors.path = "../testvectors"
+embedded-cal-testvectors.workspace = true
 libcrux-iot-p256 = { version = "0.0.1-alpha.1", features = [
     "embedded-cal",
 ] }

@@ -18,6 +18,6 @@ mod tests {
     #[test]
     fn test_hkdf_sha256() {
         let mut cal = Extender::<ImplementSha256Short>(embedded_cal::empty::EmptyCal);
-        testvectors::test_hkdf_sha256(&mut cal);
+        embedded_cal_testvectors::test_hkdf_sha256(&mut cal);
     }
 }

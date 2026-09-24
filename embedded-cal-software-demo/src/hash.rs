@@ -314,6 +314,6 @@ mod tests {
     fn test_hash_algorithm_sha256_on_dummy() {
         let mut cal = Extender::<ImplementSha256Short>(embedded_cal::empty::EmptyCal);
 
-        testvectors::test_hash_algorithm_sha256(&mut cal);
+        embedded_cal_testvectors::test_hash_algorithm_sha256(&mut cal);
     }
 }

@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 [package]
-name = "testvectors"
+name = "embedded-cal-testvectors"
 description = "Test vectors and functions for various aspects of embedded-cal"
 
 edition.workspace = true

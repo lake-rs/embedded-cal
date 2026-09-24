@@ -88,7 +88,7 @@ and will best be used augmented by (i.e., wrapped in) the formally verified impl
 
 Once an exclusive reference to such an object exists,
 its methods guide its use;
-the test vectors have an [example of how to use hashing](./testvectors/src/lib.rs).
+the test vectors have an [example of how to use hashing](./embedded-cal-testvectors/src/lib.rs).
 
 ## FAQ
 
