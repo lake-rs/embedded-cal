@@ -41,23 +41,23 @@ categories = [
     "embedded",
     "no-std::no-alloc"
 ]
-version = "0.2.0-alpha.2"
+version = "0.2.0"
 
 [workspace.dependencies]
 hax-lib = "0.4.0"
 rand_core = { version = "0.10", default-features = false }
-embedded-cal = { version = "0.2.0-alpha.2", path = "./embedded-cal" }
+embedded-cal = { version = "0.2.0", path = "./embedded-cal" }
 
 # We don't need to list all lockstepped workspace crates here, just those that
 # are being depended on.
 #
 # (And not all of them will be version-lockstepped forever.).
-embedded-cal-rand = { version = "0.2.0-alpha.2", path = "./embedded-cal-rand" }
-embedded-cal-testvectors = { version = "0.2.0-alpha.2", path = "./embedded-cal-testvectors" }
+embedded-cal-rand = { version = "0.2.0", path = "./embedded-cal-rand" }
+embedded-cal-testvectors = { version = "0.2.0", path = "./embedded-cal-testvectors" }
 
 # used by embedded-cal-exampless
-embedded-cal-rustcrypto = { version = "0.2.0-alpha.2", path = "./embedded-cal-rustcrypto" }
-embedded-cal-libcrux = { version = "0.2.0-alpha.2", path = "./embedded-cal-libcrux" }
+embedded-cal-rustcrypto = { version = "0.2.0", path = "./embedded-cal-rustcrypto" }
+embedded-cal-libcrux = { version = "0.2.0", path = "./embedded-cal-libcrux" }
 
 [workspace.metadata.release]
 sign-tag = true
