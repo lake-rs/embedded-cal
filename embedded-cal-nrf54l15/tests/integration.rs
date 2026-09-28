@@ -57,6 +57,34 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_algorithm_sha3_224(state: &mut super::TestState) {
+        super::with_extender(state, |cal| {
+            embedded_cal_testvectors::sha3::test_hash_algorithm_sha3_224(cal)
+        });
+    }
+
+    #[test]
+    fn test_hash_algorithm_sha3_256(state: &mut super::TestState) {
+        super::with_extender(state, |cal| {
+            embedded_cal_testvectors::sha3::test_hash_algorithm_sha3_256(cal)
+        });
+    }
+
+    #[test]
+    fn test_hash_algorithm_sha3_384(state: &mut super::TestState) {
+        super::with_extender(state, |cal| {
+            embedded_cal_testvectors::sha3::test_hash_algorithm_sha3_384(cal)
+        });
+    }
+
+    #[test]
+    fn test_hash_algorithm_sha3_512(state: &mut super::TestState) {
+        super::with_extender(state, |cal| {
+            embedded_cal_testvectors::sha3::test_hash_algorithm_sha3_512(cal)
+        });
+    }
+
+    #[test]
     fn test_hmac_sha256(state: &mut super::TestState) {
         embedded_cal::test_hmac_algorithm_hmacsha256::<
             <embedded_cal_software_demo::Extender<ImplementSha256Short> as embedded_cal::HmacProvider>::Algorithm,

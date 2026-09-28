@@ -49,6 +49,10 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | SHA3-256 | [libcrux] | |
 | SHA3-384 | [libcrux] | |
 | SHA3-512 | [libcrux] | |
+| SHA3-224 | [nrf54l15] | |
+| SHA3-256 | [nrf54l15] | |
+| SHA3-384 | [nrf54l15] | |
+| SHA3-512 | [nrf54l15] | |
 
 # HMAC
 
