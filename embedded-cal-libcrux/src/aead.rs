@@ -11,10 +11,20 @@ pub enum AeadAlgorithm<EC: ExtenderConfig> {
     Direct(AeadAlgorithmOf<EC::Base>),
     AesGcm128,
     AesGcm256,
+    // The TLS versions with 12 byte nonces (and, as always, 8 or 16 byte tags)
     AesCcm128,
     AesCcm128Short,
     AesCcm256,
     AesCcm256Short,
+    // The COSE versions
+    AesCcm128ShortNonce13,
+    AesCcm256ShortNonce13,
+    AesCcm128ShortNonce7,
+    AesCcm256ShortNonce7,
+    AesCcm128Nonce13,
+    AesCcm256Nonce13,
+    AesCcm128Nonce7,
+    AesCcm256Nonce7,
 }
 
 pub enum Key<EC: ExtenderConfig> {
@@ -25,6 +35,14 @@ pub enum Key<EC: ExtenderConfig> {
     AesCcm128Short([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
     AesCcm256([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
     AesCcm256Short([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
+    AesCcm128ShortNonce13([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
+    AesCcm256ShortNonce13([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
+    AesCcm128ShortNonce7([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
+    AesCcm256ShortNonce7([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
+    AesCcm128Nonce13([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
+    AesCcm256Nonce13([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
+    AesCcm128Nonce7([u8; libcrux_iot_aes::AES_128_KEY_LEN]),
+    AesCcm256Nonce7([u8; libcrux_iot_aes::AES_256_KEY_LEN]),
 }
 
 pub enum Tag<EC: ExtenderConfig> {
@@ -35,6 +53,14 @@ pub enum Tag<EC: ExtenderConfig> {
     AesCcm128Short([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
     AesCcm256([u8; libcrux_iot_aes::TAG_LEN]),
     AesCcm256Short([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
+    AesCcm128ShortNonce13([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
+    AesCcm256ShortNonce13([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
+    AesCcm128ShortNonce7([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
+    AesCcm256ShortNonce7([u8; libcrux_iot_aes::CCM_SHORT_TAG_LEN]),
+    AesCcm128Nonce13([u8; libcrux_iot_aes::TAG_LEN]),
+    AesCcm256Nonce13([u8; libcrux_iot_aes::TAG_LEN]),
+    AesCcm128Nonce7([u8; libcrux_iot_aes::TAG_LEN]),
+    AesCcm256Nonce7([u8; libcrux_iot_aes::TAG_LEN]),
 }
 
 struct AadAdapter<'a, A: Iterator<Item = &'a [u8]>> {
@@ -90,6 +116,14 @@ impl<EC: ExtenderConfig> AeadProvider for Extender<EC> {
             AeadAlgorithm::AesCcm128Short => Key::AesCcm128Short(convert(key)),
             AeadAlgorithm::AesCcm256 => Key::AesCcm256(convert(key)),
             AeadAlgorithm::AesCcm256Short => Key::AesCcm256Short(convert(key)),
+            AeadAlgorithm::AesCcm128ShortNonce13 => Key::AesCcm128ShortNonce13(convert(key)),
+            AeadAlgorithm::AesCcm256ShortNonce13 => Key::AesCcm256ShortNonce13(convert(key)),
+            AeadAlgorithm::AesCcm128ShortNonce7 => Key::AesCcm128ShortNonce7(convert(key)),
+            AeadAlgorithm::AesCcm256ShortNonce7 => Key::AesCcm256ShortNonce7(convert(key)),
+            AeadAlgorithm::AesCcm128Nonce13 => Key::AesCcm128Nonce13(convert(key)),
+            AeadAlgorithm::AesCcm256Nonce13 => Key::AesCcm256Nonce13(convert(key)),
+            AeadAlgorithm::AesCcm128Nonce7 => Key::AesCcm128Nonce7(convert(key)),
+            AeadAlgorithm::AesCcm256Nonce7 => Key::AesCcm256Nonce7(convert(key)),
         }
     }
 
@@ -191,12 +225,20 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
     fn key_length(&self) -> usize {
         match self {
             AeadAlgorithm::Direct(a) => a.key_length(),
-            AeadAlgorithm::AesGcm128 | AeadAlgorithm::AesCcm128 | AeadAlgorithm::AesCcm128Short => {
-                libcrux_iot_aes::AES_128_KEY_LEN
-            }
-            AeadAlgorithm::AesCcm256 | AeadAlgorithm::AesCcm256Short | AeadAlgorithm::AesGcm256 => {
-                libcrux_iot_aes::AES_256_KEY_LEN
-            }
+            AeadAlgorithm::AesGcm128
+            | AeadAlgorithm::AesCcm128
+            | AeadAlgorithm::AesCcm128Short
+            | AeadAlgorithm::AesCcm128ShortNonce13
+            | AeadAlgorithm::AesCcm128ShortNonce7
+            | AeadAlgorithm::AesCcm128Nonce13
+            | AeadAlgorithm::AesCcm128Nonce7 => libcrux_iot_aes::AES_128_KEY_LEN,
+            AeadAlgorithm::AesCcm256
+            | AeadAlgorithm::AesCcm256Short
+            | AeadAlgorithm::AesGcm256
+            | AeadAlgorithm::AesCcm256ShortNonce13
+            | AeadAlgorithm::AesCcm256ShortNonce7
+            | AeadAlgorithm::AesCcm256Nonce13
+            | AeadAlgorithm::AesCcm256Nonce7 => libcrux_iot_aes::AES_256_KEY_LEN,
         }
     }
 
@@ -206,10 +248,17 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
             AeadAlgorithm::AesGcm128
             | AeadAlgorithm::AesGcm256
             | AeadAlgorithm::AesCcm128
-            | AeadAlgorithm::AesCcm256 => libcrux_iot_aes::TAG_LEN,
-            AeadAlgorithm::AesCcm128Short | AeadAlgorithm::AesCcm256Short => {
-                libcrux_iot_aes::CCM_SHORT_TAG_LEN
-            }
+            | AeadAlgorithm::AesCcm256
+            | AeadAlgorithm::AesCcm128Nonce13
+            | AeadAlgorithm::AesCcm256Nonce13
+            | AeadAlgorithm::AesCcm128Nonce7
+            | AeadAlgorithm::AesCcm256Nonce7 => libcrux_iot_aes::TAG_LEN,
+            AeadAlgorithm::AesCcm128Short
+            | AeadAlgorithm::AesCcm256Short
+            | AeadAlgorithm::AesCcm128ShortNonce13
+            | AeadAlgorithm::AesCcm256ShortNonce13
+            | AeadAlgorithm::AesCcm128ShortNonce7
+            | AeadAlgorithm::AesCcm256ShortNonce7 => libcrux_iot_aes::CCM_SHORT_TAG_LEN,
         }
     }
 
@@ -222,6 +271,14 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
             | AeadAlgorithm::AesCcm256Short
             | AeadAlgorithm::AesGcm128
             | AeadAlgorithm::AesGcm256 => libcrux_iot_aes::NONCE_LEN,
+            AeadAlgorithm::AesCcm128ShortNonce13
+            | AeadAlgorithm::AesCcm256ShortNonce13
+            | AeadAlgorithm::AesCcm128Nonce13
+            | AeadAlgorithm::AesCcm256Nonce13 => 13,
+            AeadAlgorithm::AesCcm128ShortNonce7
+            | AeadAlgorithm::AesCcm256ShortNonce7
+            | AeadAlgorithm::AesCcm128Nonce7
+            | AeadAlgorithm::AesCcm256Nonce7 => 7,
         }
     }
 
@@ -230,6 +287,14 @@ impl<EC: ExtenderConfig> embedded_cal::AeadAlgorithm for AeadAlgorithm<EC> {
         match number {
             1 => Some(AeadAlgorithm::AesGcm128),
             3 => Some(AeadAlgorithm::AesGcm256),
+            10 => Some(AeadAlgorithm::AesCcm128ShortNonce13),
+            11 => Some(AeadAlgorithm::AesCcm256ShortNonce13),
+            12 => Some(AeadAlgorithm::AesCcm128ShortNonce7),
+            13 => Some(AeadAlgorithm::AesCcm256ShortNonce7),
+            30 => Some(AeadAlgorithm::AesCcm128Nonce13),
+            31 => Some(AeadAlgorithm::AesCcm256Nonce13),
+            32 => Some(AeadAlgorithm::AesCcm128Nonce7),
+            33 => Some(AeadAlgorithm::AesCcm256Nonce7),
             _ => AeadAlgorithmOf::<EC::Base>::from_cose_number(number).map(AeadAlgorithm::Direct),
         }
     }
@@ -247,6 +312,14 @@ impl<EC: ExtenderConfig> Clone for AeadAlgorithm<EC> {
             Self::AesCcm128Short => Self::AesCcm128Short,
             Self::AesCcm256 => Self::AesCcm256,
             Self::AesCcm256Short => Self::AesCcm256Short,
+            Self::AesCcm128ShortNonce13 => Self::AesCcm128ShortNonce13,
+            Self::AesCcm256ShortNonce13 => Self::AesCcm256ShortNonce13,
+            Self::AesCcm128ShortNonce7 => Self::AesCcm128ShortNonce7,
+            Self::AesCcm256ShortNonce7 => Self::AesCcm256ShortNonce7,
+            Self::AesCcm128Nonce13 => Self::AesCcm128Nonce13,
+            Self::AesCcm256Nonce13 => Self::AesCcm256Nonce13,
+            Self::AesCcm128Nonce7 => Self::AesCcm128Nonce7,
+            Self::AesCcm256Nonce7 => Self::AesCcm256Nonce7,
         }
     }
 }
@@ -262,6 +335,14 @@ impl<EC: ExtenderConfig> core::fmt::Debug for AeadAlgorithm<EC> {
             Self::AesCcm128Short => f.write_str("AesCcm128Short"),
             Self::AesCcm256 => f.write_str("AesCcm256"),
             Self::AesCcm256Short => f.write_str("AesCcm256Short"),
+            Self::AesCcm128ShortNonce13 => f.write_str("AesCcm128ShortNonce13"),
+            Self::AesCcm256ShortNonce13 => f.write_str("AesCcm256ShortNonce13"),
+            Self::AesCcm128ShortNonce7 => f.write_str("AesCcm128ShortNonce7"),
+            Self::AesCcm256ShortNonce7 => f.write_str("AesCcm256ShortNonce7"),
+            Self::AesCcm128Nonce13 => f.write_str("AesCcm128Nonce13"),
+            Self::AesCcm256Nonce13 => f.write_str("AesCcm256Nonce13"),
+            Self::AesCcm128Nonce7 => f.write_str("AesCcm128Nonce7"),
+            Self::AesCcm256Nonce7 => f.write_str("AesCcm256Nonce7"),
         }
     }
 }
@@ -290,6 +371,14 @@ impl<EC: ExtenderConfig> AsRef<[u8]> for Tag<EC> {
             Tag::AesCcm128Short(tag) => tag.as_ref(),
             Tag::AesCcm256(tag) => tag.as_ref(),
             Tag::AesCcm256Short(tag) => tag.as_ref(),
+            Tag::AesCcm128ShortNonce13(tag) => tag.as_ref(),
+            Tag::AesCcm256ShortNonce13(tag) => tag.as_ref(),
+            Tag::AesCcm128ShortNonce7(tag) => tag.as_ref(),
+            Tag::AesCcm256ShortNonce7(tag) => tag.as_ref(),
+            Tag::AesCcm128Nonce13(tag) => tag.as_ref(),
+            Tag::AesCcm256Nonce13(tag) => tag.as_ref(),
+            Tag::AesCcm128Nonce7(tag) => tag.as_ref(),
+            Tag::AesCcm256Nonce7(tag) => tag.as_ref(),
         }
     }
 }
@@ -305,6 +394,18 @@ mod tests {
 
     impl ExtenderConfig for TestConfig {
         type Base = WithSysRng<EmptyCal>;
+    }
+
+    #[test]
+    fn test_aes_ccm_16_64_128_encrypt_decrypt() {
+        let mut cal = Extender::<TestConfig>::new(WithSysRng::new_from_sys(EmptyCal));
+        testvectors::aead::aes_ccm::test_16_64_128(&mut cal);
+    }
+
+    #[test]
+    fn test_aes_ccm_16_64_256_encrypt_decrypt() {
+        let mut cal = Extender::<TestConfig>::new(WithSysRng::new_from_sys(EmptyCal));
+        testvectors::aead::aes_ccm::test_16_64_256(&mut cal);
     }
 
     #[test]
