@@ -690,6 +690,7 @@ dependencies = [
  "embedded-cal",
  "embedded-cal-testvectors",
  "rand_core",
+ "zeroize",
 ]
 
 [[package]]

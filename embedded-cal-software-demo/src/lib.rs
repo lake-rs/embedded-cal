@@ -13,6 +13,7 @@ mod hash_plumbing;
 mod hkdf;
 mod hmac;
 mod rng;
+mod sign;
 
 pub trait ExtenderConfig {
     const IMPLEMENT_SHA2SHORT: bool;
@@ -39,7 +40,7 @@ impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
     type AeadProvider = AeadProviderOf<EC::Base>;
     type HashProvider = Self;
     type HmacProvider = Self;
-    type SignProvider = SignProviderOf<EC::Base>;
+    type SignProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self.0.dh()
@@ -58,7 +59,7 @@ impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
     }
 
     fn sign(&mut self) -> &mut Self::SignProvider {
-        self.0.sign()
+        self
     }
 }
 

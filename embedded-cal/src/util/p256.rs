@@ -233,3 +233,40 @@ pub fn p256_recover_y(x_bytes: &[u8; 32]) -> Result<[u8; 32], crate::ImportError
 
     Ok(words_to_bytes(&y))
 }
+
+// Recover the y coordinate whose parity is given by `odd`, as needed for the SEC1 compressed
+// form (prefix 0x02 for even y, 0x03 for odd y). Unlike for ECDH, this matters for ECDSA, where
+// the two roots are different public keys.
+pub fn p256_recover_y_with_parity(
+    x_bytes: &[u8; 32],
+    odd: bool,
+) -> Result<[u8; 32], crate::ImportError> {
+    let y = p256_recover_y(x_bytes)?;
+    if (y[31] & 1 == 1) == odd {
+        Ok(y)
+    } else {
+        Ok(words_to_bytes(&sub256(&P, &bytes_to_words(&y))))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recover_y_with_parity_of_generator() {
+        // The generator's y coordinate is odd (it ends in 0xf5).
+        assert_eq!(P256_GY_BYTES[31] & 1, 1);
+        assert_eq!(
+            p256_recover_y_with_parity(&P256_GX_BYTES, true).unwrap(),
+            P256_GY_BYTES
+        );
+
+        let even = p256_recover_y_with_parity(&P256_GX_BYTES, false).unwrap();
+        assert_eq!(even[31] & 1, 0);
+        assert_eq!(
+            words_to_bytes(&sub256(&P, &bytes_to_words(&even))),
+            P256_GY_BYTES
+        );
+    }
+}

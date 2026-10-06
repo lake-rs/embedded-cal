@@ -110,3 +110,38 @@ pub trait SignAlgorithm: Sized + PartialEq + Eq + core::fmt::Debug + Clone {
     /// registry](https://www.iana.org/assignments/cose/cose.xhtml#algorithms) maintained by IANA.
     fn from_cose_number(alg: impl Into<i128>) -> Option<Self>;
 }
+
+pub fn test_sign_algorithm_ecdsa_p256<SP: SignProvider>() {
+    let es256 = SP::Algorithm::from_cose_number(-7i8).expect(
+        "test for type claiming ECDSA on P-256 compatibility did not recognize COSE alg ES256 (-7)",
+    );
+    assert_eq!(es256.signature_length(), 64);
+}
+
+pub fn test_sign_selftest<C: crate::Cal>(
+    cal: &mut C,
+    alg: <C::SignProvider as SignProvider>::Algorithm,
+) {
+    let cal = cal.sign();
+
+    let secret = cal.generate(alg.clone());
+    let public = cal.public_key(&secret);
+
+    let message = b"embedded-cal ECDSA selftest message";
+    let signature = cal.sign(&secret, message);
+    cal.verify(&public, message, &signature)
+        .expect("a freshly created signature must verify");
+
+    assert!(
+        cal.verify(&public, b"a different message", &signature)
+            .is_err(),
+        "verification must reject a signature over a different message"
+    );
+
+    let other_secret = cal.generate(alg);
+    let other_public = cal.public_key(&other_secret);
+    assert!(
+        cal.verify(&other_public, message, &signature).is_err(),
+        "verification must reject a signature checked against an unrelated public key"
+    );
+}
