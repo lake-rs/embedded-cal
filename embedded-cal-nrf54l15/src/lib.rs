@@ -6,6 +6,7 @@ mod aead;
 mod descriptor;
 mod dh;
 mod dh_plumbing;
+mod ecdsa_plumbing;
 mod microcode;
 mod try_rng;
 
@@ -125,10 +126,6 @@ impl AsRef<[u8]> for HashResult {
 impl embedded_cal::plumbing::Plumbing for Nrf54l15Cal {}
 
 impl embedded_cal::plumbing::hash::Hash for Nrf54l15Cal {}
-
-impl embedded_cal::plumbing::ecdsa::Ecdsa for Nrf54l15Cal {
-    const SUPPORTED: bool = false;
-}
 
 impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15Cal {
     const SUPPORTED: bool = true;

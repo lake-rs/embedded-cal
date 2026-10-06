@@ -107,6 +107,26 @@ mod tests {
     }
 
     #[test]
+    fn test_sign_ecdsa_p256(state: &mut super::TestState) {
+        use embedded_cal::{SignAlgorithm, accessor::SignAlgorithmOf};
+
+        type Extender = embedded_cal_software_demo::Extender<ImplementSha256Short>;
+        embedded_cal::test_sign_algorithm_ecdsa_p256::<Extender>();
+
+        super::with_extender(state, |cal| {
+            let es256 = SignAlgorithmOf::<Extender>::from_cose_number(-7i8).unwrap();
+            embedded_cal::test_sign_selftest(cal, es256);
+
+            for v in testvectors::sign::ECDSA_P256 {
+                v.test_with(cal);
+            }
+            for v in testvectors::sign::ECDSA_P256_SIGVER {
+                v.test_with(cal);
+            }
+        });
+    }
+
+    #[test]
     fn test_ec_plumbing_p256(state: &mut super::TestState) {
         for v in testvectors::dh::RFC5903_P256 {
             v.test_plumbing_p256(state.cal.as_mut().unwrap());
