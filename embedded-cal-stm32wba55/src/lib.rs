@@ -372,6 +372,10 @@ impl embedded_cal::plumbing::Plumbing for Stm32wba55Cal {}
 
 impl embedded_cal::plumbing::hash::Hash for Stm32wba55Cal {}
 
+impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {
+    const SUPPORTED: bool = false;
+}
+
 impl embedded_cal::plumbing::hash::Sha2Short for Stm32wba55Cal {
     const SUPPORTED: bool = true;
     const SEND_PADDING: bool = false;

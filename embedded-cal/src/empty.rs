@@ -273,6 +273,10 @@ impl plumbing::Plumbing for EmptyCal {}
 
 impl plumbing::hash::Hash for EmptyCal {}
 
+impl plumbing::ecdsa::Ecdsa for EmptyCal {
+    const SUPPORTED: bool = false;
+}
+
 impl plumbing::hash::Sha2Short for EmptyCal {
     const SUPPORTED: bool = false;
     const SEND_PADDING: bool = false;

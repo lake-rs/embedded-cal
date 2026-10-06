@@ -126,6 +126,10 @@ impl embedded_cal::plumbing::Plumbing for Nrf54l15Cal {}
 
 impl embedded_cal::plumbing::hash::Hash for Nrf54l15Cal {}
 
+impl embedded_cal::plumbing::ecdsa::Ecdsa for Nrf54l15Cal {
+    const SUPPORTED: bool = false;
+}
+
 impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15Cal {
     const SUPPORTED: bool = true;
     const SEND_PADDING: bool = true;

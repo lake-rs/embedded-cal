@@ -127,6 +127,31 @@ impl<C: Ec, R> Ec for WithRng<C, R> {
     }
 }
 
+impl<C: embedded_cal::plumbing::ecdsa::Ecdsa, R> embedded_cal::plumbing::ecdsa::Ecdsa
+    for WithRng<C, R>
+{
+    const SUPPORTED: bool = C::SUPPORTED;
+
+    fn ecdsa_p256_generate(&mut self) -> [u8; 32] {
+        self.cal.ecdsa_p256_generate()
+    }
+
+    fn ecdsa_p256_sign(&mut self, d: &[u8; 32], h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+        self.cal.ecdsa_p256_sign(d, h)
+    }
+
+    fn ecdsa_p256_verify(
+        &mut self,
+        qx: &[u8; 32],
+        qy: &[u8; 32],
+        h: &[u8; 32],
+        r: &[u8; 32],
+        s: &[u8; 32],
+    ) -> Result<(), embedded_cal::SignatureInvalid> {
+        self.cal.ecdsa_p256_verify(qx, qy, h, r, s)
+    }
+}
+
 impl<C: Plumbing, R> Plumbing for WithRng<C, R> {}
 
 impl<C, R: rand_core::TryRng> rand_core::TryRng for WithRng<C, R> {
