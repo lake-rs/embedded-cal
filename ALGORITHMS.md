@@ -36,6 +36,12 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | ECDH on curve X448 | [nrf54l15] | |
 | ECDH on P-256 | [libcrux] || 
 
+# Signature
+
+| Algorithm | Implementation | Notes |
+|-----------|----------------|-------|
+| ECDSA on curve P-256 | [rustcrypto] | |
+
 # Hash
 
 | Algorithm | Implementation | Notes |

@@ -24,6 +24,7 @@ impl Cal for EmptyCal {
     type AeadProvider = Self;
     type HashProvider = Self;
     type HmacProvider = Self;
+    type SignProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self
@@ -38,6 +39,10 @@ impl Cal for EmptyCal {
     }
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
+        self
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
         self
     }
 }
@@ -184,6 +189,86 @@ impl DhProvider for EmptyCal {
     }
 }
 
+impl SignProvider for EmptyCal {
+    type Algorithm = NoAlgorithms;
+    type Signature = NoAlgorithms;
+    type SecretKey = NoAlgorithms;
+    type PublicKey = NoAlgorithms;
+    type VisibleSecretKey = NoAlgorithms;
+
+    fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
+        match alg {}
+    }
+
+    #[allow(unreachable_code, reason = "needed to satisfy RPIT")]
+    fn export_secretkey_bytes<'s>(
+        &mut self,
+        secretkey: &'s Self::VisibleSecretKey,
+    ) -> impl AsRef<[u8]> + use<'s> {
+        match *secretkey {};
+        &[]
+    }
+
+    fn import_secretkey_bytes(
+        &mut self,
+        alg: Self::Algorithm,
+        _secret: &[u8],
+    ) -> Result<Self::VisibleSecretKey, crate::ImportError> {
+        match alg {}
+    }
+
+    #[allow(unreachable_code, reason = "needed to satisfy RPIT")]
+    fn export_publickey_bytes<'p>(
+        &mut self,
+        public: &'p Self::PublicKey,
+    ) -> impl AsRef<[u8]> + use<'p> {
+        match *public {}
+        &[]
+    }
+
+    fn import_publickey_bytes(
+        &mut self,
+        alg: Self::Algorithm,
+        _data: &[u8],
+    ) -> Result<Self::PublicKey, crate::ImportError> {
+        match alg {}
+    }
+
+    fn public_key(&mut self, private: &Self::SecretKey) -> Self::PublicKey {
+        match *private {}
+    }
+
+    #[allow(unreachable_code, reason = "needed to satisfy RPIT")]
+    fn export_signature_bytes<'s>(
+        &mut self,
+        signature: &'s Self::Signature,
+    ) -> impl AsRef<[u8]> + use<'s> {
+        match *signature {}
+        &[]
+    }
+
+    fn import_signature_bytes(
+        &mut self,
+        alg: Self::Algorithm,
+        _data: &[u8],
+    ) -> Result<Self::Signature, crate::ImportError> {
+        match alg {}
+    }
+
+    fn sign(&mut self, private: &Self::SecretKey, _message: &[u8]) -> Self::Signature {
+        match *private {}
+    }
+
+    fn verify(
+        &mut self,
+        public: &Self::PublicKey,
+        _message: &[u8],
+        _signature: &Self::Signature,
+    ) -> Result<(), SignatureInvalid> {
+        match *public {}
+    }
+}
+
 impl plumbing::Plumbing for EmptyCal {}
 
 impl plumbing::hash::Hash for EmptyCal {}
@@ -310,5 +395,15 @@ impl AsRef<[u8]> for NoAlgorithms {
 impl DhAlgorithm for NoAlgorithms {
     fn output_length(&self) -> usize {
         match *self {}
+    }
+}
+
+impl SignAlgorithm for NoAlgorithms {
+    fn signature_length(&self) -> usize {
+        match *self {}
+    }
+
+    fn from_cose_number(_alg: impl Into<i128>) -> Option<Self> {
+        None
     }
 }
