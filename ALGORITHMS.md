@@ -41,6 +41,9 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
 | ECDSA on curve P-256 | [rustcrypto] | |
+| ECDSA on curve P-256 | [software-demo] | using ECDSA plumbing |
+| ECDSA on curve P-256 | [nrf54l15] | providing plumbing |
+| ECDSA on curve P-256 | [stm32wba55] | providing plumbing |
 
 # Hash
 
