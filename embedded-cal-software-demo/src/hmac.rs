@@ -158,6 +158,7 @@ pub mod tests {
     impl ExtenderConfig for ImplementSha256Short {
         const IMPLEMENT_SHA2SHORT: bool = true;
         const IMPLEMENT_SHA2SHORT_PLUMBING: bool = true;
+        const IMPLEMENT_DH: bool = false;
         type Base = embedded_cal::empty::EmptyCal;
     }
 
