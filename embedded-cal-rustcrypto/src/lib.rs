@@ -134,23 +134,26 @@ impl<Base: embedded_cal::Cal + embedded_cal::plumbing::ecdsa::Ecdsa>
 {
     const SUPPORTED: bool = Base::SUPPORTED;
 
-    fn ecdsa_p256_generate(&mut self) -> [u8; 32] {
+    fn ecdsa_p256_generate(&mut self) -> embedded_cal::plumbing::ec::P256ScalarOf<Self> {
         self.base.ecdsa_p256_generate()
     }
 
-    fn ecdsa_p256_sign(&mut self, d: &[u8; 32], h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    fn ecdsa_p256_sign(
+        &mut self,
+        d: &embedded_cal::plumbing::ec::P256ScalarOf<Self>,
+        h: &[u8; 32],
+    ) -> ([u8; 32], [u8; 32]) {
         self.base.ecdsa_p256_sign(d, h)
     }
 
     fn ecdsa_p256_verify(
         &mut self,
-        qx: &[u8; 32],
-        qy: &[u8; 32],
+        q: &embedded_cal::plumbing::ec::P256PointOf<Self>,
         h: &[u8; 32],
         r: &[u8; 32],
         s: &[u8; 32],
     ) -> Result<(), embedded_cal::SignatureInvalid> {
-        self.base.ecdsa_p256_verify(qx, qy, h, r, s)
+        self.base.ecdsa_p256_verify(q, h, r, s)
     }
 }
 
