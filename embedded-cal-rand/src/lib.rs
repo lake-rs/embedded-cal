@@ -56,6 +56,8 @@ impl<C: Cal, R> Cal for WithRng<C, R> {
 
     type HmacProvider = C::HmacProvider;
 
+    type SignProvider = C::SignProvider;
+
     fn dh(&mut self) -> &mut Self::DhProvider {
         self.cal.dh()
     }
@@ -70,6 +72,10 @@ impl<C: Cal, R> Cal for WithRng<C, R> {
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
         self.cal.hmac()
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
+        self.cal.sign()
     }
 }
 

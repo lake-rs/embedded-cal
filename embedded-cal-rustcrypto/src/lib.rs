@@ -6,6 +6,7 @@ mod dh;
 mod hash;
 mod hmac;
 mod rng;
+mod sign;
 
 #[cfg(any(feature = "standalone", test))]
 mod standalone;
@@ -59,6 +60,7 @@ where
     type AeadProvider = Self;
     type HashProvider = Self;
     type HmacProvider = Self;
+    type SignProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self
@@ -70,6 +72,9 @@ where
         self
     }
     fn hmac(&mut self) -> &mut Self::HmacProvider {
+        self
+    }
+    fn sign(&mut self) -> &mut Self::SignProvider {
         self
     }
 }
@@ -203,5 +208,14 @@ mod tests {
         f(RustcryptoCalExtender::new_extending(
             embedded_cal::empty::EmptyCal,
         ))
+    }
+
+    #[test]
+    fn test_ecdsa_p256() {
+        let mut cal = Standalone::standalone();
+
+        for vec in testvectors::sign::ECDSA_P256 {
+            vec.test_with(&mut cal);
+        }
     }
 }

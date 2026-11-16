@@ -58,6 +58,10 @@
     HmacSha256,
 ./embedded-cal-rustcrypto/src/hmac.rs
     Direct(BA),
+./embedded-cal-rustcrypto/src/sign.rs
+    EcdsaP256,
+./embedded-cal-rustcrypto/src/sign.rs
+    Direct(BA),
 ./embedded-cal-software-demo/src/hash.rs
     // FIXME: Ideally we'd employ some witness type of IMPLEMENT_SHA2SHORT to render this uninhabited when
 ./embedded-cal-software-demo/src/hash.rs
