@@ -8,21 +8,16 @@ use embedded_cal::{
     Cal, HashProvider, ImportError, SignProvider, SignatureInvalid,
     accessor::*,
     plumbing::{
-        ec::{Ec, EcPrimitives, P256},
+        ec::{Ec, EcPrimitives, P256, P256PointOf, P256ScalarOf},
         ecdsa::Ecdsa,
     },
     util::p256::{
         P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y_with_parity,
     },
 };
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{Extender, ExtenderConfig};
 use crate::hash::HashAlgorithm;
-
-/// Private scalar of an ECDSA P-256 key, big-endian.
-#[derive(Zeroize, ZeroizeOnDrop)]
-pub struct PrivateScalar([u8; 32]);
 
 pub enum SignAlgorithm<EC: ExtenderConfig> {
     EcdsaP256,
@@ -84,13 +79,15 @@ impl<EC: ExtenderConfig> embedded_cal::SignAlgorithm for SignAlgorithm<EC> {
     }
 }
 
+// The ECDSA keys are the base's own P-256 types, so a base can keep them resident in hardware.
+
 pub enum SecretKey<EC: ExtenderConfig> {
-    EcdsaP256(PrivateScalar),
+    EcdsaP256(P256ScalarOf<EC::Base>),
     Direct(SignSecretKeyOf<EC::Base>),
 }
 
 pub enum VisibleSecretKey<EC: ExtenderConfig> {
-    EcdsaP256(PrivateScalar),
+    EcdsaP256(P256ScalarOf<EC::Base>),
     Direct(SignVisibleSecretKeyOf<EC::Base>),
 }
 
@@ -104,7 +101,7 @@ impl<EC: ExtenderConfig> From<VisibleSecretKey<EC>> for SecretKey<EC> {
 }
 
 pub enum PublicKey<EC: ExtenderConfig> {
-    EcdsaP256 { x: [u8; 32], y: [u8; 32] },
+    EcdsaP256(P256PointOf<EC::Base>),
     Direct(SignPublicKeyOf<EC::Base>),
 }
 
@@ -137,9 +134,7 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
 
     fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
         match alg {
-            SignAlgorithm::EcdsaP256 => {
-                VisibleSecretKey::EcdsaP256(PrivateScalar(self.0.ecdsa_p256_generate()))
-            }
+            SignAlgorithm::EcdsaP256 => VisibleSecretKey::EcdsaP256(self.0.ecdsa_p256_generate()),
             SignAlgorithm::Direct(a) => VisibleSecretKey::Direct(self.0.sign().generate_visible(a)),
         }
     }
@@ -149,7 +144,9 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
         secretkey: &'s Self::VisibleSecretKey,
     ) -> impl AsRef<[u8]> + use<'s, EC> {
         match secretkey {
-            VisibleSecretKey::EcdsaP256(d) => embedded_cal::util::Either::Own(&d.0[..]),
+            VisibleSecretKey::EcdsaP256(d) => {
+                embedded_cal::util::Either::Own(self.0.p256().export_scalar_bytes(d))
+            }
             VisibleSecretKey::Direct(d) => {
                 embedded_cal::util::Either::Direct(self.0.sign().export_secretkey_bytes(d))
             }
@@ -163,10 +160,10 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
     ) -> Result<Self::VisibleSecretKey, ImportError> {
         match alg {
             SignAlgorithm::EcdsaP256 => {
-                let d = PrivateScalar(secret.try_into().map_err(|_| ImportError)?);
-                if !in_scalar_range(&d.0) {
+                if !in_scalar_range(secret.try_into().map_err(|_| ImportError)?) {
                     return Err(ImportError);
                 }
+                let d = self.0.p256().import_scalar_bytes(secret)?;
                 Ok(VisibleSecretKey::EcdsaP256(d))
             }
             SignAlgorithm::Direct(a) => self
@@ -183,10 +180,18 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
     ) -> impl AsRef<[u8]> + use<'p, EC> {
         match public {
             // SEC1 compressed form: 0x02 or 0x03 (parity of y), followed by x
-            PublicKey::EcdsaP256 { x, y } => {
+            PublicKey::EcdsaP256(q) => {
+                let p256 = self.0.p256();
                 let mut compressed = [0u8; 33];
-                compressed[0] = 0x02 | (y[31] & 1);
-                compressed[1..].copy_from_slice(x);
+                let qy = p256.y_coord(q);
+                let y_last = *p256
+                    .export_scalar_bytes(&qy)
+                    .as_ref()
+                    .last()
+                    .expect("P-256 coordinates are 32 bytes");
+                compressed[0] = 0x02 | (y_last & 1);
+                let qx = p256.x_coord(q);
+                compressed[1..].copy_from_slice(p256.export_scalar_bytes(&qx).as_ref());
                 embedded_cal::util::Either::Own(compressed)
             }
             PublicKey::Direct(p) => {
@@ -212,7 +217,10 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
                     _ => return Err(ImportError),
                 };
                 let y = p256_recover_y_with_parity(&x, odd)?;
-                Ok(PublicKey::EcdsaP256 { x, y })
+                let p256 = self.0.p256();
+                let x = p256.import_scalar_bytes(&x)?;
+                let y = p256.import_scalar_bytes(&y)?;
+                Ok(PublicKey::EcdsaP256(p256.point(x, y)))
             }
             SignAlgorithm::Direct(a) => self
                 .0
@@ -233,18 +241,7 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
                     .import_scalar_bytes(&P256_GY_BYTES)
                     .expect("generator y is a valid scalar");
                 let generator = p256.point(gx, gy);
-                let d = p256
-                    .import_scalar_bytes(&d.0)
-                    .expect("private scalar was range checked on import");
-                let q = p256.multiply_scalar_point(&d, &generator);
-
-                let mut x = [0u8; 32];
-                let mut y = [0u8; 32];
-                let qx = p256.x_coord(&q);
-                x.copy_from_slice(p256.export_scalar_bytes(&qx).as_ref());
-                let qy = p256.y_coord(&q);
-                y.copy_from_slice(p256.export_scalar_bytes(&qy).as_ref());
-                PublicKey::EcdsaP256 { x, y }
+                PublicKey::EcdsaP256(p256.multiply_scalar_point(d, &generator))
             }
             SecretKey::Direct(d) => PublicKey::Direct(self.0.sign().public_key(d)),
         }
@@ -293,7 +290,7 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
         match private {
             SecretKey::EcdsaP256(d) => {
                 let digest = self.sha256(message);
-                let (r, s) = self.0.ecdsa_p256_sign(&d.0, &digest);
+                let (r, s) = self.0.ecdsa_p256_sign(d, &digest);
                 Signature::EcdsaP256 { r, s }
             }
             SecretKey::Direct(d) => Signature::Direct(self.0.sign().sign(d, message)),
@@ -307,12 +304,12 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
         signature: &Self::Signature,
     ) -> Result<(), SignatureInvalid> {
         match (public, signature) {
-            (PublicKey::EcdsaP256 { x, y }, Signature::EcdsaP256 { r, s }) => {
+            (PublicKey::EcdsaP256(q), Signature::EcdsaP256 { r, s }) => {
                 if !in_scalar_range(r) || !in_scalar_range(s) {
                     return Err(SignatureInvalid);
                 }
                 let digest = self.sha256(message);
-                self.0.ecdsa_p256_verify(x, y, &digest, r, s)
+                self.0.ecdsa_p256_verify(q, &digest, r, s)
             }
             (PublicKey::Direct(p), Signature::Direct(s)) => self.0.sign().verify(p, message, s),
             _ => Err(SignatureInvalid),
