@@ -4,41 +4,49 @@
 //! Traits describing hardware that performs complete ECDSA operations on an already hashed
 //! message.
 //!
-//! Hashing the message, key handling and encoding are left to the caller; deriving a public key is
-//! done through [`super::ec::EcPrimitives::multiply_scalar_point()`].
+//! Hashing the message and encoding are left to the caller; deriving a public key is done through
+//! [`super::ec::EcPrimitives::multiply_scalar_point()`].
+//!
+//! Keys use the [`Scalar`][super::ec::EcPrimitives::Scalar] and
+//! [`Point`][super::ec::EcPrimitives::Point] types of the implementation's
+//! [`Ec`] P-256 primitives, so a back-end can keep private keys resident in
+//! hardware rather than exposing their bytes.
+
+use super::ec::{Ec, P256PointOf, P256ScalarOf};
 
 /// Trait indicating that there is hardware support for ECDSA on P-256.
 ///
 /// All byte arrays are big-endian.
-pub trait Ecdsa {
+pub trait Ecdsa: Ec {
     /// Whether this trait is actually supported. See [`Plumbing`][super::Plumbing] docs for
     /// rationale.
     const SUPPORTED: bool;
 
     /// Generates a fresh private scalar `d`, uniformly random in `1..n`.
-    fn ecdsa_p256_generate(&mut self) -> [u8; 32] {
+    fn ecdsa_p256_generate(&mut self) -> P256ScalarOf<Self> {
         panic!("user disregarded SUPPORTED=false")
     }
 
     /// Produces a raw `(r, s)` ECDSA signature over digest `h` with private scalar `d`.
     ///
+    /// `d` must be in `1..n`; implementations may panic otherwise.
+    ///
     /// The implementation picks the per-signature nonce itself, and retries with a new one when
     /// the nonce turns out to be unusable.
-    fn ecdsa_p256_sign(&mut self, d: &[u8; 32], h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    fn ecdsa_p256_sign(&mut self, d: &P256ScalarOf<Self>, h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
         let _ = (d, h);
         panic!("user disregarded SUPPORTED=false")
     }
 
-    /// Verifies a raw `(r, s)` ECDSA signature over digest `h` against public key `(qx, qy)`.
+    /// Verifies a raw `(r, s)` ECDSA signature over digest `h` against public key `q`.
     fn ecdsa_p256_verify(
         &mut self,
-        qx: &[u8; 32],
-        qy: &[u8; 32],
+        q: &P256PointOf<Self>,
         h: &[u8; 32],
         r: &[u8; 32],
         s: &[u8; 32],
     ) -> Result<(), crate::SignatureInvalid> {
-        let _ = (qx, qy, h, r, s);
+        let _ = (q, h, r, s);
         panic!("user disregarded SUPPORTED=false")
     }
 }
