@@ -17,6 +17,11 @@ pub trait Ec {
     fn x448(&mut self) -> &mut Self::PrimitivesX448;
 }
 
+/// The P-256 [`Scalar`][EcPrimitives::Scalar] type of an [`Ec`] implementation.
+pub type P256ScalarOf<T> = <<T as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Scalar;
+/// The P-256 [`Point`][EcPrimitives::Point] type of an [`Ec`] implementation.
+pub type P256PointOf<T> = <<T as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Point;
+
 /// Providers for ECC primitive operations on a given curve.
 ///
 /// Implementations whose back-end uses similar code on various curves can use identical types (or
