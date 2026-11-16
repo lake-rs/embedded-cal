@@ -7,6 +7,7 @@ use rand_core::Rng as _;
 use zeroize::Zeroizing;
 
 use super::Stm32wba55Cal;
+use super::dh_plumbing::{StmPoint, StmScalar};
 
 /// Number of fresh nonces tried before signing gives up.
 const SIGN_MAX_ATTEMPTS: usize = 4;
@@ -30,18 +31,19 @@ impl Stm32wba55Cal {
 impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {
     const SUPPORTED: bool = true;
 
-    fn ecdsa_p256_generate(&mut self) -> [u8; 32] {
-        self.random_p256_scalar()
+    fn ecdsa_p256_generate(&mut self) -> StmScalar {
+        let d = Zeroizing::new(self.random_p256_scalar());
+        StmScalar(bytes_to_words(&d))
     }
 
-    fn ecdsa_p256_sign(&mut self, d: &[u8; 32], h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
-        // `d` and `k` are wrapped in `Zeroizing` so the stack copies are wiped on every exit path,
-        // like `scalar_words.zeroize()` in dh.rs. A leaked `k` reveals `d` from one signature.
-        let d = Zeroizing::new(bytes_to_words(d));
+    fn ecdsa_p256_sign(&mut self, d: &StmScalar, h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+        // `StmScalar` wipes itself on drop, and `k` is wrapped in `Zeroizing` so its stack copies
+        // are wiped on every exit path. A leaked `k` reveals `d` from one signature.
+        let d = &d.0;
         // An out-of-range `d` makes every PKA attempt fail, which would otherwise look like an
         // endless run of unusable nonces.
         assert!(
-            *d != [0u32; 8] && !ge(&d, &P256_ORDER),
+            *d != [0u32; 8] && !ge(d, &P256_ORDER),
             "ECDSA private scalar not in 1..n"
         );
         let h = bytes_to_words(h);
@@ -50,7 +52,7 @@ impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {
         for _ in 0..SIGN_MAX_ATTEMPTS {
             let k_bytes = Zeroizing::new(self.random_p256_scalar());
             let k = Zeroizing::new(bytes_to_words(&k_bytes));
-            if let Some((r, s)) = self.pka_ecdsa_sign(&d, &k, &h) {
+            if let Some((r, s)) = self.pka_ecdsa_sign(d, &k, &h) {
                 return (words_to_bytes(&r), words_to_bytes(&s));
             }
         }
@@ -59,15 +61,14 @@ impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {
 
     fn ecdsa_p256_verify(
         &mut self,
-        qx: &[u8; 32],
-        qy: &[u8; 32],
+        q: &StmPoint,
         h: &[u8; 32],
         r: &[u8; 32],
         s: &[u8; 32],
     ) -> Result<(), SignatureInvalid> {
         self.pka_ecdsa_verify(
-            &bytes_to_words(qx),
-            &bytes_to_words(qy),
+            &q.x.0,
+            &q.y.0,
             &bytes_to_words(h),
             &bytes_to_words(r),
             &bytes_to_words(s),
