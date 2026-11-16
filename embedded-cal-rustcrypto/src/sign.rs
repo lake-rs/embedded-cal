@@ -80,8 +80,9 @@ where
         data: &[u8],
     ) -> Result<Self::PublicKey, embedded_cal::ImportError> {
         match alg {
-            // Unlike for ECDH, the parity of y matters for ECDSA, so only the SEC1 compressed form
-            // produced by export_publickey_bytes is accepted.
+            // Only the SEC1 compressed form produced by export_publickey_bytes is accepted. (The
+            // x-only compact form used for ECDH would not do: unlike for ECDH, the sign of y
+            // matters for ECDSA.)
             SignAlgorithm::EcdsaP256 if data.len() != 33 => Err(ImportError),
             SignAlgorithm::EcdsaP256 => Ok(SignPublicKey::EcdsaP256(
                 p256::ecdsa::VerifyingKey::from_sec1_bytes(data).map_err(|_| ImportError)?,

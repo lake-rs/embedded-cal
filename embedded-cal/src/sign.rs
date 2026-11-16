@@ -5,9 +5,10 @@
 pub trait SignProvider {
     type Algorithm: SignAlgorithm;
 
-    /// A secret key that is intended to be exported
+    /// A secret key that is intended to be exported.
+    ///
     /// See [`DhProvider::VisibleSecretKey`][super::DhProvider::VisibleSecretKey]
-    /// for the reason of splitting this from [`SecretKey`][Self::SecretKey]
+    /// for the reason of splitting this from [`SecretKey`][Self::SecretKey].
     type VisibleSecretKey: Sized + Into<Self::SecretKey>;
     type SecretKey: Sized;
     type PublicKey: Sized;
@@ -23,12 +24,14 @@ pub trait SignProvider {
     }
 
     /// Exposes a private key's key data bytes.
+    ///
+    /// For ECDSA, this is the `d` value.
     fn export_secretkey_bytes<'s>(
         &mut self,
         secretkey: &'s Self::VisibleSecretKey,
     ) -> impl AsRef<[u8]> + use<'s, Self>;
 
-    /// Imports a public key in the inverse operation of
+    /// Imports a secret key in the inverse operation of
     /// [`.export_secretkey_bytes()`][Self::export_secretkey_bytes()].
     fn import_secretkey_bytes(
         &mut self,
@@ -37,6 +40,8 @@ pub trait SignProvider {
     ) -> Result<Self::VisibleSecretKey, super::ImportError>;
 
     /// Exposes a public key's key data bytes.
+    ///
+    /// For ECDSA, this is the compressed representation.
     fn export_publickey_bytes<'p>(
         &mut self,
         public: &'p Self::PublicKey,
@@ -67,8 +72,13 @@ pub trait SignProvider {
         data: &[u8],
     ) -> Result<Self::Signature, super::ImportError>;
 
+    /// Signs a message.
+    ///
+    /// The message is passed unhashed; any hashing is part of the algorithm
+    /// (e.g. SHA-256 for ES256).
     fn sign(&mut self, private: &Self::SecretKey, message: &[u8]) -> Self::Signature;
 
+    /// Verifies a signature over a message.
     fn verify(
         &mut self,
         public: &Self::PublicKey,
