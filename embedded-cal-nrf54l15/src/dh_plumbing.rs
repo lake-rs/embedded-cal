@@ -222,12 +222,18 @@ pub struct NrfScalar<C: ?Sized> {
     phantom: PhantomData<C>,
 }
 
+// Fails to compile if `NrfScalar` stops wiping itself on drop; it holds ECDSA private keys.
+const _: () = {
+    const fn assert_zeroize_on_drop<T: ZeroizeOnDrop>() {}
+    assert_zeroize_on_drop::<NrfScalar<P256>>();
+};
+
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct NrfPoint<C: ?Sized> {
     // This doubles as the `u` coordinate for RFC7748 curves.
-    x: NrfScalar<C>,
+    pub(crate) x: NrfScalar<C>,
     // This is not used in RFC7748 curves.
-    y: NrfScalar<C>,
+    pub(crate) y: NrfScalar<C>,
 }
 
 // FIXME: While const generics can't do that, let's macro over this rather than repeat all over

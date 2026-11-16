@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 use embedded_cal::SignatureInvalid;
+use embedded_cal::plumbing::ec::P256;
 use embedded_cal::util::p256::{P256_ORDER, bytes_to_words, ge};
 use rand_core::Rng as _;
 use zeroize::Zeroizing;
 
 use super::Nrf54l15Cal;
+use super::dh_plumbing::{NrfPoint, NrfScalar};
 
 /// Number of fresh nonces tried before signing gives up.
 const SIGN_MAX_ATTEMPTS: usize = 4;
@@ -30,11 +32,12 @@ impl Nrf54l15Cal {
 impl embedded_cal::plumbing::ecdsa::Ecdsa for Nrf54l15Cal {
     const SUPPORTED: bool = true;
 
-    fn ecdsa_p256_generate(&mut self) -> [u8; 32] {
-        self.random_p256_scalar()
+    fn ecdsa_p256_generate(&mut self) -> NrfScalar<P256> {
+        self.random_p256_scalar().into()
     }
 
-    fn ecdsa_p256_sign(&mut self, d: &[u8; 32], h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    fn ecdsa_p256_sign(&mut self, d: &NrfScalar<P256>, h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+        let d: &[u8; 32] = d.as_ref();
         // An out-of-range `d` makes every PKE attempt fail, which would otherwise look like an
         // endless run of unusable nonces.
         let d_words = Zeroizing::new(bytes_to_words(d));
@@ -56,12 +59,11 @@ impl embedded_cal::plumbing::ecdsa::Ecdsa for Nrf54l15Cal {
 
     fn ecdsa_p256_verify(
         &mut self,
-        qx: &[u8; 32],
-        qy: &[u8; 32],
+        q: &NrfPoint<P256>,
         h: &[u8; 32],
         r: &[u8; 32],
         s: &[u8; 32],
     ) -> Result<(), SignatureInvalid> {
-        self.cracen_ecdsa_verify(qx, qy, h, r, s)
+        self.cracen_ecdsa_verify(q.x.as_ref(), q.y.as_ref(), h, r, s)
     }
 }
