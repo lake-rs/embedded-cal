@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 use embedded_cal::plumbing::ec::{Ec, EcPrimitives};
+use embedded_cal::util::in_scalar_range;
 use embedded_cal::util::montgomery::{clamp_x448, clamp_x25519, mask_u_x25519};
-use embedded_cal::util::p256::{
-    P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y,
-};
+use embedded_cal::util::p256::{P256_GX_BYTES, P256_GY_BYTES, P256_ORDER_BYTES, p256_recover_y};
 use nrf_pac::common::{RW, Reg};
 use nrf_pac::cracencore::vals::{Selcurve, Swapbytes};
 use rand_core::Rng as _;
@@ -557,8 +556,7 @@ impl embedded_cal::DhProvider for super::Nrf54l15Cal {
                 let mut scalar = [0u8; 32];
                 // Error = Infallible
                 self.fill_bytes(&mut scalar);
-                let w = bytes_to_words(&scalar);
-                if w != [0u32; 8] && !ge(&w, &P256_ORDER) {
+                if in_scalar_range(&scalar, &P256_ORDER_BYTES) {
                     return VisibleSecretKey(SecretKey::EcdhP256(scalar.into()));
                 }
             },

@@ -40,31 +40,3 @@ pub const P384_GY_BYTES: [u8; 48] = [
     0xf8, 0xf4, 0x1d, 0xbd, 0x28, 0x9a, 0x14, 0x7c, 0xe9, 0xda, 0x31, 0x13, 0xb5, 0xf0, 0xb8, 0xc0,
     0x0a, 0x60, 0xb1, 0xce, 0x1d, 0x7e, 0x81, 0x9d, 0x7a, 0x43, 0x1d, 0x7c, 0x90, 0xea, 0x0e, 0x5f,
 ];
-
-/// Whether the big-endian `scalar` is in `1..n`, as needed for private scalars and signature
-/// components.
-///
-/// This is not constant time; it is meant for rejection sampling (where rejected values are
-/// discarded) and for checking public values.
-pub fn in_scalar_range(scalar: &[u8; 48]) -> bool {
-    // Lexicographic order of equally long big-endian byte arrays is their numeric order.
-    *scalar != [0; 48] && *scalar < P384_ORDER_BYTES
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn scalar_range() {
-        assert!(!in_scalar_range(&[0; 48]));
-        assert!(!in_scalar_range(&P384_ORDER_BYTES));
-        assert!(!in_scalar_range(&[0xff; 48]));
-        let mut one = [0; 48];
-        one[47] = 1;
-        assert!(in_scalar_range(&one));
-        let mut n_minus_one = P384_ORDER_BYTES;
-        n_minus_one[47] -= 1;
-        assert!(in_scalar_range(&n_minus_one));
-    }
-}

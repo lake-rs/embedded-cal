@@ -11,9 +11,8 @@ use embedded_cal::{
         ec::{Ec, EcPrimitives, P256, P256PointOf, P256ScalarOf},
         ecdsa::EcdsaPrimitives,
     },
-    util::p256::{
-        P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y_with_parity,
-    },
+    util::in_scalar_range,
+    util::p256::{P256_GX_BYTES, P256_GY_BYTES, P256_ORDER_BYTES, p256_recover_y_with_parity},
 };
 
 use super::{Extender, ExtenderConfig};
@@ -110,12 +109,6 @@ pub enum Signature<EC: ExtenderConfig> {
     Direct(SignSignatureOf<EC::Base>),
 }
 
-/// Whether `w` is in `1..n`, as needed for private scalars and signature components.
-fn in_scalar_range(w: &[u8; 32]) -> bool {
-    let w = bytes_to_words(w);
-    w != [0u32; 8] && !ge(&w, &P256_ORDER)
-}
-
 /// Exports a P-256 scalar (here: a signature component) into its fixed-size byte form.
 fn scalar_to_array<P: EcPrimitives<P256>>(p256: &mut P, scalar: &P::Scalar) -> [u8; 32] {
     p256.export_scalar_bytes(scalar)
@@ -168,7 +161,10 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
     ) -> Result<Self::VisibleSecretKey, ImportError> {
         match alg {
             SignAlgorithm::EcdsaP256 => {
-                if !in_scalar_range(secret.try_into().map_err(|_| ImportError)?) {
+                if !in_scalar_range(
+                    secret.try_into().map_err(|_| ImportError)?,
+                    &P256_ORDER_BYTES,
+                ) {
                     return Err(ImportError);
                 }
                 let d = self.0.p256().import_scalar_bytes(secret)?;
@@ -317,7 +313,8 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
     ) -> Result<(), SignatureInvalid> {
         match (public, signature) {
             (PublicKey::EcdsaP256(q), Signature::EcdsaP256 { r, s }) => {
-                if !in_scalar_range(r) || !in_scalar_range(s) {
+                if !in_scalar_range(r, &P256_ORDER_BYTES) || !in_scalar_range(s, &P256_ORDER_BYTES)
+                {
                     return Err(SignatureInvalid);
                 }
                 let digest = self.sha256(message);

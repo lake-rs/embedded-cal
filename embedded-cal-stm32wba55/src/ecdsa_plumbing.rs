@@ -4,7 +4,8 @@
 use embedded_cal::SignatureInvalid;
 use embedded_cal::plumbing::ec::P256;
 use embedded_cal::plumbing::ecdsa::EcdsaPrimitives;
-use embedded_cal::util::p256::{P256_ORDER, bytes_to_words, ge};
+use embedded_cal::util::in_scalar_range;
+use embedded_cal::util::p256::{P256_ORDER_BYTES, bytes_to_words, words_to_bytes};
 use rand_core::Rng as _;
 use zeroize::Zeroizing;
 
@@ -17,13 +18,12 @@ const SIGN_MAX_ATTEMPTS: usize = 4;
 impl Stm32wba55Cal {
     /// Draws a scalar uniformly from `1..n` by rejection sampling.
     ///
-    /// The working buffers are wiped on return; the caller owns (and must wipe) the result.
+    /// The working buffer is wiped on return; the caller owns (and must wipe) the result.
     fn random_p256_scalar(&mut self) -> [u8; 32] {
         let mut scalar = Zeroizing::new([0u8; 32]);
         loop {
             self.fill_bytes(&mut *scalar);
-            let w = Zeroizing::new(bytes_to_words(&scalar));
-            if *w != [0u32; 8] && !ge(&w, &P256_ORDER) {
+            if in_scalar_range(&scalar, &P256_ORDER_BYTES) {
                 return *scalar;
             }
         }
@@ -48,7 +48,7 @@ impl EcdsaPrimitives<P256> for Stm32wba55Cal {
         // An out-of-range `d` makes every PKA attempt fail, which would otherwise look like an
         // endless run of unusable nonces.
         assert!(
-            *d != [0u32; 8] && !ge(d, &P256_ORDER),
+            in_scalar_range(&Zeroizing::new(words_to_bytes(d)), &P256_ORDER_BYTES),
             "ECDSA private scalar not in 1..n"
         );
         let h = bytes_to_words(h);

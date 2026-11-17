@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
+use embedded_cal::util::in_scalar_range;
 use embedded_cal::util::p256::{
-    B, P, P256_GX, P256_GY, P256_ORDER, bytes_to_words, ge, p256_recover_y, words_to_bytes,
+    B, P, P256_GX, P256_GY, P256_ORDER, P256_ORDER_BYTES, bytes_to_words, p256_recover_y,
+    words_to_bytes,
 };
 use rand_core::Rng;
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -343,8 +345,7 @@ impl embedded_cal::DhProvider for super::Stm32wba55Cal {
                 let mut scalar = [0u8; 32];
                 // Error = Infallible for this RNG
                 self.fill_bytes(&mut scalar);
-                let w = bytes_to_words(&scalar);
-                if w != [0u32; 8] && !ge(&w, &P256_ORDER) {
+                if in_scalar_range(&scalar, &P256_ORDER_BYTES) {
                     return VisibleSecretKey(SecretKey { alg, scalar });
                 }
             },

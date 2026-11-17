@@ -19,16 +19,14 @@ pub const P: [u32; 8] = [
     0xFFFF_FFFF,
 ];
 
-pub const P256_ORDER: [u32; 8] = [
-    0xFC63_2551,
-    0xF3B9_CAC2,
-    0xA717_9E84,
-    0xBCE6_FAAD,
-    0xFFFF_FFFF,
-    0xFFFF_FFFF,
-    0x0000_0000,
-    0xFFFF_FFFF,
+/// The order n of the generator, in big-endian bytes.
+pub const P256_ORDER_BYTES: [u8; 32] = [
+    0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84, 0xf3, 0xb9, 0xca, 0xc2, 0xfc, 0x63, 0x25, 0x51,
 ];
+
+/// [`P256_ORDER_BYTES`] in little-endian word order, for the word-based arithmetic.
+pub const P256_ORDER: [u32; 8] = bytes_to_words(&P256_ORDER_BYTES);
 
 pub const B: [u32; 8] = [
     0x27D2_604B,
@@ -267,6 +265,23 @@ mod tests {
         assert_eq!(
             words_to_bytes(&sub256(&P, &bytes_to_words(&even))),
             P256_GY_BYTES
+        );
+    }
+
+    #[test]
+    fn order_words() {
+        assert_eq!(
+            P256_ORDER,
+            [
+                0xFC63_2551,
+                0xF3B9_CAC2,
+                0xA717_9E84,
+                0xBCE6_FAAD,
+                0xFFFF_FFFF,
+                0xFFFF_FFFF,
+                0x0000_0000,
+                0xFFFF_FFFF,
+            ]
         );
     }
 }
