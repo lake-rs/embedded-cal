@@ -8,6 +8,10 @@
     reason = "nRF54L15 uses 1 as last-descriptor sentinel"
 )]
 const LAST_DESC_PTR: *mut Descriptor = 1 as *mut Descriptor;
+/// DMA tag bit marking the last descriptor of a chain (sdk-nrf cmdma.h: DMATAG_LAST).
+///
+/// [`DescriptorChain`] sets it on the final descriptor automatically.
+pub(crate) const DMATAG_LAST: u32 = 1 << 5;
 /// Single EasyDMA scatter-gather job entry.
 ///
 /// This structure maps directly to one hardware “job entry” consumed by the
@@ -120,7 +124,7 @@ impl<'mem, Direction, const N: usize> DescriptorChain<'mem, Direction, N> {
             // finalize the operation (produce output / authentication tag).
             // sx_cmdma_finalize_descs() in the Nordic SDK applies this to both
             // the last input and last output descriptor of every DMA operation.
-            last.dmatag |= 1 << 5;
+            last.dmatag |= DMATAG_LAST;
         }
     }
 

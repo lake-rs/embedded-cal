@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
-use crate::descriptor::{DescriptorChain, Input, Output};
+use crate::descriptor::{DMATAG_LAST, DescriptorChain, Input, Output};
 
 // BA418 (SHA-3) engine mode codes (sdk-nrf sxsymcrypt/src/sha3.c: SHA3_MODE)
 #[repr(u8)]
@@ -41,14 +41,14 @@ const KECCAK_STATE_SIZE: usize = 200;
 
 // BA418 DMA tags.
 // DMATAG_BA418 = 5, DMATAG_CONFIG = 16.
-// DMATAG_LAST (bit 5 = 32) is ORed in automatically by DescriptorChain on the
+// DMATAG_LAST is ORed in automatically by DescriptorChain on the
 // final descriptor of each chain, so data descriptors start at 5.
 const DMATAG_BA418_CONFIG: u32 = 5 | 16; // = 21
 const DMATAG_BA418_DATA: u32 = 5;
 // DMATAG_BA418 | DMATAG_DATATYPE(1) | DMATAG_LAST: re-injects a saved Keccak sponge
 // state. DMATAG_LAST here is a BA418 semantic flag (not the chain terminator): it
 // marks this descriptor as a state-load operation.
-const DMATAG_BA418_INITIAL_STATE: u32 = 5 | (1 << 6) | (1 << 5); // = 101
+const DMATAG_BA418_INITIAL_STATE: u32 = 5 | (1 << 6) | DMATAG_LAST; // = 101
 
 // SHA3_SAVE_CONTEXT (bit 6 of the BA418 config word): when set, the hardware outputs
 // the 200-byte intermediate Keccak sponge state instead of the final digest.
@@ -136,7 +136,7 @@ impl super::Nrf54l15Cal {
 
         let mut output_descriptors: DescriptorChain<Output, { super::MAX_DESCRIPTOR_CHAIN_LEN }> =
             DescriptorChain::new();
-        output_descriptors.push(&mut new_state, 32);
+        output_descriptors.push(&mut new_state, DMATAG_LAST);
 
         let mut input_descriptors: DescriptorChain<Input, { super::MAX_DESCRIPTOR_CHAIN_LEN }> =
             DescriptorChain::new();
@@ -207,7 +207,7 @@ impl embedded_cal::HashProvider for super::Nrf54l15Cal {
 
         let mut output_descriptors: DescriptorChain<Output, { super::MAX_DESCRIPTOR_CHAIN_LEN }> =
             DescriptorChain::new();
-        output_descriptors.push(&mut out_buf[..out_len], 32);
+        output_descriptors.push(&mut out_buf[..out_len], DMATAG_LAST);
 
         let mut input_descriptors: DescriptorChain<Input, { super::MAX_DESCRIPTOR_CHAIN_LEN }> =
             DescriptorChain::new();
