@@ -39,19 +39,14 @@ const MAX_RATE: usize = Variant::Sha3_224.rate();
 // Full Keccak-f[1600] permutation state (1600 bits).
 const KECCAK_STATE_SIZE: usize = 200;
 
-// BA418 DMA tags.
-// DMATAG_BA418 = 5, DMATAG_CONFIG = 16.
-// DMATAG_LAST is ORed in automatically by DescriptorChain on the
-// final descriptor of each chain, so data descriptors start at 5.
-const DMATAG_BA418_CONFIG: u32 = 5 | 16; // = 21
-const DMATAG_BA418_DATA: u32 = 5;
-// DMATAG_BA418 | DMATAG_DATATYPE(1) | DMATAG_LAST: re-injects a saved Keccak sponge
-// state. DMATAG_LAST here is a BA418 semantic flag (not the chain terminator): it
-// marks this descriptor as a state-load operation.
-const DMATAG_BA418_INITIAL_STATE: u32 = 5 | (1 << 6) | DMATAG_LAST; // = 101
+// BA418 DMA tags (sdk-nrf sxsymcrypt/src/sha3.c: ba418tags; macros from cmdma.h).
+// DMATAG_LAST is ORed in automatically by DescriptorChain on the final descriptor of each chain.
+const DMATAG_BA418: u32 = 5;
+const DMATAG_BA418_CONFIG: u32 = DMATAG_BA418 | (1 << 4); // DMATAG_CONFIG(0)
+const DMATAG_BA418_DATA: u32 = DMATAG_BA418; // DMATAG_DATATYPE(0)
+const DMATAG_BA418_INITIAL_STATE: u32 = DMATAG_BA418 | (1 << 6) | DMATAG_LAST; // DMATAG_DATATYPE(1) | DMATAG_LAST
 
-// SHA3_SAVE_CONTEXT (bit 6 of the BA418 config word): when set, the hardware outputs
-// the 200-byte intermediate Keccak sponge state instead of the final digest.
+// Outputs the Keccak state instead of the digest (sdk-nrf sxsymcrypt/src/sha3.c: SHA3_SAVE_CONTEXT).
 const SHA3_SAVE_CONTEXT: u8 = 1 << 6;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
