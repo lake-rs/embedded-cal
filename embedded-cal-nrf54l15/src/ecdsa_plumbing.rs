@@ -4,9 +4,8 @@
 use embedded_cal::SignatureInvalid;
 use embedded_cal::plumbing::ec::{P256, P384};
 use embedded_cal::plumbing::ecdsa::EcdsaPrimitives;
-use embedded_cal::util::{in_scalar_range, p256, p384};
+use embedded_cal::util::{in_scalar_range, p256, p384, random_scalar};
 use nrf_pac::cracencore::vals::Selcurve;
-use rand_core::Rng as _;
 use zeroize::Zeroizing;
 
 use super::Nrf54l15Cal;
@@ -16,20 +15,6 @@ use super::dh_plumbing::{NrfPoint, NrfScalar};
 const SIGN_MAX_ATTEMPTS: usize = 4;
 
 impl Nrf54l15Cal {
-    /// Draws an `N` byte scalar uniformly from `1..n` by rejection sampling, for the big-endian
-    /// curve order `n`.
-    ///
-    /// The working buffer is wiped on return; the caller owns (and must wipe) the result.
-    fn random_scalar<const N: usize>(&mut self, n: &[u8; N]) -> [u8; N] {
-        let mut scalar = Zeroizing::new([0u8; N]);
-        loop {
-            self.fill_bytes(&mut *scalar);
-            if in_scalar_range(&scalar, n) {
-                return *scalar;
-            }
-        }
-    }
-
     /// ECDSA signing with `N` byte operands on `selcurve` (whose order is `n`), shared by all
     /// curves.
     fn ecdsa_sign_on<const N: usize>(
@@ -49,7 +34,7 @@ impl Nrf54l15Cal {
         // less), so repeated failures mean the hardware is faulty rather than unlucky.
         for _ in 0..SIGN_MAX_ATTEMPTS {
             // Wiped on every exit path; a leaked `k` reveals `d` from one signature.
-            let k = Zeroizing::new(self.random_scalar(n));
+            let k = Zeroizing::new(random_scalar(self, n));
             if let Some(signature) = self.cracen_ecdsa_sign(selcurve, d, &k, h) {
                 return signature;
             }
@@ -64,7 +49,7 @@ impl EcdsaPrimitives<P256> for Nrf54l15Cal {
     const HAS_ECDSA: bool = true;
 
     fn ecdsa_generate(&mut self) -> NrfScalar<P256> {
-        self.random_scalar(&p256::P256_ORDER_BYTES).into()
+        random_scalar(self, &p256::P256_ORDER_BYTES).into()
     }
 
     fn ecdsa_sign(&mut self, d: &NrfScalar<P256>, h: &[u8]) -> (NrfScalar<P256>, NrfScalar<P256>) {
@@ -95,7 +80,7 @@ impl EcdsaPrimitives<P384> for Nrf54l15Cal {
     const HAS_ECDSA: bool = true;
 
     fn ecdsa_generate(&mut self) -> NrfScalar<P384> {
-        self.random_scalar(&p384::P384_ORDER_BYTES).into()
+        random_scalar(self, &p384::P384_ORDER_BYTES).into()
     }
 
     fn ecdsa_sign(&mut self, d: &NrfScalar<P384>, h: &[u8]) -> (NrfScalar<P384>, NrfScalar<P384>) {

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
-use embedded_cal::util::in_scalar_range;
 use embedded_cal::util::p256::{
     B, P, P256_GX, P256_GY, P256_ORDER, P256_ORDER_BYTES, bytes_to_words, p256_recover_y,
     words_to_bytes,
 };
-use rand_core::Rng;
+use embedded_cal::util::random_scalar;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 // P-256 curve constants (little-endian word order: LSW at index 0)
@@ -341,14 +340,10 @@ impl embedded_cal::DhProvider for super::Stm32wba55Cal {
 
     fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
         match alg {
-            DhAlgorithm::EcdhP256 => loop {
-                let mut scalar = [0u8; 32];
-                // Error = Infallible for this RNG
-                self.fill_bytes(&mut scalar);
-                if in_scalar_range(&scalar, &P256_ORDER_BYTES) {
-                    return VisibleSecretKey(SecretKey { alg, scalar });
-                }
-            },
+            DhAlgorithm::EcdhP256 => VisibleSecretKey(SecretKey {
+                alg,
+                scalar: random_scalar(self, &P256_ORDER_BYTES),
+            }),
         }
     }
 

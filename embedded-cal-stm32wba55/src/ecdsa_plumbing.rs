@@ -4,9 +4,8 @@
 use embedded_cal::SignatureInvalid;
 use embedded_cal::plumbing::ec::P256;
 use embedded_cal::plumbing::ecdsa::EcdsaPrimitives;
-use embedded_cal::util::in_scalar_range;
 use embedded_cal::util::p256::{P256_ORDER_BYTES, bytes_to_words, words_to_bytes};
-use rand_core::Rng as _;
+use embedded_cal::util::{in_scalar_range, random_scalar};
 use zeroize::Zeroizing;
 
 use super::Stm32wba55Cal;
@@ -15,28 +14,13 @@ use super::dh_plumbing::{StmPoint, StmScalar};
 /// Number of fresh nonces tried before signing gives up.
 const SIGN_MAX_ATTEMPTS: usize = 4;
 
-impl Stm32wba55Cal {
-    /// Draws a scalar uniformly from `1..n` by rejection sampling.
-    ///
-    /// The working buffer is wiped on return; the caller owns (and must wipe) the result.
-    fn random_p256_scalar(&mut self) -> [u8; 32] {
-        let mut scalar = Zeroizing::new([0u8; 32]);
-        loop {
-            self.fill_bytes(&mut *scalar);
-            if in_scalar_range(&scalar, &P256_ORDER_BYTES) {
-                return *scalar;
-            }
-        }
-    }
-}
-
 impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {}
 
 impl EcdsaPrimitives<P256> for Stm32wba55Cal {
     const HAS_ECDSA: bool = true;
 
     fn ecdsa_generate(&mut self) -> StmScalar {
-        let d = Zeroizing::new(self.random_p256_scalar());
+        let d = Zeroizing::new(random_scalar(self, &P256_ORDER_BYTES));
         StmScalar(bytes_to_words(&d))
     }
 
@@ -55,7 +39,7 @@ impl EcdsaPrimitives<P256> for Stm32wba55Cal {
         // A genuinely unusable nonce (r or s reducing to zero) has probability about 2^-256, so
         // repeated failures mean the hardware is faulty rather than unlucky.
         for _ in 0..SIGN_MAX_ATTEMPTS {
-            let k_bytes = Zeroizing::new(self.random_p256_scalar());
+            let k_bytes = Zeroizing::new(random_scalar(self, &P256_ORDER_BYTES));
             let k = Zeroizing::new(bytes_to_words(&k_bytes));
             if let Some((r, s)) = self.pka_ecdsa_sign(d, &k, &h) {
                 return (StmScalar(r), StmScalar(s));

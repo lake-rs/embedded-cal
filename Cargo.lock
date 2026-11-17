@@ -601,6 +601,7 @@ version = "0.2.0"
 dependencies = [
  "hax-lib 0.4.0",
  "rand_core",
+ "zeroize",
 ]
 
 [[package]]
