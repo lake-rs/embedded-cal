@@ -127,6 +127,20 @@ mod tests {
     }
 
     #[test]
+    fn test_ecdsa_plumbing_p256(state: &mut super::TestState) {
+        for v in testvectors::ecdsa::P256_PLUMBING {
+            v.test_plumbing_p256(state.cal.as_mut().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_ecdsa_plumbing_p384(state: &mut super::TestState) {
+        for v in testvectors::ecdsa::P384_PLUMBING {
+            v.test_plumbing_p384(state.cal.as_mut().unwrap());
+        }
+    }
+
+    #[test]
     fn test_ec_plumbing_p256(state: &mut super::TestState) {
         for v in testvectors::dh::RFC5903_P256 {
             v.test_plumbing_p256(state.cal.as_mut().unwrap());

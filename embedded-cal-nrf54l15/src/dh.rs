@@ -17,13 +17,8 @@ const CRACEN_PKE_RAM_BASE: u32 = 0x5180_8000;
 const CRACEN_PKE_RAM_END: u32 = crate::microcode::BASE;
 // Slot size equals HWCONFIG.MAXOPSIZE (= 0x200 on nRF54L15); see sdk-nrf pk_baremetal.c.
 const SLOT_SIZE: u32 = 0x200;
-// PKECOMMAND.OPBYTESM1 encodes operand width as (bytes − 1); P-256 uses 32-byte scalars → 31.
+// PKECOMMAND.OPBYTESM1 encodes operand width as (bytes − 1); X25519 uses 32-byte scalars → 31.
 const BYTES_M1: u16 = 31;
-
-// In big-endian (ECC) mode the BA414ep right-aligns operands within the slot:
-// a 32-byte P-256 value is placed at byte offset (512 - 32) = 480 within its slot.
-// See sx_pk_list_ecc_inslots() in sdk-nrf pkhardware_ba414e.c: `cryptoram += slot_size - op_size`.
-const P256_SLOT_OFFSET: u32 = SLOT_SIZE - 32;
 
 // Slot indices for ECC point multiplication (PK_OP_ECC_PTMUL = 0x22, sdk-nrf regs_commands.h).
 // Derived from sdk-nrf op_slots.h: OP_SLOT_ECC_PTMUL_K/P/R and the BA414ep pointer registers.
@@ -39,7 +34,7 @@ const SLOT_POINT_Y: u32 = 13;
 const SLOT_RESULT_X: u32 = 10;
 const SLOT_RESULT_Y: u32 = 11;
 
-// Opcodes for full ECDSA-P256 sign/verify
+// Opcodes for full ECDSA sign/verify (on P-256 or P-384, picked by SELCURVE)
 //
 // Their operand slots are fixed by the microcode
 const PKE_OPCODE_ECDSA_SIGN: u8 = 0x30;
@@ -81,10 +76,29 @@ const MG_SLOT_OUT: u32 = 10;
 // OPBYTESM1 for X448: 56-byte scalars → 55.
 const X448_BYTES_M1: u16 = 55;
 
-// Big-endian slot address (P-256): data at end of slot.
+// Big-endian slot address (short-Weierstrass curves) of an `op_size` byte operand.
+//
+// In big-endian (ECC) mode the BA414ep right-aligns operands within the slot: a 32-byte P-256
+// value is placed at byte offset (512 - 32) = 480 within its slot, a 48-byte P-384 value at 464.
+// See sx_pk_list_ecc_inslots() in sdk-nrf pkhardware_ba414e.c: `cryptoram += slot_size - op_size`.
 #[inline(always)]
-fn slot_addr(slot: u32) -> u32 {
-    CRACEN_PKE_RAM_BASE + slot * SLOT_SIZE + P256_SLOT_OFFSET
+fn slot_addr(slot: u32, op_size: usize) -> u32 {
+    CRACEN_PKE_RAM_BASE + slot * SLOT_SIZE + SLOT_SIZE - op_size as u32
+}
+
+// PKECOMMAND.OPBYTESM1 for an `N` byte operand.
+const fn bytes_m1<const N: usize>() -> u16 {
+    N as u16 - 1
+}
+
+/// Zeroes the `N` byte big-endian operand in `slot`.
+///
+/// # Safety
+/// `slot` must be a slot index within PKE RAM.
+unsafe fn zero_slot<const N: usize>(slot: u32) {
+    for i in 0..(N / 4) as u32 {
+        unsafe { pke_ram_word(slot_addr(slot, N) + i * 4).write_value(0u32) };
+    }
 }
 
 // Little-endian slot address (Montgomery curves): data at start of slot.
@@ -246,21 +260,24 @@ impl super::Nrf54l15Cal {
         while self.cracen_core.ikg().status().read().ctrdrbgbusy() {}
     }
 
-    // P-256 short-Weierstrass scalar multiplication on the CRACEN BA414ep PKE engine.
+    // Short-Weierstrass scalar multiplication on the CRACEN BA414ep PKE engine, on the curve
+    // `selcurve` with `N` byte operands (P-256: 32, P-384: 48). Both curves have their parameters
+    // built into the engine, so none are loaded.
     // `scalar`, `px`, `py` are big-endian byte arrays; returns the resulting affine point (rx, ry)
     // also in big-endian. Zeroes the scalar slot in PKE RAM before returning.
-    pub(super) fn cracen_p256_mult(
+    pub(super) fn cracen_weierstrass_mult<const N: usize>(
         &mut self,
-        scalar: &[u8; 32],
-        px: &[u8; 32],
-        py: &[u8; 32],
-    ) -> ([u8; 32], [u8; 32]) {
+        selcurve: Selcurve,
+        scalar: &[u8; N],
+        px: &[u8; N],
+        py: &[u8; N],
+    ) -> ([u8; N], [u8; N]) {
         self.wait_pk_ready();
 
         self.cracen_core.pk().command().write(|w| {
             w.set_opeaddr(PKE_OPCODE_ECC_MULT);
-            w.set_opbytesm1(BYTES_M1);
-            w.set_selcurve(Selcurve::P256);
+            w.set_opbytesm1(bytes_m1::<N>());
+            w.set_selcurve(selcurve);
             w.set_swapbytes(Swapbytes::SWAPPED);
         });
 
@@ -268,9 +285,9 @@ impl super::Nrf54l15Cal {
 
         // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
         unsafe {
-            write_pke_le(slot_addr(SLOT_SCALAR), scalar);
-            write_pke_le(slot_addr(SLOT_POINT_X), px);
-            write_pke_le(slot_addr(SLOT_POINT_Y), py);
+            write_pke_le(slot_addr(SLOT_SCALAR, N), scalar);
+            write_pke_le(slot_addr(SLOT_POINT_X, N), px);
+            write_pke_le(slot_addr(SLOT_POINT_Y, N), py);
         }
 
         self.cracen_core.pk().pointers().write(|w| {
@@ -294,16 +311,14 @@ impl super::Nrf54l15Cal {
             status.failptr(),
         );
 
-        let mut rx = [0u8; 32];
-        let mut ry = [0u8; 32];
+        let mut rx = [0u8; N];
+        let mut ry = [0u8; N];
         // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
         unsafe {
-            read_pke_le(slot_addr(SLOT_RESULT_X), &mut rx);
-            read_pke_le(slot_addr(SLOT_RESULT_Y), &mut ry);
+            read_pke_le(slot_addr(SLOT_RESULT_X, N), &mut rx);
+            read_pke_le(slot_addr(SLOT_RESULT_Y, N), &mut ry);
             // Zero the private scalar from PKE RAM before returning.
-            for i in 0..8u32 {
-                pke_ram_word(slot_addr(SLOT_SCALAR) + i * 4).write_value(0u32);
-            }
+            zero_slot::<N>(SLOT_SCALAR);
         }
         (rx, ry)
     }
@@ -392,11 +407,12 @@ impl super::Nrf54l15Cal {
         )
     }
 
-    // 64-bit blinding factor right-aligned in a 32-byte big-endian operand: odd, with bits 63..61
-    // forced to 0b001 for constant-time execution (sdk-nrf pkhardware_ba414e.c: sx_pk_blind).
-    fn random_blind_factor(&mut self) -> [u8; 32] {
-        let mut operand = [0u8; 32];
-        let factor = &mut operand[24..];
+    // 64-bit blinding factor right-aligned in an `N` byte big-endian operand: odd, with bits
+    // 63..61 forced to 0b001 for constant-time execution (sdk-nrf pkhardware_ba414e.c:
+    // sx_pk_blind).
+    fn random_blind_factor<const N: usize>(&mut self) -> [u8; N] {
+        let mut operand = [0u8; N];
+        let factor = &mut operand[N - 8..];
         self.fill_bytes(factor);
         factor[0] &= 0x3F;
         factor[0] |= 0x20;
@@ -404,24 +420,26 @@ impl super::Nrf54l15Cal {
         operand
     }
 
-    // Full ECDSA-P256 signature generation on the CRACEN BA414ep PKE engine (PK_OP_ECDSA_GEN).
+    // Full ECDSA signature generation on the CRACEN BA414ep PKE engine (PK_OP_ECDSA_GEN), on the
+    // curve `selcurve` with `N` byte operands.
     // `d` (private scalar), `k` (per-signature nonce), and `h` (message digest) are big-endian
     // byte arrays. Returns `None` if the hardware reports the nonce was unusable (it has no
     // modular inverse, or the resulting `r`/`s` component reduced to zero); per FIPS 186-5's
     // signature generation algorithm, the caller should resample `k` and retry. Zeroes the
     // private scalar slot in PKE RAM before returning either way.
-    pub(super) fn cracen_ecdsa_sign(
+    pub(super) fn cracen_ecdsa_sign<const N: usize>(
         &mut self,
-        d: &[u8; 32],
-        k: &[u8; 32],
-        h: &[u8; 32],
-    ) -> Option<([u8; 32], [u8; 32])> {
+        selcurve: Selcurve,
+        d: &[u8; N],
+        k: &[u8; N],
+        h: &[u8; N],
+    ) -> Option<([u8; N], [u8; N])> {
         self.wait_pk_ready();
 
         self.cracen_core.pk().command().write(|w| {
             w.set_opeaddr(PKE_OPCODE_ECDSA_SIGN);
-            w.set_opbytesm1(BYTES_M1);
-            w.set_selcurve(Selcurve::P256);
+            w.set_opbytesm1(bytes_m1::<N>());
+            w.set_selcurve(selcurve);
             w.set_swapbytes(Swapbytes::SWAPPED);
             // Blind the nonce and projective coordinates (matches sdk-nrf's
             // SX_PK_OP_FLAGS_ECC_CM countermeasure flags declared on CMD_ECDSA_GEN).
@@ -433,10 +451,10 @@ impl super::Nrf54l15Cal {
 
         // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
         unsafe {
-            write_pke_le(slot_addr(SLOT_ECDSA_SGN_D), d);
-            write_pke_le(slot_addr(SLOT_ECDSA_SGN_K), k);
-            write_pke_le(slot_addr(SLOT_ECDSA_SGN_H), h);
-            write_pke_le(slot_addr(SLOT_BLIND), &self.random_blind_factor());
+            write_pke_le(slot_addr(SLOT_ECDSA_SGN_D, N), d);
+            write_pke_le(slot_addr(SLOT_ECDSA_SGN_K, N), k);
+            write_pke_le(slot_addr(SLOT_ECDSA_SGN_H, N), h);
+            write_pke_le(slot_addr(SLOT_BLIND, N), &self.random_blind_factor::<N>());
         }
 
         self.cracen_core.pk().control().write(|w| {
@@ -461,42 +479,42 @@ impl super::Nrf54l15Cal {
         let result = if unusable_nonce {
             None
         } else {
-            let mut r = [0u8; 32];
-            let mut s = [0u8; 32];
+            let mut r = [0u8; N];
+            let mut s = [0u8; N];
             // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
             unsafe {
-                read_pke_le(slot_addr(SLOT_ECDSA_SGN_R), &mut r);
-                read_pke_le(slot_addr(SLOT_ECDSA_SGN_S), &mut s);
+                read_pke_le(slot_addr(SLOT_ECDSA_SGN_R, N), &mut r);
+                read_pke_le(slot_addr(SLOT_ECDSA_SGN_S, N), &mut s);
             }
             Some((r, s))
         };
 
         // Safety: slot address is derived from a slot constant, statically in PKE RAM range;
         unsafe {
-            for i in 0..8u32 {
-                pke_ram_word(slot_addr(SLOT_ECDSA_SGN_D) + i * 4).write_value(0u32);
-            }
+            zero_slot::<N>(SLOT_ECDSA_SGN_D);
         }
         result
     }
 
-    // Full ECDSA-P256 signature verification on the CRACEN BA414ep PKE engine (PK_OP_ECDSA_VER).
+    // Full ECDSA signature verification on the CRACEN BA414ep PKE engine (PK_OP_ECDSA_VER), on
+    // the curve `selcurve` with `N` byte operands.
     // `qx`/`qy` (public key), `r`/`s` (signature), and `h` (message digest) are big-endian byte
     // arrays.
-    pub(super) fn cracen_ecdsa_verify(
+    pub(super) fn cracen_ecdsa_verify<const N: usize>(
         &mut self,
-        qx: &[u8; 32],
-        qy: &[u8; 32],
-        h: &[u8; 32],
-        r: &[u8; 32],
-        s: &[u8; 32],
+        selcurve: Selcurve,
+        qx: &[u8; N],
+        qy: &[u8; N],
+        h: &[u8; N],
+        r: &[u8; N],
+        s: &[u8; N],
     ) -> Result<(), embedded_cal::SignatureInvalid> {
         self.wait_pk_ready();
 
         self.cracen_core.pk().command().write(|w| {
             w.set_opeaddr(PKE_OPCODE_ECDSA_VERIFY);
-            w.set_opbytesm1(BYTES_M1);
-            w.set_selcurve(Selcurve::P256);
+            w.set_opbytesm1(bytes_m1::<N>());
+            w.set_selcurve(selcurve);
             w.set_swapbytes(Swapbytes::SWAPPED);
         });
 
@@ -504,11 +522,11 @@ impl super::Nrf54l15Cal {
 
         // Safety: slot addresses are derived from slot constants, statically in PKE RAM range;
         unsafe {
-            write_pke_le(slot_addr(SLOT_ECDSA_VER_QX), qx);
-            write_pke_le(slot_addr(SLOT_ECDSA_VER_QY), qy);
-            write_pke_le(slot_addr(SLOT_ECDSA_VER_R), r);
-            write_pke_le(slot_addr(SLOT_ECDSA_VER_S), s);
-            write_pke_le(slot_addr(SLOT_ECDSA_VER_H), h);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_QX, N), qx);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_QY, N), qy);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_R, N), r);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_S, N), s);
+            write_pke_le(slot_addr(SLOT_ECDSA_VER_H, N), h);
         }
 
         self.cracen_core.pk().control().write(|w| {

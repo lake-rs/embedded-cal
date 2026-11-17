@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 use embedded_cal::SignatureInvalid;
-use embedded_cal::plumbing::ec::P256;
+use embedded_cal::plumbing::ec::{P256, P384};
 use embedded_cal::plumbing::ecdsa::EcdsaPrimitives;
 use embedded_cal::util::p256::{P256_ORDER, bytes_to_words, ge};
+use nrf_pac::cracencore::vals::Selcurve;
 use rand_core::Rng as _;
 use zeroize::Zeroizing;
 
@@ -14,19 +15,51 @@ use super::dh_plumbing::{NrfPoint, NrfScalar};
 /// Number of fresh nonces tried before signing gives up.
 const SIGN_MAX_ATTEMPTS: usize = 4;
 
+/// Whether a big-endian P-256 scalar is in `1..n`.
+fn p256_in_scalar_range(scalar: &[u8; 32]) -> bool {
+    let w = Zeroizing::new(bytes_to_words(scalar));
+    *w != [0u32; 8] && !ge(&w, &P256_ORDER)
+}
+
 impl Nrf54l15Cal {
-    /// Draws a scalar uniformly from `1..n` by rejection sampling.
+    /// Draws an `N` byte scalar uniformly from `1..n` by rejection sampling, where `in_range`
+    /// tells whether a candidate is in `1..n`.
     ///
-    /// The working buffers are wiped on return; the caller owns (and must wipe) the result.
-    fn random_p256_scalar(&mut self) -> [u8; 32] {
-        let mut scalar = Zeroizing::new([0u8; 32]);
+    /// The working buffer is wiped on return; the caller owns (and must wipe) the result.
+    fn random_scalar<const N: usize>(&mut self, in_range: fn(&[u8; N]) -> bool) -> [u8; N] {
+        let mut scalar = Zeroizing::new([0u8; N]);
         loop {
             self.fill_bytes(&mut *scalar);
-            let w = Zeroizing::new(bytes_to_words(&scalar));
-            if *w != [0u32; 8] && !ge(&w, &P256_ORDER) {
+            if in_range(&scalar) {
                 return *scalar;
             }
         }
+    }
+
+    /// ECDSA signing with `N` byte operands on `selcurve`, shared by all curves.
+    fn ecdsa_sign_on<const N: usize>(
+        &mut self,
+        selcurve: Selcurve,
+        in_range: fn(&[u8; N]) -> bool,
+        d: &[u8; N],
+        h: &[u8],
+    ) -> ([u8; N], [u8; N]) {
+        let h: &[u8; N] = h
+            .try_into()
+            .expect("digest length does not match the curve");
+        // An out-of-range `d` makes every PKE attempt fail, which would otherwise look like an
+        // endless run of unusable nonces.
+        assert!(in_range(d), "ECDSA private scalar not in 1..n");
+        // A genuinely unusable nonce (r or s reducing to zero) has probability about 2^-256 (or
+        // less), so repeated failures mean the hardware is faulty rather than unlucky.
+        for _ in 0..SIGN_MAX_ATTEMPTS {
+            // Wiped on every exit path; a leaked `k` reveals `d` from one signature.
+            let k = Zeroizing::new(self.random_scalar(in_range));
+            if let Some(signature) = self.cracen_ecdsa_sign(selcurve, d, &k, h) {
+                return signature;
+            }
+        }
+        panic!("CRACEN ECDSA sign failed repeatedly");
     }
 }
 
@@ -36,29 +69,12 @@ impl EcdsaPrimitives<P256> for Nrf54l15Cal {
     const HAS_ECDSA: bool = true;
 
     fn ecdsa_generate(&mut self) -> NrfScalar<P256> {
-        self.random_p256_scalar().into()
+        self.random_scalar(p256_in_scalar_range).into()
     }
 
     fn ecdsa_sign(&mut self, d: &NrfScalar<P256>, h: &[u8]) -> (NrfScalar<P256>, NrfScalar<P256>) {
-        let h: &[u8; 32] = h.try_into().expect("P-256 digests are 32 bytes");
-        let d: &[u8; 32] = d.as_ref();
-        // An out-of-range `d` makes every PKE attempt fail, which would otherwise look like an
-        // endless run of unusable nonces.
-        let d_words = Zeroizing::new(bytes_to_words(d));
-        assert!(
-            *d_words != [0u32; 8] && !ge(&d_words, &P256_ORDER),
-            "ECDSA private scalar not in 1..n"
-        );
-        // A genuinely unusable nonce (r or s reducing to zero) has probability about 2^-256, so
-        // repeated failures mean the hardware is faulty rather than unlucky.
-        for _ in 0..SIGN_MAX_ATTEMPTS {
-            // Wiped on every exit path; a leaked `k` reveals `d` from one signature.
-            let k = Zeroizing::new(self.random_p256_scalar());
-            if let Some((r, s)) = self.cracen_ecdsa_sign(d, &k, h) {
-                return (r.into(), s.into());
-            }
-        }
-        panic!("CRACEN ECDSA sign failed repeatedly");
+        let (r, s) = self.ecdsa_sign_on(Selcurve::P256, p256_in_scalar_range, d.as_ref(), h);
+        (r.into(), s.into())
     }
 
     fn ecdsa_verify(
@@ -68,7 +84,51 @@ impl EcdsaPrimitives<P256> for Nrf54l15Cal {
         r: &NrfScalar<P256>,
         s: &NrfScalar<P256>,
     ) -> Result<(), SignatureInvalid> {
-        let h: &[u8; 32] = h.try_into().expect("P-256 digests are 32 bytes");
-        self.cracen_ecdsa_verify(q.x.as_ref(), q.y.as_ref(), h, r.as_ref(), s.as_ref())
+        let h = h.try_into().expect("P-256 digests are 32 bytes");
+        self.cracen_ecdsa_verify(
+            Selcurve::P256,
+            q.x.as_ref(),
+            q.y.as_ref(),
+            h,
+            r.as_ref(),
+            s.as_ref(),
+        )
+    }
+}
+
+impl EcdsaPrimitives<P384> for Nrf54l15Cal {
+    const HAS_ECDSA: bool = true;
+
+    fn ecdsa_generate(&mut self) -> NrfScalar<P384> {
+        self.random_scalar(embedded_cal::util::p384::in_scalar_range)
+            .into()
+    }
+
+    fn ecdsa_sign(&mut self, d: &NrfScalar<P384>, h: &[u8]) -> (NrfScalar<P384>, NrfScalar<P384>) {
+        let (r, s) = self.ecdsa_sign_on(
+            Selcurve::P384,
+            embedded_cal::util::p384::in_scalar_range,
+            d.as_ref(),
+            h,
+        );
+        (r.into(), s.into())
+    }
+
+    fn ecdsa_verify(
+        &mut self,
+        q: &NrfPoint<P384>,
+        h: &[u8],
+        r: &NrfScalar<P384>,
+        s: &NrfScalar<P384>,
+    ) -> Result<(), SignatureInvalid> {
+        let h = h.try_into().expect("P-384 digests are 48 bytes");
+        self.cracen_ecdsa_verify(
+            Selcurve::P384,
+            q.x.as_ref(),
+            q.y.as_ref(),
+            h,
+            r.as_ref(),
+            s.as_ref(),
+        )
     }
 }

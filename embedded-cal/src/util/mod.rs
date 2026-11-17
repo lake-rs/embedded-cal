@@ -5,6 +5,7 @@
 pub mod aesccm;
 pub mod montgomery;
 pub mod p256;
+pub mod p384;
 
 /// A 2-variant generic enum, useful for writing implementations that provide some own variants on
 /// those passed on directly to a base.
