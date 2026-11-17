@@ -193,7 +193,9 @@ impl embedded_cal::HashProvider for super::Nrf54l15Cal {
 
         // FIPS 202 multi-rate padding: place 0x06 after the last message byte, then
         // OR 0x80 into the last byte of the rate block. When buf_len == rate - 1
-        // both writes land on the same byte, producing 0x86.
+        // both writes land on the same byte, producing 0x86. The bytes in between
+        // must be zero, so clear them here rather than relying on earlier resets.
+        instance.buf[instance.buf_len..rate].fill(0);
         instance.buf[instance.buf_len] = 0x06;
         instance.buf[rate - 1] |= 0x80;
 
