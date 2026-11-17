@@ -273,8 +273,10 @@ impl plumbing::Plumbing for EmptyCal {}
 
 impl plumbing::hash::Hash for EmptyCal {}
 
-impl plumbing::ecdsa::Ecdsa for EmptyCal {
-    const SUPPORTED: bool = false;
+impl plumbing::ecdsa::Ecdsa for EmptyCal {}
+
+impl<C: plumbing::ec::Curve> plumbing::ecdsa::EcdsaPrimitives<C> for EmptyCal {
+    const HAS_ECDSA: bool = false;
 }
 
 impl plumbing::hash::Sha2Short for EmptyCal {
@@ -302,10 +304,14 @@ impl plumbing::ec::Ec for EmptyCal {
     const MAX_SCALAR_LENGTH: usize = 0;
 
     type PrimitivesP256 = Self;
+    type PrimitivesP384 = Self;
     type PrimitivesX25519 = Self;
     type PrimitivesX448 = Self;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
+        self
+    }
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
         self
     }
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {

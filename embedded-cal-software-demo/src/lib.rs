@@ -68,11 +68,16 @@ impl<EC: ExtenderConfig> embedded_cal::plumbing::ec::Ec for Extender<EC> {
         <EC::Base as embedded_cal::plumbing::ec::Ec>::MAX_SCALAR_LENGTH;
 
     type PrimitivesP256 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesP256;
+    type PrimitivesP384 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesP384;
     type PrimitivesX25519 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesX25519;
     type PrimitivesX448 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesX448;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
         self.0.p256()
+    }
+
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        self.0.p384()
     }
 
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
@@ -86,30 +91,6 @@ impl<EC: ExtenderConfig> embedded_cal::plumbing::ec::Ec for Extender<EC> {
 
 impl<EC: ExtenderConfig> embedded_cal::plumbing::hash::Hash for Extender<EC> {}
 
-impl<EC: ExtenderConfig> embedded_cal::plumbing::ecdsa::Ecdsa for Extender<EC> {
-    const SUPPORTED: bool = <EC::Base as embedded_cal::plumbing::ecdsa::Ecdsa>::SUPPORTED;
-
-    fn ecdsa_p256_generate(&mut self) -> embedded_cal::plumbing::ec::P256ScalarOf<Self> {
-        self.0.ecdsa_p256_generate()
-    }
-
-    fn ecdsa_p256_sign(
-        &mut self,
-        d: &embedded_cal::plumbing::ec::P256ScalarOf<Self>,
-        h: &[u8; 32],
-    ) -> ([u8; 32], [u8; 32]) {
-        self.0.ecdsa_p256_sign(d, h)
-    }
-
-    fn ecdsa_p256_verify(
-        &mut self,
-        q: &embedded_cal::plumbing::ec::P256PointOf<Self>,
-        h: &[u8; 32],
-        r: &[u8; 32],
-        s: &[u8; 32],
-    ) -> Result<(), embedded_cal::SignatureInvalid> {
-        self.0.ecdsa_p256_verify(q, h, r, s)
-    }
-}
+impl<EC: ExtenderConfig> embedded_cal::plumbing::ecdsa::Ecdsa for Extender<EC> {}
 
 impl<EC: ExtenderConfig> embedded_cal::plumbing::Plumbing for Extender<EC> {}

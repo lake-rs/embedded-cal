@@ -12,6 +12,11 @@ impl Ec for Stm32wba55Cal {
         self
     }
 
+    type PrimitivesP384 = embedded_cal::empty::EmptyCal;
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        &mut self.empty
+    }
+
     type PrimitivesX25519 = embedded_cal::empty::EmptyCal;
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
         &mut self.empty

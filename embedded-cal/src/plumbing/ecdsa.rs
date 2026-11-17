@@ -5,26 +5,41 @@
 //! message.
 //!
 //! Hashing the message and encoding are left to the caller; deriving a public key is done through
-//! [`super::ec::EcPrimitives::multiply_scalar_point()`].
+//! [`EcPrimitives::multiply_scalar_point()`].
 //!
-//! Keys use the [`Scalar`][super::ec::EcPrimitives::Scalar] and
-//! [`Point`][super::ec::EcPrimitives::Point] types of the implementation's
-//! [`Ec`] P-256 primitives, so a back-end can keep private keys resident in
-//! hardware rather than exposing their bytes.
+//! Like the [`ec`][super::ec] plumbing, this is split by curve: ECDSA is an extension of each
+//! curve's [`EcPrimitives`], so keys and signature components are that curve's
+//! [`Scalar`][EcPrimitives::Scalar] and [`Point`][EcPrimitives::Point] types, and a back-end can
+//! keep private keys resident in hardware rather than exposing their bytes. Callers reach it
+//! through the same accessors, e.g. `cal.p256().ecdsa_sign(…)`.
+//!
+//! Only the short-Weierstrass curves of [`Ec`] take part. EdDSA (on the Edwards forms of
+//! Curve25519 and Curve448) is a different algorithm and would get its own trait.
 
-use super::ec::{Ec, P256PointOf, P256ScalarOf};
+use super::ec::{Curve, Ec, EcPrimitives, P256, P384};
 
-/// Trait indicating that there is hardware support for ECDSA on P-256.
+/// Trait indicating which curves of an [`Ec`] implementation provide ECDSA.
 ///
-/// All byte arrays are big-endian.
-pub trait Ecdsa: Ec {
-    /// Whether this trait is actually supported. See [`Plumbing`][super::Plumbing] docs for
-    /// rationale.
-    const SUPPORTED: bool;
+/// This has no items of its own: whether ECDSA is usable on a curve is
+/// [`EcdsaPrimitives::HAS_ECDSA`] of that curve's primitives. (Like [`Ec`], it therefore has no
+/// overall `SUPPORTED` constant).
+pub trait Ecdsa:
+    Ec<PrimitivesP256: EcdsaPrimitives<P256>, PrimitivesP384: EcdsaPrimitives<P384>>
+{
+}
+
+/// ECDSA on the curve `C`, using the [`EcPrimitives`] types of that curve.
+///
+/// All byte slices are big-endian. Digests must be exactly as long as the curve's scalars (32
+/// bytes for P-256, 48 bytes for P-384), which is the length of the hash function the curve is
+/// paired with in COSE; implementations may panic on other lengths.
+pub trait EcdsaPrimitives<C: Curve>: EcPrimitives<C> {
+    /// Indicates whether the ECDSA functions are available (otherwise they panic).
+    const HAS_ECDSA: bool;
 
     /// Generates a fresh private scalar `d`, uniformly random in `1..n`.
-    fn ecdsa_p256_generate(&mut self) -> P256ScalarOf<Self> {
-        panic!("user disregarded SUPPORTED=false")
+    fn ecdsa_generate(&mut self) -> Self::Scalar {
+        panic!("user disregarded HAS_ECDSA=false")
     }
 
     /// Produces a raw `(r, s)` ECDSA signature over digest `h` with private scalar `d`.
@@ -33,20 +48,23 @@ pub trait Ecdsa: Ec {
     ///
     /// The implementation picks the per-signature nonce itself, and retries with a new one when
     /// the nonce turns out to be unusable.
-    fn ecdsa_p256_sign(&mut self, d: &P256ScalarOf<Self>, h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    fn ecdsa_sign(&mut self, d: &Self::Scalar, h: &[u8]) -> (Self::Scalar, Self::Scalar) {
         let _ = (d, h);
-        panic!("user disregarded SUPPORTED=false")
+        panic!("user disregarded HAS_ECDSA=false")
     }
 
     /// Verifies a raw `(r, s)` ECDSA signature over digest `h` against public key `q`.
-    fn ecdsa_p256_verify(
+    ///
+    /// `r` and `s` must be in `1..n`; implementations may panic otherwise (callers that take
+    /// them from untrusted input check this first).
+    fn ecdsa_verify(
         &mut self,
-        q: &P256PointOf<Self>,
-        h: &[u8; 32],
-        r: &[u8; 32],
-        s: &[u8; 32],
+        q: &Self::Point,
+        h: &[u8],
+        r: &Self::Scalar,
+        s: &Self::Scalar,
     ) -> Result<(), crate::SignatureInvalid> {
         let _ = (q, h, r, s);
-        panic!("user disregarded SUPPORTED=false")
+        panic!("user disregarded HAS_ECDSA=false")
     }
 }

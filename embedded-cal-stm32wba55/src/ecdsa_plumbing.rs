@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 use embedded_cal::SignatureInvalid;
-use embedded_cal::util::p256::{P256_ORDER, bytes_to_words, ge, words_to_bytes};
+use embedded_cal::plumbing::ec::P256;
+use embedded_cal::plumbing::ecdsa::EcdsaPrimitives;
+use embedded_cal::util::p256::{P256_ORDER, bytes_to_words, ge};
 use rand_core::Rng as _;
 use zeroize::Zeroizing;
 
@@ -28,15 +30,18 @@ impl Stm32wba55Cal {
     }
 }
 
-impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {
-    const SUPPORTED: bool = true;
+impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {}
 
-    fn ecdsa_p256_generate(&mut self) -> StmScalar {
+impl EcdsaPrimitives<P256> for Stm32wba55Cal {
+    const HAS_ECDSA: bool = true;
+
+    fn ecdsa_generate(&mut self) -> StmScalar {
         let d = Zeroizing::new(self.random_p256_scalar());
         StmScalar(bytes_to_words(&d))
     }
 
-    fn ecdsa_p256_sign(&mut self, d: &StmScalar, h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    fn ecdsa_sign(&mut self, d: &StmScalar, h: &[u8]) -> (StmScalar, StmScalar) {
+        let h: &[u8; 32] = h.try_into().expect("P-256 digests are 32 bytes");
         // `StmScalar` wipes itself on drop, and `k` is wrapped in `Zeroizing` so its stack copies
         // are wiped on every exit path. A leaked `k` reveals `d` from one signature.
         let d = &d.0;
@@ -53,25 +58,20 @@ impl embedded_cal::plumbing::ecdsa::Ecdsa for Stm32wba55Cal {
             let k_bytes = Zeroizing::new(self.random_p256_scalar());
             let k = Zeroizing::new(bytes_to_words(&k_bytes));
             if let Some((r, s)) = self.pka_ecdsa_sign(d, &k, &h) {
-                return (words_to_bytes(&r), words_to_bytes(&s));
+                return (StmScalar(r), StmScalar(s));
             }
         }
         panic!("PKA ECDSA sign failed repeatedly");
     }
 
-    fn ecdsa_p256_verify(
+    fn ecdsa_verify(
         &mut self,
         q: &StmPoint,
-        h: &[u8; 32],
-        r: &[u8; 32],
-        s: &[u8; 32],
+        h: &[u8],
+        r: &StmScalar,
+        s: &StmScalar,
     ) -> Result<(), SignatureInvalid> {
-        self.pka_ecdsa_verify(
-            &q.x.0,
-            &q.y.0,
-            &bytes_to_words(h),
-            &bytes_to_words(r),
-            &bytes_to_words(s),
-        )
+        let h: &[u8; 32] = h.try_into().expect("P-256 digests are 32 bytes");
+        self.pka_ecdsa_verify(&q.x.0, &q.y.0, &bytes_to_words(h), &r.0, &s.0)
     }
 }

@@ -3,6 +3,7 @@
 
 use embedded_cal::SignatureInvalid;
 use embedded_cal::plumbing::ec::P256;
+use embedded_cal::plumbing::ecdsa::EcdsaPrimitives;
 use embedded_cal::util::p256::{P256_ORDER, bytes_to_words, ge};
 use rand_core::Rng as _;
 use zeroize::Zeroizing;
@@ -29,14 +30,17 @@ impl Nrf54l15Cal {
     }
 }
 
-impl embedded_cal::plumbing::ecdsa::Ecdsa for Nrf54l15Cal {
-    const SUPPORTED: bool = true;
+impl embedded_cal::plumbing::ecdsa::Ecdsa for Nrf54l15Cal {}
 
-    fn ecdsa_p256_generate(&mut self) -> NrfScalar<P256> {
+impl EcdsaPrimitives<P256> for Nrf54l15Cal {
+    const HAS_ECDSA: bool = true;
+
+    fn ecdsa_generate(&mut self) -> NrfScalar<P256> {
         self.random_p256_scalar().into()
     }
 
-    fn ecdsa_p256_sign(&mut self, d: &NrfScalar<P256>, h: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    fn ecdsa_sign(&mut self, d: &NrfScalar<P256>, h: &[u8]) -> (NrfScalar<P256>, NrfScalar<P256>) {
+        let h: &[u8; 32] = h.try_into().expect("P-256 digests are 32 bytes");
         let d: &[u8; 32] = d.as_ref();
         // An out-of-range `d` makes every PKE attempt fail, which would otherwise look like an
         // endless run of unusable nonces.
@@ -50,20 +54,21 @@ impl embedded_cal::plumbing::ecdsa::Ecdsa for Nrf54l15Cal {
         for _ in 0..SIGN_MAX_ATTEMPTS {
             // Wiped on every exit path; a leaked `k` reveals `d` from one signature.
             let k = Zeroizing::new(self.random_p256_scalar());
-            if let Some(signature) = self.cracen_ecdsa_sign(d, &k, h) {
-                return signature;
+            if let Some((r, s)) = self.cracen_ecdsa_sign(d, &k, h) {
+                return (r.into(), s.into());
             }
         }
         panic!("CRACEN ECDSA sign failed repeatedly");
     }
 
-    fn ecdsa_p256_verify(
+    fn ecdsa_verify(
         &mut self,
         q: &NrfPoint<P256>,
-        h: &[u8; 32],
-        r: &[u8; 32],
-        s: &[u8; 32],
+        h: &[u8],
+        r: &NrfScalar<P256>,
+        s: &NrfScalar<P256>,
     ) -> Result<(), SignatureInvalid> {
-        self.cracen_ecdsa_verify(q.x.as_ref(), q.y.as_ref(), h, r, s)
+        let h: &[u8; 32] = h.try_into().expect("P-256 digests are 32 bytes");
+        self.cracen_ecdsa_verify(q.x.as_ref(), q.y.as_ref(), h, r.as_ref(), s.as_ref())
     }
 }

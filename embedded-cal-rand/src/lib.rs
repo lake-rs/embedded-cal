@@ -110,12 +110,18 @@ impl<C: Ec, R> Ec for WithRng<C, R> {
 
     type PrimitivesP256 = C::PrimitivesP256;
 
+    type PrimitivesP384 = C::PrimitivesP384;
+
     type PrimitivesX25519 = C::PrimitivesX25519;
 
     type PrimitivesX448 = C::PrimitivesX448;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
         self.cal.p256()
+    }
+
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        self.cal.p384()
     }
 
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
@@ -130,29 +136,6 @@ impl<C: Ec, R> Ec for WithRng<C, R> {
 impl<C: embedded_cal::plumbing::ecdsa::Ecdsa, R> embedded_cal::plumbing::ecdsa::Ecdsa
     for WithRng<C, R>
 {
-    const SUPPORTED: bool = C::SUPPORTED;
-
-    fn ecdsa_p256_generate(&mut self) -> embedded_cal::plumbing::ec::P256ScalarOf<Self> {
-        self.cal.ecdsa_p256_generate()
-    }
-
-    fn ecdsa_p256_sign(
-        &mut self,
-        d: &embedded_cal::plumbing::ec::P256ScalarOf<Self>,
-        h: &[u8; 32],
-    ) -> ([u8; 32], [u8; 32]) {
-        self.cal.ecdsa_p256_sign(d, h)
-    }
-
-    fn ecdsa_p256_verify(
-        &mut self,
-        q: &embedded_cal::plumbing::ec::P256PointOf<Self>,
-        h: &[u8; 32],
-        r: &[u8; 32],
-        s: &[u8; 32],
-    ) -> Result<(), embedded_cal::SignatureInvalid> {
-        self.cal.ecdsa_p256_verify(q, h, r, s)
-    }
 }
 
 impl<C: Plumbing, R> Plumbing for WithRng<C, R> {}

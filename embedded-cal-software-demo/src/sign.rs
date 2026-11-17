@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
 //! ECDSA on P-256, hashing in software and leaving the curve operations to the
-//! [`Ecdsa`][embedded_cal::plumbing::ecdsa::Ecdsa] and [`Ec`] plumbing of the base.
+//! [`EcdsaPrimitives`] and [`EcPrimitives`] plumbing of the base's P-256 curve.
 
 use embedded_cal::{
     Cal, HashProvider, ImportError, SignProvider, SignatureInvalid,
     accessor::*,
     plumbing::{
         ec::{Ec, EcPrimitives, P256, P256PointOf, P256ScalarOf},
-        ecdsa::Ecdsa,
+        ecdsa::EcdsaPrimitives,
     },
     util::p256::{
         P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y_with_parity,
@@ -66,10 +66,10 @@ impl<EC: ExtenderConfig> embedded_cal::SignAlgorithm for SignAlgorithm<EC> {
     fn from_cose_number(alg: impl Into<i128>) -> Option<Self> {
         let alg: i128 = alg.into();
 
-        // Signing needs the SHA-256 implemented here, the base's ECDSA plumbing, and its P-256
-        // point multiplication to derive public keys.
+        // Signing needs the SHA-256 implemented here, the base's P-256 ECDSA plumbing, and its
+        // P-256 point multiplication to derive public keys.
         let supported = EC::IMPLEMENT_SHA2SHORT
-            && <EC::Base as Ecdsa>::SUPPORTED
+            && <<EC::Base as Ec>::PrimitivesP256 as EcdsaPrimitives<P256>>::HAS_ECDSA
             && <<EC::Base as Ec>::PrimitivesP256 as EcPrimitives<P256>>::HAS_MULTIPLY_SCALAR_POINT;
 
         match alg {
@@ -116,6 +116,14 @@ fn in_scalar_range(w: &[u8; 32]) -> bool {
     w != [0u32; 8] && !ge(&w, &P256_ORDER)
 }
 
+/// Exports a P-256 scalar (here: a signature component) into its fixed-size byte form.
+fn scalar_to_array<P: EcPrimitives<P256>>(p256: &mut P, scalar: &P::Scalar) -> [u8; 32] {
+    p256.export_scalar_bytes(scalar)
+        .as_ref()
+        .try_into()
+        .expect("P-256 scalars are 32 bytes")
+}
+
 impl<EC: ExtenderConfig> Extender<EC> {
     fn sha256(&mut self, message: &[u8]) -> [u8; 32] {
         HashProvider::hash(self, HashAlgorithm::Sha256, message)
@@ -134,7 +142,7 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
 
     fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
         match alg {
-            SignAlgorithm::EcdsaP256 => VisibleSecretKey::EcdsaP256(self.0.ecdsa_p256_generate()),
+            SignAlgorithm::EcdsaP256 => VisibleSecretKey::EcdsaP256(self.0.p256().ecdsa_generate()),
             SignAlgorithm::Direct(a) => VisibleSecretKey::Direct(self.0.sign().generate_visible(a)),
         }
     }
@@ -290,8 +298,12 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
         match private {
             SecretKey::EcdsaP256(d) => {
                 let digest = self.sha256(message);
-                let (r, s) = self.0.ecdsa_p256_sign(d, &digest);
-                Signature::EcdsaP256 { r, s }
+                let p256 = self.0.p256();
+                let (r, s) = p256.ecdsa_sign(d, &digest);
+                Signature::EcdsaP256 {
+                    r: scalar_to_array(p256, &r),
+                    s: scalar_to_array(p256, &s),
+                }
             }
             SecretKey::Direct(d) => Signature::Direct(self.0.sign().sign(d, message)),
         }
@@ -309,7 +321,11 @@ impl<EC: ExtenderConfig> SignProvider for Extender<EC> {
                     return Err(SignatureInvalid);
                 }
                 let digest = self.sha256(message);
-                self.0.ecdsa_p256_verify(q, &digest, r, s)
+                let p256 = self.0.p256();
+                // Both were range checked, so they are valid scalars of any implementation.
+                let r = p256.import_scalar_bytes(r).map_err(|_| SignatureInvalid)?;
+                let s = p256.import_scalar_bytes(s).map_err(|_| SignatureInvalid)?;
+                p256.ecdsa_verify(q, &digest, &r, &s)
             }
             (PublicKey::Direct(p), Signature::Direct(s)) => self.0.sign().verify(p, message, s),
             _ => Err(SignatureInvalid),

@@ -93,11 +93,15 @@ impl Ec for Nrf54l15Cal {
     const MAX_SCALAR_LENGTH: usize = 56;
 
     type PrimitivesP256 = Self;
+    type PrimitivesP384 = EmptyCal;
     type PrimitivesX25519 = Self;
     type PrimitivesX448 = Self;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
         self
+    }
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        &mut self.empty
     }
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
         self

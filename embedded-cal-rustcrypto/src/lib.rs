@@ -113,11 +113,16 @@ impl<Base: embedded_cal::Cal + embedded_cal::plumbing::ec::Ec> embedded_cal::plu
     const MAX_SCALAR_LENGTH: usize = Base::MAX_SCALAR_LENGTH;
 
     type PrimitivesP256 = Base::PrimitivesP256;
+    type PrimitivesP384 = Base::PrimitivesP384;
     type PrimitivesX25519 = Base::PrimitivesX25519;
     type PrimitivesX448 = Base::PrimitivesX448;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
         self.base.p256()
+    }
+
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        self.base.p384()
     }
 
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
@@ -132,29 +137,6 @@ impl<Base: embedded_cal::Cal + embedded_cal::plumbing::ec::Ec> embedded_cal::plu
 impl<Base: embedded_cal::Cal + embedded_cal::plumbing::ecdsa::Ecdsa>
     embedded_cal::plumbing::ecdsa::Ecdsa for RustcryptoCalExtender<Base>
 {
-    const SUPPORTED: bool = Base::SUPPORTED;
-
-    fn ecdsa_p256_generate(&mut self) -> embedded_cal::plumbing::ec::P256ScalarOf<Self> {
-        self.base.ecdsa_p256_generate()
-    }
-
-    fn ecdsa_p256_sign(
-        &mut self,
-        d: &embedded_cal::plumbing::ec::P256ScalarOf<Self>,
-        h: &[u8; 32],
-    ) -> ([u8; 32], [u8; 32]) {
-        self.base.ecdsa_p256_sign(d, h)
-    }
-
-    fn ecdsa_p256_verify(
-        &mut self,
-        q: &embedded_cal::plumbing::ec::P256PointOf<Self>,
-        h: &[u8; 32],
-        r: &[u8; 32],
-        s: &[u8; 32],
-    ) -> Result<(), embedded_cal::SignatureInvalid> {
-        self.base.ecdsa_p256_verify(q, h, r, s)
-    }
 }
 
 impl<Base: embedded_cal::Cal + embedded_cal::plumbing::Plumbing> embedded_cal::plumbing::Plumbing
