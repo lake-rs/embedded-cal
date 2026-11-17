@@ -107,6 +107,8 @@ pub struct HashState {
     state: Option<[u8; KECCAK_STATE_SIZE]>,
     // Partial block buffer; always contains bytes [0, buf_len).
     // Bytes [buf_len, MAX_RATE) are kept zeroed.
+    // FIXME: Buffering and padding are not hardware specific; move them into a SHA-3 plumbing
+    // trait (like plumbing::hash::Sha2Short) so this backend only absorbs full blocks.
     buf: [u8; MAX_RATE],
     buf_len: usize,
 }
