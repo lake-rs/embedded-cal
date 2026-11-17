@@ -151,7 +151,6 @@ impl super::Nrf54l15Cal {
         self.execute_cryptomaster_dma(&mut input_descriptors, &mut output_descriptors);
 
         instance.state = Some(new_state);
-        instance.buf = [0u8; MAX_RATE];
         instance.buf_len = 0;
     }
 }
