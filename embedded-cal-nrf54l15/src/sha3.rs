@@ -3,7 +3,7 @@
 
 use crate::descriptor::{DescriptorChain, Input, Output};
 
-// BA418 (SHA-3) engine mode codes.
+// BA418 (SHA-3) engine mode codes (sdk-nrf sxsymcrypt/src/sha3.c: SHA3_MODE)
 #[repr(u8)]
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 enum Variant {
