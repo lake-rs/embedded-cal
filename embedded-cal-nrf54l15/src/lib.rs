@@ -7,9 +7,10 @@ mod descriptor;
 mod dh;
 mod dh_plumbing;
 mod microcode;
+mod sha3;
 mod try_rng;
 
-use descriptor::{DescriptorChain, Input, Output};
+use descriptor::{DMATAG_LAST, DescriptorChain, Input, Output};
 use embedded_cal::empty::EmptyCal;
 use nrf_pac::{cracen, cracencore};
 
@@ -30,7 +31,7 @@ pub struct Nrf54l15Cal {
 impl embedded_cal::Cal for Nrf54l15Cal {
     type DhProvider = Self;
     type AeadProvider = Self;
-    type HashProvider = EmptyCal;
+    type HashProvider = Self;
     type HmacProvider = EmptyCal;
     type SignProvider = EmptyCal;
 
@@ -43,7 +44,7 @@ impl embedded_cal::Cal for Nrf54l15Cal {
     }
 
     fn hash(&mut self) -> &mut Self::HashProvider {
-        &mut self.empty
+        self
     }
 
     fn hmac(&mut self) -> &mut Self::HmacProvider {
@@ -157,7 +158,7 @@ impl embedded_cal::plumbing::hash::Sha2Short for Nrf54l15Cal {
 
         let mut output_descriptors: DescriptorChain<Output, MAX_DESCRIPTOR_CHAIN_LEN> =
             DescriptorChain::new();
-        output_descriptors.push(&mut new_state, 32);
+        output_descriptors.push(&mut new_state, DMATAG_LAST);
 
         let mut input_descriptors: DescriptorChain<Input, MAX_DESCRIPTOR_CHAIN_LEN> =
             DescriptorChain::new();
