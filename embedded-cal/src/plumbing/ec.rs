@@ -9,13 +9,24 @@ pub trait Ec {
     const MAX_SCALAR_LENGTH: usize;
 
     type PrimitivesP256: EcPrimitives<P256>;
+    type PrimitivesP384: EcPrimitives<P384>;
     type PrimitivesX25519: EcPrimitives<X25519>;
     type PrimitivesX448: EcPrimitives<X448>;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256;
+    fn p384(&mut self) -> &mut Self::PrimitivesP384;
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519;
     fn x448(&mut self) -> &mut Self::PrimitivesX448;
 }
+
+/// The P-256 [`Scalar`][EcPrimitives::Scalar] type of an [`Ec`] implementation.
+pub type P256ScalarOf<T> = <<T as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Scalar;
+/// The P-256 [`Point`][EcPrimitives::Point] type of an [`Ec`] implementation.
+pub type P256PointOf<T> = <<T as Ec>::PrimitivesP256 as EcPrimitives<P256>>::Point;
+/// The P-384 [`Scalar`][EcPrimitives::Scalar] type of an [`Ec`] implementation.
+pub type P384ScalarOf<T> = <<T as Ec>::PrimitivesP384 as EcPrimitives<P384>>::Scalar;
+/// The P-384 [`Point`][EcPrimitives::Point] type of an [`Ec`] implementation.
+pub type P384PointOf<T> = <<T as Ec>::PrimitivesP384 as EcPrimitives<P384>>::Point;
 
 /// Providers for ECC primitive operations on a given curve.
 ///
@@ -106,6 +117,8 @@ pub trait Curve {}
 
 pub struct P256(());
 impl Curve for P256 {}
+pub struct P384(());
+impl Curve for P384 {}
 pub struct X25519(());
 impl Curve for X25519 {}
 pub struct X448(());

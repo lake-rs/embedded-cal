@@ -110,12 +110,18 @@ impl<C: Ec, R> Ec for WithRng<C, R> {
 
     type PrimitivesP256 = C::PrimitivesP256;
 
+    type PrimitivesP384 = C::PrimitivesP384;
+
     type PrimitivesX25519 = C::PrimitivesX25519;
 
     type PrimitivesX448 = C::PrimitivesX448;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
         self.cal.p256()
+    }
+
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        self.cal.p384()
     }
 
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
@@ -125,6 +131,11 @@ impl<C: Ec, R> Ec for WithRng<C, R> {
     fn x448(&mut self) -> &mut Self::PrimitivesX448 {
         self.cal.x448()
     }
+}
+
+impl<C: embedded_cal::plumbing::ecdsa::Ecdsa, R> embedded_cal::plumbing::ecdsa::Ecdsa
+    for WithRng<C, R>
+{
 }
 
 impl<C: Plumbing, R> Plumbing for WithRng<C, R> {}
