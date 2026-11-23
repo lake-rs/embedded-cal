@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 //! Implementation of the [`rand_core::CryptoRng`] traits as an [`embedded_cal`] extender
 
+#![no_std]
+
 use embedded_cal::{
     Cal,
     plumbing::{

@@ -56,6 +56,12 @@ jobs:
     - name: cargo build STM32WBA55 (lib + tests)
       working-directory: embedded-cal-stm32wba55
       run: cargo build --tests
+    - name: Check embedded-cal-rustcrypto is no_std
+      run: cargo check -p embedded-cal-rustcrypto --target thumbv8m.main-none-eabihf
+    - name: Check embedded-cal-rustcrypto is no_std (alloc)
+      run: cargo check -p embedded-cal-rustcrypto --features alloc --target thumbv8m.main-none-eabihf
+    - name: Check embedded-cal-rand is no_std
+      run: cargo check -p embedded-cal-rand --target thumbv8m.main-none-eabihf
 
 #   generate-fstar:
 #     runs-on: ubuntu-latest
