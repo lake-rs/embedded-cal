@@ -39,6 +39,15 @@ impl SignVector {
 
         cal.verify(&public, self.message, &signature)
             .expect("known-answer signature did not verify");
+
+        // The signature is not compared to the known answer, as algorithms may be randomized.
+        let signature = cal.sign(&private, self.message);
+        cal.verify(&public, self.message, &signature)
+            .expect("freshly created signature did not verify");
+        assert!(
+            cal.verify(&public, &self.message[1..], &signature).is_err(),
+            "signature verified for a different message"
+        );
     }
 }
 

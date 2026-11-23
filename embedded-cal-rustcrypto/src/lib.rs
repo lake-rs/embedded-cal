@@ -217,5 +217,9 @@ mod tests {
         for vec in testvectors::sign::ECDSA_P256 {
             vec.test_with(&mut cal);
         }
+
+        for vec in testvectors::sign::ECDSA_P256_SIGVER {
+            vec.test_with(&mut cal);
+        }
     }
 }
