@@ -496,8 +496,8 @@ impl Stm32wba55Cal {
         while self.hash.cr().read().init() {}
 
         // Restore CSR registers AFTER INIT has reinitialized the core
-        for i in 0..CSR_REGS_LEN {
-            self.hash.csr(i).write_value(ctx.csr[i])
+        for (i, &word) in ctx.csr.iter().enumerate() {
+            self.hash.csr(i).write_value(word);
         }
     }
 
@@ -517,8 +517,8 @@ impl Stm32wba55Cal {
         });
         self.hash.cr().modify(|w| w.set_init(true));
         while self.hash.cr().read().init() {}
-        for i in 0..CSR_REGS_LEN {
-            self.hash.csr(i).write_value(ctx.csr[i]);
+        for (i, &word) in ctx.csr.iter().enumerate() {
+            self.hash.csr(i).write_value(word);
         }
     }
 
