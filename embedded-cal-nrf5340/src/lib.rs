@@ -20,6 +20,10 @@
 #![no_std]
 
 mod aead;
+mod dh;
+mod dh_plumbing;
+mod ec;
+mod pka;
 mod try_rng;
 
 use core::sync::atomic::{Ordering, fence};
@@ -80,6 +84,7 @@ pub struct Nrf5340Cal {
     cc_hash: cc_hash::CcHash,
     cc_host_rgf: cc_host_rgf::CcHostRgf,
     cc_misc: cc_misc::CcMisc,
+    cc_pka: cc_pka::CcPka,
     cc_rng: cc_rng::CcRng,
 
     /// TRNG ring oscillator currently in use (index into `try_rng::SAMPLE_COUNTS`).
@@ -90,14 +95,14 @@ pub struct Nrf5340Cal {
 }
 
 impl embedded_cal::Cal for Nrf5340Cal {
-    type DhProvider = EmptyCal;
+    type DhProvider = Self;
     type AeadProvider = Self;
     type HashProvider = EmptyCal;
     type HmacProvider = EmptyCal;
     type SignProvider = EmptyCal;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
-        &mut self.empty
+        self
     }
 
     fn aead(&mut self) -> &mut Self::AeadProvider {
@@ -151,6 +156,7 @@ impl Nrf5340Cal {
             cc_hash: p.cc_hash,
             cc_host_rgf: p.cc_host_rgf,
             cc_misc: p.cc_misc,
+            cc_pka: p.cc_pka,
             cc_rng: p.cc_rng,
             trng_rosc: 0,
             empty: EmptyCal,
@@ -305,6 +311,8 @@ impl AsRef<[u8]> for HashResult {
         }
     }
 }
+
+impl embedded_cal::plumbing::Plumbing for Nrf5340Cal {}
 
 impl embedded_cal::plumbing::hash::Hash for Nrf5340Cal {}
 
