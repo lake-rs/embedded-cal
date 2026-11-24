@@ -19,11 +19,14 @@
 //! * TRNG: raw entropy (health-tested in hardware), conditioned with SHA-256.
 #![no_std]
 
+mod try_rng;
+
 use core::sync::atomic::{Ordering, fence};
 use embedded_cal::empty::EmptyCal;
 use nrf_pac::{
     cc_aes, cc_ctl, cc_din, cc_dout, cc_hash, cc_host_rgf, cc_misc, cc_pka, cc_rng, cryptocell,
 };
+use zeroize::Zeroize;
 
 /// Largest single DIN/DOUT DMA transfer (the size fields take at most 2^16 - 1 bytes), rounded
 /// down to a multiple of both the AES block (16 B) and the SHA-256 block (64 B).
@@ -76,6 +79,9 @@ pub struct Nrf5340Cal {
     cc_host_rgf: cc_host_rgf::CcHostRgf,
     cc_misc: cc_misc::CcMisc,
     cc_rng: cc_rng::CcRng,
+
+    /// TRNG ring oscillator currently in use (index into `try_rng::SAMPLE_COUNTS`).
+    trng_rosc: usize,
 
     // Null-provider for everything we do *not* implement
     empty: EmptyCal,
@@ -134,7 +140,7 @@ impl Nrf5340Cal {
             .icr()
             .write_value(cc_host_rgf::regs::Icr(0xFFFF_FFFF));
 
-        Self {
+        let mut cal = Self {
             cryptocell: p.cryptocell,
             cc_ctl: p.cc_ctl,
             cc_din: p.cc_din,
@@ -143,8 +149,13 @@ impl Nrf5340Cal {
             cc_host_rgf: p.cc_host_rgf,
             cc_misc: p.cc_misc,
             cc_rng: p.cc_rng,
+            trng_rosc: 0,
             empty: EmptyCal,
-        }
+        };
+
+        cal.trng_configure();
+
+        cal
     }
 
     /// Waits until the symmetric engines (AES, HASH and their DMA) are idle.
@@ -212,6 +223,8 @@ impl Nrf5340Cal {
 
 impl Drop for Nrf5340Cal {
     fn drop(&mut self) {
+        self.trng_stop();
+
         // Power-down sequence from the nRF5340 PS: no pending tasks, idle, interrupts cleared,
         // power-down request, then disable.
         while self.cc_host_rgf.host_cc_is_idle().read().host_cc_is_idle()
@@ -381,5 +394,66 @@ impl Nrf5340Cal {
         for i in (0..8).rev() {
             h[i] = self.cc_hash.hash_h(i).read();
         }
+    }
+
+    /// One-shot SHA-256 over the concatenation of `parts`, with software padding.
+    ///
+    /// Used internally for ECDSA and for conditioning TRNG output.
+    pub(crate) fn sha256(&mut self, parts: &[&[u8]]) -> [u8; 32] {
+        let mut h = SHA256_IV;
+        let mut processed: u64 = 0;
+        let mut total: u64 = 0;
+        let mut buf = [0u8; 64];
+        let mut fill = 0;
+
+        for part in parts {
+            let mut part = *part;
+            total += part.len() as u64;
+
+            if fill > 0 {
+                let take = (64 - fill).min(part.len());
+                buf[fill..fill + take].copy_from_slice(&part[..take]);
+                fill += take;
+                part = &part[take..];
+                if fill == 64 {
+                    self.sha2_compress(&mut h, processed, &buf);
+                    processed += 64;
+                    fill = 0;
+                }
+            }
+
+            // Whole blocks go to the DMA straight from the caller's memory.
+            let whole = part.len() & !63;
+            if whole > 0 {
+                self.sha2_compress(&mut h, processed, &part[..whole]);
+                processed += whole as u64;
+                part = &part[whole..];
+            }
+
+            if !part.is_empty() {
+                // Only reachable with an empty buffer: a partially filled one was either topped
+                // up to a full block or has absorbed all of `part` above.
+                buf[..part.len()].copy_from_slice(part);
+                fill = part.len();
+            }
+        }
+
+        // FIPS 180-4 5.1.1 padding
+        buf[fill] = 0x80;
+        buf[fill + 1..].fill(0);
+        if fill + 1 > 56 {
+            self.sha2_compress(&mut h, processed, &buf);
+            processed += 64;
+            buf.fill(0);
+        }
+        buf[56..].copy_from_slice(&(total * 8).to_be_bytes());
+        self.sha2_compress(&mut h, processed, &buf);
+        buf.zeroize();
+
+        let mut digest = [0u8; 32];
+        for (out, h) in digest.as_chunks_mut::<4>().0.iter_mut().zip(h) {
+            *out = h.to_be_bytes();
+        }
+        digest
     }
 }

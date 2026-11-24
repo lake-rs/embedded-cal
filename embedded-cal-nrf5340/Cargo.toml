@@ -22,4 +22,6 @@ test = false
 [dependencies]
 embedded-cal.workspace = true
 nrf-pac = { version = "0.4.0", features = ["nrf5340-app", "rt"] }
+rand_core.workspace = true
+zeroize = { version = "1.8.2", default-features = false, features = ["derive"] }
 
