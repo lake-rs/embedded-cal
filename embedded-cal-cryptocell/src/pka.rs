@@ -3,7 +3,7 @@
 
 //! # CryptoCell-312 PKA engine
 //!
-//! The PKA is a big-number ALU working on 32 *virtual registers* in its 6 KiB SRAM. The
+//! The PKA is a big-number ALU working on 32 *virtual registers* in its SRAM. The
 //! `MEMORY_MAP[i]` registers map virtual register `i` to an SRAM address (in 32-bit words);
 //! `PKA_L[j]` hold operand sizes in bits, selected per operation by the opcode's `LEN` field.
 //! Register 0 holds the modulus N, register 1 its Barrett tag NP; registers 30 and 31 (T0, T1) are
@@ -38,7 +38,12 @@ const LEN_N: u8 = 0;
 const LEN_REG: u8 = 1;
 
 const PKA_WORD_BITS: u32 = 64;
+/// PKA SRAM size: 6 KiB on the CryptoCell-312, 4 KiB on the CryptoCell-310 (whose MEMORY_MAP
+/// addresses have 9 instead of 10 bits).
+#[cfg(feature = "nrf5340")]
 const PKA_SRAM_WORDS: u32 = 6 * 1024 / 4;
+#[cfg(feature = "nrf52840")]
+const PKA_SRAM_WORDS: u32 = 4 * 1024 / 4;
 
 /// An operand of a PKA operation.
 #[derive(Clone, Copy)]

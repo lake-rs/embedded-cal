@@ -1,6 +1,8 @@
 ./embedded-cal-cryptocell/src/aead.rs
     AesCcm16_64_128,
 ./embedded-cal-cryptocell/src/aead.rs
+    #[cfg(feature = "nrf5340")]
+./embedded-cal-cryptocell/src/aead.rs
     AesCcm16_64_256,
 ./embedded-cal-cryptocell/src/dh.rs
     EcdhP256,

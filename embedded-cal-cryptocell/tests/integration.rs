@@ -82,7 +82,19 @@ mod tests {
 
     #[test]
     fn test_aead_aesccm_16_64_256(state: &mut super::TestState) {
+        #[cfg(feature = "nrf5340")]
         testvectors::aead::aes_ccm::test_16_64_256(state.cal.as_mut().unwrap().aead());
+        // The CryptoCell-310 AES engine only supports 128-bit keys: the algorithm must not be
+        // offered.
+        #[cfg(feature = "nrf52840")]
+        {
+            use embedded_cal::AeadAlgorithm;
+            let _ = state;
+            assert!(
+                <CryptoCellCal as embedded_cal::AeadProvider>::Algorithm::from_cose_number(11)
+                    .is_none()
+            );
+        }
     }
 
     #[test]

@@ -7,6 +7,7 @@
 //! The chip is selected with exactly one cargo feature:
 //!
 //! * `nrf5340`: the CryptoCell-312 in the nRF5340 application core.
+//! * `nrf52840`: the CryptoCell-310 in the nRF52840.
 //!
 //! Without a chip feature, the crate is empty. (This keeps workspace-wide builds working: nrf-pac
 //! supports only one chip per build.)
@@ -15,7 +16,17 @@
 //! runtime library is involved. The register-level sequences follow the chip's Product
 //! Specification (CRYPTOCELL chapter) and, where that is silent, the open source (BSD-3-Clause)
 //! CryptoCell-312 runtime shipped with Trusted Firmware-M
-//! (`lib/ext/cryptocell-312-runtime`), which is used as documentation only.
+//! (`lib/ext/cryptocell-312-runtime`), which is used as documentation only. The CryptoCell-310 is
+//! its predecessor with the same engines and registers for everything used here; the differences
+//! are handled where they occur (`cfg(feature = ...)`):
+//!
+//! * The CryptoCell-310 AES engine only supports 128-bit keys, so AES-CCM-16-64-256 is only
+//!   offered on the nRF5340.
+//! * The nRF52840's CryptoCell DMA cannot read flash, so data outside RAM is copied through a RAM
+//!   buffer first.
+//! * The CryptoCell-310 has no "symmetric DMA completed" interrupt; DIN/DOUT completion is used.
+//! * The CryptoCell-310 has no HOST_CC_IS_IDLE / HOST_POWERDOWN registers and no GHASH engine.
+//! * The PKA SRAM is 6 KiB on the CryptoCell-312 and 4 KiB on the CryptoCell-310.
 //!
 //! What the hardware provides, and what this crate builds from it:
 //!
@@ -34,8 +45,11 @@
 //! are derived from random bytes by wide reduction instead of rejection sampling. Branches remain
 //! only on public data and on public results (e.g. a signature component being zero, an AEAD tag
 //! mismatch, or the outcome of importing a key).
-#![cfg(feature = "nrf5340")]
+#![cfg(any(feature = "nrf5340", feature = "nrf52840"))]
 #![no_std]
+
+#[cfg(all(feature = "nrf5340", feature = "nrf52840"))]
+compile_error!("embedded-cal-cryptocell supports exactly one chip feature at a time");
 
 mod aead;
 mod ct;
@@ -57,9 +71,30 @@ use zeroize::Zeroize;
 /// down to a multiple of both the AES block (16 B) and the SHA-256 block (64 B).
 const MAX_DMA_CHUNK: usize = 0xFFC0;
 
+/// RAM buffer size for data the DMA cannot read in place; a multiple of the AES and SHA-256 block
+/// sizes.
+const BOUNCE_LEN: usize = 256;
+
+/// Whether the CryptoCell DMA can access `data` in place.
+#[cfg(feature = "nrf5340")]
+fn dma_accessible(_data: &[u8]) -> bool {
+    // The nRF5340's CryptoCell DMA reads both RAM and flash.
+    true
+}
+
+/// Whether the CryptoCell DMA can access `data` in place.
+#[cfg(feature = "nrf52840")]
+fn dma_accessible(data: &[u8]) -> bool {
+    /// The data RAM of the nRF52840, the only memory its CryptoCell DMA can access.
+    const RAM: core::ops::Range<usize> = 0x2000_0000..0x2004_0000;
+    let start = data.as_ptr() as usize;
+    RAM.contains(&start) && start + data.len() <= RAM.end
+}
+
 /// The CryptoCell register blocks used by [`CryptoCellCal`].
 ///
-/// All `CC_*` blocks share the base address 0x5084_5000; the PAC splits them by engine.
+/// All `CC_*` blocks share one base address (0x5084_5000 on the nRF5340, 0x5002_B000 on the
+/// nRF52840); the PAC splits them by engine.
 pub struct Peripherals {
     pub cryptocell: cryptocell::Cryptocell,
     pub cc_aes: cc_aes::CcAes,
@@ -74,9 +109,10 @@ pub struct Peripherals {
 }
 
 impl Peripherals {
-    /// All CryptoCell register blocks (on the nRF5340: their secure mapping).
+    /// All CryptoCell register blocks, in their secure mapping.
     ///
     /// FIXME: Like for the nRF54L15, nothing enforces that only one instance of these exists.
+    #[cfg(feature = "nrf5340")]
     pub const fn all() -> Self {
         Self {
             cryptocell: nrf_pac::CRYPTOCELL_S,
@@ -89,6 +125,25 @@ impl Peripherals {
             cc_misc: nrf_pac::CC_MISC_S,
             cc_pka: nrf_pac::CC_PKA_S,
             cc_rng: nrf_pac::CC_RNG_S,
+        }
+    }
+
+    /// All CryptoCell register blocks.
+    ///
+    /// FIXME: Like for the nRF54L15, nothing enforces that only one instance of these exists.
+    #[cfg(feature = "nrf52840")]
+    pub const fn all() -> Self {
+        Self {
+            cryptocell: nrf_pac::CRYPTOCELL,
+            cc_aes: nrf_pac::CC_AES,
+            cc_ctl: nrf_pac::CC_CTL,
+            cc_din: nrf_pac::CC_DIN,
+            cc_dout: nrf_pac::CC_DOUT,
+            cc_hash: nrf_pac::CC_HASH,
+            cc_host_rgf: nrf_pac::CC_HOST_RGF,
+            cc_misc: nrf_pac::CC_MISC,
+            cc_pka: nrf_pac::CC_PKA,
+            cc_rng: nrf_pac::CC_RNG,
         }
     }
 }
@@ -202,7 +257,7 @@ impl CryptoCellCal {
     /// * `src` must be valid for reads of `len` bytes, and `dst` (if not null) for writes of
     ///   `len` bytes, for the duration of the call. They may be identical (in-place operation),
     ///   but must not otherwise overlap.
-    /// * Both must be in memory the CryptoCell DMA can reach (SRAM or flash).
+    /// * Both must be in memory the CryptoCell DMA can reach (see [`dma_accessible`]).
     /// * `len` must be in `1..=0xFFFF`.
     ///
     /// The function only returns after the engine signalled completion, so the memory is no
@@ -210,7 +265,7 @@ impl CryptoCellCal {
     unsafe fn dma_raw(&mut self, src: *const u8, dst: *mut u8, len: usize) {
         debug_assert!((1..=0xFFFF).contains(&len));
 
-        self.cc_host_rgf.icr().write(|w| w.set_sym_dma_clear(true));
+        self.clear_dma_irqs();
 
         // Make sure all CPU writes to the buffers are visible before the DMA starts.
         fence(Ordering::SeqCst);
@@ -230,20 +285,69 @@ impl CryptoCellCal {
             if irr.ahb_err_int() {
                 panic!("CryptoCell DMA bus error");
             }
-            if irr.sym_dma_int() {
+            #[cfg(feature = "nrf5340")]
+            let done = irr.sym_dma_int();
+            // The CryptoCell-310 has no "symmetric DMA completed" interrupt: with output, the
+            // transfer is complete once DOUT has written everything back (as in the nRF52840 PS
+            // AES example); without, once DIN has read everything and the engine is done with it.
+            #[cfg(feature = "nrf52840")]
+            let done = if dst.is_null() {
+                irr.mem_to_din_int()
+            } else {
+                irr.dout_to_mem_int()
+            };
+            if done {
                 break;
             }
             core::hint::spin_loop();
         }
-        self.cc_host_rgf.icr().write(|w| w.set_sym_dma_clear(true));
+        #[cfg(feature = "nrf52840")]
+        self.wait_crypto_idle();
+        self.clear_dma_irqs();
 
         // Make sure the CPU does not read the output before the DMA has written it.
         fence(Ordering::SeqCst);
     }
 
-    /// Feeds `data` (1..=[`MAX_DMA_CHUNK`] bytes) into the selected engine, without output DMA.
+    /// Clears the DMA completion interrupts used by [`Self::dma_raw`].
+    fn clear_dma_irqs(&self) {
+        self.cc_host_rgf.icr().write(|w| {
+            #[cfg(feature = "nrf5340")]
+            w.set_sym_dma_clear(true);
+            #[cfg(feature = "nrf52840")]
+            {
+                w.set_mem_to_din_clear(true);
+                w.set_dout_to_mem_clear(true);
+            }
+        });
+    }
+
+    /// Calls `f` with consecutive pieces of `data` that the DMA can read: pieces of `data` itself
+    /// if the DMA can access it (see [`dma_accessible`]), otherwise copies in a RAM buffer that is
+    /// wiped afterwards.
+    ///
+    /// All pieces but the last have a length that is a multiple of [`BOUNCE_LEN`] (and thus of the
+    /// AES and SHA-256 block sizes); none is empty or longer than [`MAX_DMA_CHUNK`].
+    fn for_dma_chunks(&mut self, data: &[u8], mut f: impl FnMut(&mut Self, &[u8])) {
+        if dma_accessible(data) {
+            for chunk in data.chunks(MAX_DMA_CHUNK) {
+                f(self, chunk);
+            }
+        } else {
+            let mut buf = [0u8; BOUNCE_LEN];
+            for chunk in data.chunks(BOUNCE_LEN) {
+                buf[..chunk.len()].copy_from_slice(chunk);
+                f(self, &buf[..chunk.len()]);
+            }
+            buf.zeroize();
+        }
+    }
+
+    /// Feeds `data` (1..=[`MAX_DMA_CHUNK`] bytes, DMA accessible) into the selected engine,
+    /// without output DMA.
     fn dma_in(&mut self, data: &[u8]) {
         assert!((1..=MAX_DMA_CHUNK).contains(&data.len()));
+        assert!(dma_accessible(data), "DMA source not accessible");
         // Safety: data is a live shared slice of valid length; dma_raw blocks until the hardware
         // is done with it.
         unsafe { self.dma_raw(data.as_ptr(), core::ptr::null_mut(), data.len()) };
@@ -253,6 +357,7 @@ impl CryptoCellCal {
     /// output back in place.
     fn dma_in_place(&mut self, data: &mut [u8]) {
         assert!((1..=MAX_DMA_CHUNK).contains(&data.len()));
+        assert!(dma_accessible(data), "DMA buffer not accessible");
         // Safety: data is a live exclusive slice of valid length; source and destination are
         // identical, which is the permitted in-place case.
         unsafe { self.dma_raw(data.as_ptr(), data.as_mut_ptr(), data.len()) };
@@ -263,11 +368,14 @@ impl Drop for CryptoCellCal {
     fn drop(&mut self) {
         self.trng_stop();
 
-        // Power-down sequence from the nRF5340 PS: no pending tasks, idle, interrupts cleared,
-        // power-down request, then disable.
+        // Power-down sequence from the PS: no pending tasks, idle, interrupts cleared (RNG_ICR
+        // before ICR), on the nRF5340 a power-down request, then disable.
+        #[cfg(feature = "nrf5340")]
         while self.cc_host_rgf.host_cc_is_idle().read().host_cc_is_idle()
             != cc_host_rgf::vals::HostCcIsIdle::Idle
         {}
+        #[cfg(feature = "nrf52840")]
+        self.wait_crypto_idle();
         self.cc_rng
             .rng_icr()
             .write_value(cc_rng::regs::RngIcr(0xFFFF_FFFF));
@@ -281,6 +389,7 @@ impl Drop for CryptoCellCal {
         self.cc_misc.pka_clk().write(|w| w.set_enable(false));
         self.cc_rng.rng_clk().write(|w| w.set_enable(false));
 
+        #[cfg(feature = "nrf5340")]
         self.cc_host_rgf
             .host_powerdown()
             .write(|w| w.set_host_powerdown(true));
@@ -396,11 +505,11 @@ impl CryptoCellCal {
         debug_assert!(data.len().is_multiple_of(64));
 
         // Each transfer starts from a freshly loaded state, so nothing needs to persist inside
-        // the engine between transfers.
-        for chunk in data.chunks(MAX_DMA_CHUNK) {
-            self.sha2_compress_chunk(h, processed, chunk);
+        // the engine between transfers. (Chunks are whole blocks, see `for_dma_chunks`.)
+        self.for_dma_chunks(data, |cal, chunk| {
+            cal.sha2_compress_chunk(h, processed, chunk);
             processed += chunk.len() as u64;
-        }
+        });
     }
 
     fn sha2_compress_chunk(&mut self, h: &mut [u32; 8], processed: u64, data: &[u8]) {
@@ -413,6 +522,8 @@ impl CryptoCellCal {
             .crypto_ctl()
             .write(|w| w.set_mode(cc_ctl::vals::Mode::HashActive));
         self.cc_hash.hash_pad().write(|w| w.set_enable(true));
+        // (The CryptoCell-310 has no GHASH engine to select between.)
+        #[cfg(feature = "nrf5340")]
         self.cc_hash
             .hash_select()
             .write(|w| w.set_engine(cc_hash::vals::Engine::Hash));

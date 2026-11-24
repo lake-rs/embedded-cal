@@ -18,6 +18,10 @@
 //
 // Every DMA transfer starts from a freshly loaded engine state (key, IV or counter), so no state
 // needs to persist inside the engine between transfers.
+//
+// The CryptoCell-310 AES engine only supports 128-bit keys, so AES-CCM-16-64-256 is only offered on
+// the CryptoCell-312 (nRF5340). Where the DMA cannot read flash (nRF52840), AAD outside RAM is fed
+// through a RAM buffer (`for_dma_chunks`); the message is always in RAM, being processed in place.
 
 use crate::{CryptoCellCal, MAX_DMA_CHUNK};
 use nrf_pac::cc_aes::vals::{DecKey0, ModeKey0, NkKey0, Status};
@@ -33,6 +37,7 @@ const L: usize = 15 - NONCE_LEN;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AeadAlgorithm {
     AesCcm16_64_128,
+    #[cfg(feature = "nrf5340")]
     AesCcm16_64_256,
 }
 
@@ -40,6 +45,7 @@ impl embedded_cal::AeadAlgorithm for AeadAlgorithm {
     fn key_length(&self) -> usize {
         match self {
             AeadAlgorithm::AesCcm16_64_128 => 16,
+            #[cfg(feature = "nrf5340")]
             AeadAlgorithm::AesCcm16_64_256 => 32,
         }
     }
@@ -55,6 +61,7 @@ impl embedded_cal::AeadAlgorithm for AeadAlgorithm {
     fn from_cose_number(number: impl Into<i128>) -> Option<Self> {
         match number.into() {
             10 => Some(AeadAlgorithm::AesCcm16_64_128),
+            #[cfg(feature = "nrf5340")]
             11 => Some(AeadAlgorithm::AesCcm16_64_256),
             _ => None,
         }
@@ -64,11 +71,13 @@ impl embedded_cal::AeadAlgorithm for AeadAlgorithm {
 #[derive(Zeroize)]
 pub enum AeadKey {
     AesCcm16_64_128([u8; 16]),
+    #[cfg(feature = "nrf5340")]
     AesCcm16_64_256([u8; 32]),
 }
 
 pub enum AeadTag {
     AesCcm16_64_128([u8; 8]),
+    #[cfg(feature = "nrf5340")]
     AesCcm16_64_256([u8; 8]),
 }
 
@@ -76,6 +85,7 @@ impl AsRef<[u8]> for AeadTag {
     fn as_ref(&self) -> &[u8] {
         match self {
             AeadTag::AesCcm16_64_128(r) => &r[..],
+            #[cfg(feature = "nrf5340")]
             AeadTag::AesCcm16_64_256(r) => &r[..],
         }
     }
@@ -119,6 +129,7 @@ impl CryptoCellCal {
             w.set_mode_key0(mode);
             w.set_nk_key0(match key.len() {
                 16 => NkKey0::_128bits,
+                #[cfg(feature = "nrf5340")]
                 32 => NkKey0::_256bits,
                 _ => unreachable!("key length checked at load time"),
             });
@@ -145,14 +156,15 @@ impl CryptoCellCal {
     /// Runs CBC-MAC over whole blocks of `data`, continuing from (and updating) `mac`.
     fn cbc_mac_blocks(&mut self, key: &[u8], mac: &mut [u8; BLOCK], data: &[u8]) {
         debug_assert!(data.len().is_multiple_of(BLOCK));
-        for chunk in data.chunks(MAX_DMA_CHUNK) {
-            self.aes_configure(ModeKey0::CbcMac, key, mac);
-            self.dma_in(chunk);
-            self.aes_wait_idle();
+        // Chunks are whole blocks, see `for_dma_chunks`.
+        self.for_dma_chunks(data, |cal, chunk| {
+            cal.aes_configure(ModeKey0::CbcMac, key, mac);
+            cal.dma_in(chunk);
+            cal.aes_wait_idle();
             for (i, out) in mac.as_chunks_mut::<4>().0.iter_mut().enumerate() {
-                *out = self.cc_aes.aes_iv_0(i).read().to_le_bytes();
+                *out = cal.cc_aes.aes_iv_0(i).read().to_le_bytes();
             }
-        }
+        });
     }
 
     /// Feeds bytes into a running CBC-MAC; whole blocks are DMA'd from `data` directly.
@@ -346,6 +358,7 @@ impl embedded_cal::AeadProvider for super::CryptoCellCal {
             AeadAlgorithm::AesCcm16_64_128 => {
                 AeadKey::AesCcm16_64_128(key.try_into().expect("key length mismatch"))
             }
+            #[cfg(feature = "nrf5340")]
             AeadAlgorithm::AesCcm16_64_256 => {
                 AeadKey::AesCcm16_64_256(key.try_into().expect("key length mismatch"))
             }
@@ -363,6 +376,7 @@ impl embedded_cal::AeadProvider for super::CryptoCellCal {
             AeadKey::AesCcm16_64_128(key_bytes) => {
                 AeadTag::AesCcm16_64_128(self.ccm_encrypt(key_bytes, nonce, message, aad))
             }
+            #[cfg(feature = "nrf5340")]
             AeadKey::AesCcm16_64_256(key_bytes) => {
                 AeadTag::AesCcm16_64_256(self.ccm_encrypt(key_bytes, nonce, message, aad))
             }
@@ -381,6 +395,7 @@ impl embedded_cal::AeadProvider for super::CryptoCellCal {
             AeadKey::AesCcm16_64_128(key_bytes) => {
                 self.ccm_decrypt(key_bytes, nonce, cyphertext, tag, aad)
             }
+            #[cfg(feature = "nrf5340")]
             AeadKey::AesCcm16_64_256(key_bytes) => {
                 self.ccm_decrypt(key_bytes, nonce, cyphertext, tag, aad)
             }

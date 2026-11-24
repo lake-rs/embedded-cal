@@ -4,7 +4,10 @@
 use std::{env, fs, path::PathBuf};
 
 /// Memory layout of each supported chip, selected by the chip feature.
-const CHIPS: &[(&str, &str)] = &[("CARGO_FEATURE_NRF5340", "memory-nrf5340.x")];
+const CHIPS: &[(&str, &str)] = &[
+    ("CARGO_FEATURE_NRF5340", "memory-nrf5340.x"),
+    ("CARGO_FEATURE_NRF52840", "memory-nrf52840.x"),
+];
 
 fn main() {
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());

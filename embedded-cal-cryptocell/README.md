@@ -12,6 +12,7 @@ libraries. The chip is selected with a cargo feature:
 | Feature   | Chip    | CryptoCell |
 |-----------|---------|------------|
 | `nrf5340` | nRF5340 | CC312      |
+| `nrf52840` | nRF52840 | CC310 (no AES-256) |
 
 No code path branches on secret data (see the crate documentation for details).
 
@@ -19,7 +20,7 @@ See [the embedded-cal documentation](https://docs.rs/embedded-cal/) for a high-l
 including usage and setup instructions.
 
 The tests in `tests/` run on the chip's development kit through `probe-rs`; from this
-directory, run `cargo test-nrf5340`.
+directory, run `cargo test-nrf5340` or `cargo test-nrf52840`.
 
 ## ⚠️ Security note
 

@@ -3,7 +3,7 @@
 
 [package]
 name = "embedded-cal-cryptocell"
-description = "Implementation of embedded-cal for Arm TrustZone CryptoCell hardware (nRF5340)"
+description = "Implementation of embedded-cal for Arm TrustZone CryptoCell hardware (nRF5340, nRF52840)"
 documentation = "https://docs.rs/embedded-cal-cryptocell/"
 
 edition.workspace = true
@@ -23,6 +23,7 @@ test = false
 # Exactly one chip must be selected; without any, the crate is empty (which keeps
 # workspace-wide builds working, as nrf-pac only supports one chip per build).
 nrf5340 = ["_chip", "nrf-pac/nrf5340-app"]
+nrf52840 = ["_chip", "nrf-pac/nrf52840"]
 # Common to all chips; not to be enabled directly.
 _chip = ["dep:embedded-cal", "dep:nrf-pac", "nrf-pac/rt", "dep:rand_core", "dep:zeroize"]
 
