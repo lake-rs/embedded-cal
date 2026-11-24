@@ -346,9 +346,11 @@ impl Drop for Pka<'_> {
 /// Constant-time conditional swap of two register indices.
 ///
 /// The PKA performs the same operations either way; only which registers they act on changes.
+/// The swap is computed with a mask, without branching on `bit`; [`core::hint::black_box`] keeps
+/// the compiler from turning it back into a branch.
 #[inline(always)]
 pub(crate) fn cswap(a: &mut u8, b: &mut u8, bit: u8) {
-    let mask = 0u8.wrapping_sub(bit & 1);
+    let mask = core::hint::black_box(0u8.wrapping_sub(bit & 1));
     let t = mask & (*a ^ *b);
     *a ^= t;
     *b ^= t;

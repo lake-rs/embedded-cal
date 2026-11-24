@@ -17,9 +17,19 @@
 //!   X25519 and X448 scalar multiplication and ECDSA are built from modular arithmetic on it in
 //!   the `ec` module.
 //! * TRNG: raw entropy (health-tested in hardware), conditioned with SHA-256.
+//!
+//! # Secret independence
+//!
+//! No code path branches on secret data, and secrets do not influence loop bounds: secret
+//! scalars only select PKA register indices through masked arithmetic (see `ec`), validity and
+//! zero checks on secrets are computed in constant time (see `ct`), and secret scalars and nonces
+//! are derived from random bytes by wide reduction instead of rejection sampling. Branches remain
+//! only on public data and on public results (e.g. a signature component being zero, an AEAD tag
+//! mismatch, or the outcome of importing a key).
 #![no_std]
 
 mod aead;
+mod ct;
 mod dh;
 mod dh_plumbing;
 mod ec;

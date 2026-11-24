@@ -6,9 +6,7 @@
 
 use embedded_cal::plumbing::ec::{Ec, EcPrimitives};
 use embedded_cal::util::montgomery::{clamp_x448, clamp_x25519, mask_u_x25519};
-use embedded_cal::util::p256::{
-    P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y,
-};
+use embedded_cal::util::p256::{P256_GX_BYTES, P256_GY_BYTES, p256_recover_y};
 use rand_core::Rng as _;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -117,15 +115,10 @@ impl embedded_cal::DhProvider for super::Nrf5340Cal {
 
     fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
         match alg {
-            DhAlgorithm::EcdhP256 => loop {
-                let mut scalar = [0u8; 32];
-                // Error = Infallible
-                self.fill_bytes(&mut scalar);
-                let w = bytes_to_words(&scalar);
-                if w != [0u32; 8] && !ge(&w, &P256_ORDER) {
-                    return VisibleSecretKey(SecretKey::EcdhP256(scalar.into()));
-                }
-            },
+            // No rejection loop on the secret candidate; see `p256_random_scalar`.
+            DhAlgorithm::EcdhP256 => {
+                VisibleSecretKey(SecretKey::EcdhP256(self.p256_random_scalar().into()))
+            }
             DhAlgorithm::X25519 => {
                 let mut scalar = [0u8; 32];
                 self.fill_bytes(&mut scalar);

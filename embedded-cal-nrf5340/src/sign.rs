@@ -7,13 +7,12 @@
 //! Formats follow the other embedded-cal implementations: the secret key is the big-endian `d`,
 //! public keys are exported in SEC1 compressed form, signatures as raw `r || s`.
 
-use crate::Nrf5340Cal;
 use crate::ec::sub_words;
+use crate::{Nrf5340Cal, ct};
 use embedded_cal::util::p256::{
-    P, P256_GX_BYTES, P256_GY_BYTES, P256_ORDER, bytes_to_words, ge, p256_recover_y, words_to_bytes,
+    P, P256_GX_BYTES, P256_GY_BYTES, bytes_to_words, p256_recover_y, words_to_bytes,
 };
 use embedded_cal::{ImportError, SignatureInvalid};
-use rand_core::Rng as _;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -67,20 +66,16 @@ pub enum Signature {
 }
 
 /// Whether a big-endian scalar is in `1..n`.
+///
+/// Computed in constant time; only the final answer, which becomes public as the outcome of the
+/// import or the verification, is branched on.
 fn is_valid_scalar(s: &[u8; 32]) -> bool {
-    let w = bytes_to_words(s);
-    w != [0; 8] && !ge(&w, &P256_ORDER)
+    ct::p256_scalar_valid_mask(s) == 0xFF
 }
 
-/// Reduces a 256-bit big-endian number (a digest or a field element) mod n.
-///
-/// As 2n > 2^256, a single subtraction suffices.
+/// Reduces a 256-bit big-endian number (a digest or a field element) mod n, in constant time.
 fn reduce_mod_n(v: &[u8; 32]) -> [u8; 32] {
-    let mut w = bytes_to_words(v);
-    if ge(&w, &P256_ORDER) {
-        sub_words(&mut w, &P256_ORDER);
-    }
-    words_to_bytes(&w)
+    ct::p256_reduce_once(v)
 }
 
 fn public_key_from_coordinates(x: [u8; 32], y: [u8; 32]) -> PublicKey {
@@ -99,15 +94,10 @@ impl embedded_cal::SignProvider for Nrf5340Cal {
 
     fn generate_visible(&mut self, alg: Self::Algorithm) -> Self::VisibleSecretKey {
         match alg {
-            SignAlgorithm::EcdsaP256 => loop {
-                let mut d = [0u8; 32];
-                // Error = Infallible
-                self.fill_bytes(&mut d);
-                if is_valid_scalar(&d) {
-                    return VisibleSecretKey(SecretKey::EcdsaP256(d));
-                }
-                d.zeroize();
-            },
+            // No rejection loop on the secret candidate; see `p256_random_scalar`.
+            SignAlgorithm::EcdsaP256 => {
+                VisibleSecretKey(SecretKey::EcdsaP256(self.p256_random_scalar()))
+            }
         }
     }
 
@@ -214,14 +204,10 @@ impl embedded_cal::SignProvider for Nrf5340Cal {
         let SecretKey::EcdsaP256(d) = private;
         let e = reduce_mod_n(&self.sha256(&[message]));
 
-        // FIPS 186-5 6.4.1 with a random per-message secret k from the TRNG.
+        // FIPS 186-5 6.4.1 with a random per-message secret k from the TRNG. The only retries are
+        // on r = 0 or s = 0, which are public (they would be the signature).
         loop {
-            let mut k = [0u8; 32];
-            self.fill_bytes(&mut k);
-            if !is_valid_scalar(&k) {
-                k.zeroize();
-                continue;
-            }
+            let mut k = self.p256_random_scalar();
 
             let (x, _) = self.p256_mul(&k, &P256_GX_BYTES, &P256_GY_BYTES);
             let r = reduce_mod_n(&x);

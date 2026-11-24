@@ -13,7 +13,10 @@
 //! * X25519 and X448 use the RFC 7748 Montgomery ladder.
 //!
 //! In both ladders, scalar bits only select *which registers* an operation acts on (through
-//! [`cswap`] on register indices); the sequence of PKA operations does not depend on the scalar.
+//! [`cswap`] on register indices, computed with masks, not branches); the sequence of PKA
+//! operations, the CPU's control flow and all loop bounds are independent of the scalar. Results
+//! derived from secrets are returned without inspecting them (the point at infinity simply comes
+//! out as (0, 0)); only the ECDSA verification path, which handles public data only, tests for it.
 //! Inversion is done by Fermat exponentiation (`z^(p-2)`) with the PKA's ModExp, whose exponent
 //! is the public constant p-2, so it is also scalar independent.
 //!
@@ -21,9 +24,11 @@
 //! 64-bit PKA word with 8 extra bits: `floor(2^215 / ceil(N / 2^(len(N)-144)))`. For P-256 and
 //! Curve25519 this matches the tags in the CC312 runtime's domain tables.
 
-use crate::Nrf5340Cal;
 use crate::pka::{Pka, cswap};
+use crate::{Nrf5340Cal, ct};
 use embedded_cal::util::p256::{P, P256_GX_BYTES, P256_GY_BYTES, P256_ORDER};
+use rand_core::Rng as _;
+use zeroize::Zeroize;
 
 // --- Constants (little-endian 32-bit words) ---
 
@@ -185,9 +190,10 @@ impl Pka<'_> {
     /// Converts a projective point to affine big-endian coordinates.
     ///
     /// Returns `None` for the point at infinity.
-    fn p256_affine(&self, p: Triple) -> Option<([u8; 32], [u8; 32])> {
-        // Infinity is detected from the result rather than by reading Z first, which saves a
-        // read-back.
+    /// Returns (0, 0) for the point at infinity: then Z = 0, so Z^(p-2) = 0. (0, 0) is not on
+    /// P-256 (b != 0), so it identifies infinity exactly. Nothing about the (possibly secret)
+    /// result is inspected here.
+    fn p256_affine(&self, p: Triple) -> ([u8; 32], [u8; 32]) {
         let [out_x, out_y, ..] = W_T;
         self.load(W_EXP, &P256_P_MINUS_2);
         self.mod_exp(W_ZINV, p[2], W_EXP);
@@ -198,13 +204,7 @@ impl Pka<'_> {
         let mut y = [0u8; 32];
         self.read_be(out_x, &mut x);
         self.read_be(out_y, &mut y);
-
-        // For the point at infinity Z = 0, so Z^(p-2) = 0 and both coordinates come out 0; (0, 0)
-        // is not on P-256 (b != 0), so this identifies infinity exactly.
-        if x == [0; 32] && y == [0; 32] {
-            return None;
-        }
-        Some((x, y))
+        (x, y)
     }
 
     /// RFC 7748 Montgomery ladder; `scalar` and `u` are little-endian, `u` reduced mod p, and the
@@ -293,7 +293,7 @@ impl Nrf5340Cal {
         pka.p256_setup();
         pka.p256_load_base(px, py);
         let r = pka.p256_ladder(k);
-        pka.p256_affine(r).unwrap_or(([0; 32], [0; 32]))
+        pka.p256_affine(r)
     }
 
     /// Computes the affine x-coordinate of u1 * G + u2 * Q (ECDSA verification).
@@ -320,7 +320,13 @@ impl Nrf5340Cal {
         // The base is no longer needed; reuse it as the output.
         pka.rcb_add(W_HELD, r, W_BASE);
 
-        pka.p256_affine(W_BASE).map(|(x, _)| x)
+        // Public data only (verification), so testing for infinity is fine here.
+        let (x, y) = pka.p256_affine(W_BASE);
+        if ct::is_zero_mask(&x) & ct::is_zero_mask(&y) == 0xFF {
+            None
+        } else {
+            Some(x)
+        }
     }
 
     /// X25519 (RFC 7748) on a clamped scalar and a u-coordinate with its top bit cleared.
@@ -361,6 +367,27 @@ impl Nrf5340Cal {
         out
     }
 
+    /// A random scalar in [0, n), by the "extra random bits" method of FIPS 186-5 A.4.1: 512
+    /// random bits hi || lo reduced mod n, computed as hi * (2^256 mod n) + lo on the PKA.
+    ///
+    /// Unlike rejection sampling, this does not branch or loop on the (secret) candidate. Its
+    /// bias is negligible (about 2^-256), as is the probability of producing 0.
+    pub(crate) fn p256_random_scalar(&mut self) -> [u8; 32] {
+        let mut wide = [0u8; 64];
+        self.fill_bytes(&mut wide);
+        // Both halves are below 2^256 < 2n, so a constant-time conditional subtraction brings
+        // them below n, as the PKA's modular operations require.
+        let mut hi = ct::p256_reduce_once(wide[..32].try_into().expect("half of 64"));
+        let mut lo = ct::p256_reduce_once(wide[32..].try_into().expect("half of 64"));
+        let k = self
+            .p256_scalar_ops()
+            .mul_add(&hi, &ct::P256_2_256_MOD_N_BE, &lo);
+        wide.zeroize();
+        hi.zeroize();
+        lo.zeroize();
+        k
+    }
+
     /// Arithmetic modulo the P-256 group order n, as needed by ECDSA.
     ///
     /// All inputs are big-endian and must already be reduced mod n.
@@ -396,6 +423,16 @@ impl ScalarOps<'_> {
         self.pka.load_be(SCALAR_A, a);
         self.pka.load_be(SCALAR_B, b);
         self.pka.mod_mul(SCALAR_R, SCALAR_A, SCALAR_B);
+        self.result()
+    }
+
+    /// a * b + c mod n
+    pub(crate) fn mul_add(&self, a: &[u8; 32], b: &[u8; 32], c: &[u8; 32]) -> [u8; 32] {
+        self.pka.load_be(SCALAR_A, a);
+        self.pka.load_be(SCALAR_B, b);
+        self.pka.mod_mul(SCALAR_C, SCALAR_A, SCALAR_B);
+        self.pka.load_be(SCALAR_A, c);
+        self.pka.mod_add(SCALAR_R, SCALAR_C, SCALAR_A);
         self.result()
     }
 
