@@ -57,6 +57,9 @@ jobs:
     - name: cargo build nRF54L15 (lib + tests)
       working-directory: embedded-cal-nrf54l15
       run: cargo build --tests
+    - name: cargo build nRF5340 (lib + tests)
+      working-directory: embedded-cal-nrf5340
+      run: cargo build --tests
     - name: cargo build STM32WBA55 (lib + tests)
       working-directory: embedded-cal-stm32wba55
       run: cargo build --tests
