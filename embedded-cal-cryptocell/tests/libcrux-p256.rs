@@ -9,7 +9,7 @@
 use defmt_rtt as _;
 use embedded_alloc::LlffHeap as Heap;
 use embedded_cal::plumbing::ec::P256;
-use embedded_cal_nrf5340::Nrf5340Cal;
+use embedded_cal_cryptocell::CryptoCellCal;
 use embedded_cal_testvectors::dh::EccVector;
 use nrf_pac as _;
 use panic_probe as _;
@@ -20,7 +20,7 @@ use panic_probe as _;
 static HEAP: Heap = Heap::empty();
 
 struct TestState {
-    board_cal: Nrf5340Cal,
+    board_cal: CryptoCellCal,
 }
 
 #[defmt_test::tests]
@@ -32,8 +32,9 @@ mod tests {
 
     #[init]
     fn init() -> super::TestState {
-        let board_cal =
-            embedded_cal_nrf5340::Nrf5340Cal::new(embedded_cal_nrf5340::Peripherals::secure());
+        let board_cal = embedded_cal_cryptocell::CryptoCellCal::new(
+            embedded_cal_cryptocell::Peripherals::all(),
+        );
 
         super::TestState { board_cal }
     }

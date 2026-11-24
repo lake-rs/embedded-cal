@@ -1,17 +1,25 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
-//! Implementation of embedded-cal for the Arm TrustZone CryptoCell-312 in the nRF5340 application
-//! core.
+//! Implementation of embedded-cal for Arm TrustZone CryptoCell hardware.
 //!
-//! All engines are driven through their registers (as exposed by [`nrf_pac`]); no precompiled
-//! runtime library is involved. The register-level sequences follow the nRF5340 Product
+//! # Chip selection
+//!
+//! The chip is selected with exactly one cargo feature:
+//!
+//! * `nrf5340`: the CryptoCell-312 in the nRF5340 application core.
+//!
+//! Without a chip feature, the crate is empty. (This keeps workspace-wide builds working: nrf-pac
+//! supports only one chip per build.)
+//!
+//! All engines are driven through their registers (as exposed by `nrf_pac`); no precompiled
+//! runtime library is involved. The register-level sequences follow the chip's Product
 //! Specification (CRYPTOCELL chapter) and, where that is silent, the open source (BSD-3-Clause)
 //! CryptoCell-312 runtime shipped with Trusted Firmware-M
 //! (`lib/ext/cryptocell-312-runtime`), which is used as documentation only.
 //!
 //! What the hardware provides, and what this crate builds from it:
 //!
-//! * HASH engine: SHA-224/SHA-256 compression ([`embedded_cal::plumbing::hash::Sha2Short`]).
+//! * HASH engine: SHA-224/SHA-256 compression (`embedded_cal::plumbing::hash::Sha2Short`).
 //! * AES engine: AES-CCM (in two passes: CBC-MAC, then CTR).
 //! * PKA engine: a modular big-number ALU, with no elliptic curve operations of its own. P-256,
 //!   X25519 and X448 scalar multiplication and ECDSA are built from modular arithmetic on it in
@@ -26,6 +34,7 @@
 //! are derived from random bytes by wide reduction instead of rejection sampling. Branches remain
 //! only on public data and on public results (e.g. a signature component being zero, an AEAD tag
 //! mismatch, or the outcome of importing a key).
+#![cfg(feature = "nrf5340")]
 #![no_std]
 
 mod aead;
@@ -48,7 +57,7 @@ use zeroize::Zeroize;
 /// down to a multiple of both the AES block (16 B) and the SHA-256 block (64 B).
 const MAX_DMA_CHUNK: usize = 0xFFC0;
 
-/// The CryptoCell register blocks used by [`Nrf5340Cal`].
+/// The CryptoCell register blocks used by [`CryptoCellCal`].
 ///
 /// All `CC_*` blocks share the base address 0x5084_5000; the PAC splits them by engine.
 pub struct Peripherals {
@@ -65,10 +74,10 @@ pub struct Peripherals {
 }
 
 impl Peripherals {
-    /// The secure mapping of all CryptoCell register blocks.
+    /// All CryptoCell register blocks (on the nRF5340: their secure mapping).
     ///
     /// FIXME: Like for the nRF54L15, nothing enforces that only one instance of these exists.
-    pub const fn secure() -> Self {
+    pub const fn all() -> Self {
         Self {
             cryptocell: nrf_pac::CRYPTOCELL_S,
             cc_aes: nrf_pac::CC_AES_S,
@@ -84,7 +93,7 @@ impl Peripherals {
     }
 }
 
-pub struct Nrf5340Cal {
+pub struct CryptoCellCal {
     // FIXME: No need to enable and take ownership of everything
     // it's possible to have a more granular ownership
     cryptocell: cryptocell::Cryptocell,
@@ -105,7 +114,7 @@ pub struct Nrf5340Cal {
     empty: EmptyCal,
 }
 
-impl embedded_cal::Cal for Nrf5340Cal {
+impl embedded_cal::Cal for CryptoCellCal {
     type DhProvider = Self;
     type AeadProvider = Self;
     type HashProvider = EmptyCal;
@@ -133,7 +142,7 @@ impl embedded_cal::Cal for Nrf5340Cal {
     }
 }
 
-impl Nrf5340Cal {
+impl CryptoCellCal {
     pub fn new(p: Peripherals) -> Self {
         // Power up the subsystem; per the PS, engine registers are only accessible while the
         // respective engine clock is enabled.
@@ -250,7 +259,7 @@ impl Nrf5340Cal {
     }
 }
 
-impl Drop for Nrf5340Cal {
+impl Drop for CryptoCellCal {
     fn drop(&mut self) {
         self.trng_stop();
 
@@ -323,11 +332,11 @@ impl AsRef<[u8]> for HashResult {
     }
 }
 
-impl embedded_cal::plumbing::Plumbing for Nrf5340Cal {}
+impl embedded_cal::plumbing::Plumbing for CryptoCellCal {}
 
-impl embedded_cal::plumbing::hash::Hash for Nrf5340Cal {}
+impl embedded_cal::plumbing::hash::Hash for CryptoCellCal {}
 
-impl embedded_cal::plumbing::hash::Sha2Short for Nrf5340Cal {
+impl embedded_cal::plumbing::hash::Sha2Short for CryptoCellCal {
     const SUPPORTED: bool = true;
     // The engine can pad (AUTO_HW_PADDING), but software padding keeps the state a plain
     // intermediate hash value that can be cloned and resumed at any block boundary.
@@ -378,7 +387,7 @@ impl embedded_cal::plumbing::hash::Sha2Short for Nrf5340Cal {
     }
 }
 
-impl Nrf5340Cal {
+impl CryptoCellCal {
     /// Runs the SHA-256 compression function over whole 64-byte blocks of `data`, starting from
     /// (and updating) the intermediate hash value `h`.
     ///

@@ -1,3 +1,15 @@
+./embedded-cal-cryptocell/src/aead.rs
+    AesCcm16_64_128,
+./embedded-cal-cryptocell/src/aead.rs
+    AesCcm16_64_256,
+./embedded-cal-cryptocell/src/dh.rs
+    EcdhP256,
+./embedded-cal-cryptocell/src/dh.rs
+    X25519,
+./embedded-cal-cryptocell/src/dh.rs
+    X448,
+./embedded-cal-cryptocell/src/sign.rs
+    EcdsaP256,
 ./embedded-cal-libcrux/src/aead.rs
     Direct(AeadAlgorithmOf<EC::Base>),
 ./embedded-cal-libcrux/src/aead.rs
@@ -28,18 +40,6 @@
     Sha3_384,
 ./embedded-cal-libcrux/src/hash.rs
     Sha3_512,
-./embedded-cal-nrf5340/src/aead.rs
-    AesCcm16_64_128,
-./embedded-cal-nrf5340/src/aead.rs
-    AesCcm16_64_256,
-./embedded-cal-nrf5340/src/dh.rs
-    EcdhP256,
-./embedded-cal-nrf5340/src/dh.rs
-    X25519,
-./embedded-cal-nrf5340/src/dh.rs
-    X448,
-./embedded-cal-nrf5340/src/sign.rs
-    EcdsaP256,
 ./embedded-cal-nrf54l15/src/aead.rs
     AesCcm16_64_128,
 ./embedded-cal-nrf54l15/src/aead.rs

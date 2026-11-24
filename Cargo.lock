@@ -604,6 +604,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-cal-cryptocell"
+version = "0.2.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "defmt-test",
+ "embedded-alloc",
+ "embedded-cal",
+ "embedded-cal-examples",
+ "embedded-cal-software-demo",
+ "embedded-cal-testvectors",
+ "libcrux-iot-p256",
+ "nrf-pac 0.4.0",
+ "panic-probe",
+ "rand_core",
+ "zeroize",
+]
+
+[[package]]
 name = "embedded-cal-examples"
 version = "0.2.0"
 dependencies = [
@@ -631,27 +652,6 @@ dependencies = [
  "libcrux-sha2",
  "libcrux-traits",
  "rand_core",
-]
-
-[[package]]
-name = "embedded-cal-nrf5340"
-version = "0.2.0"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "defmt-test",
- "embedded-alloc",
- "embedded-cal",
- "embedded-cal-examples",
- "embedded-cal-software-demo",
- "embedded-cal-testvectors",
- "libcrux-iot-p256",
- "nrf-pac 0.4.0",
- "panic-probe",
- "rand_core",
- "zeroize",
 ]
 
 [[package]]

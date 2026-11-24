@@ -8,7 +8,7 @@
 //! public keys are exported in SEC1 compressed form, signatures as raw `r || s`.
 
 use crate::ec::sub_words;
-use crate::{Nrf5340Cal, ct};
+use crate::{CryptoCellCal, ct};
 use embedded_cal::util::p256::{
     P, P256_GX_BYTES, P256_GY_BYTES, bytes_to_words, p256_recover_y, words_to_bytes,
 };
@@ -85,7 +85,7 @@ fn public_key_from_coordinates(x: [u8; 32], y: [u8; 32]) -> PublicKey {
     PublicKey::EcdsaP256 { x, y, compressed }
 }
 
-impl embedded_cal::SignProvider for Nrf5340Cal {
+impl embedded_cal::SignProvider for CryptoCellCal {
     type Algorithm = SignAlgorithm;
     type VisibleSecretKey = VisibleSecretKey;
     type SecretKey = SecretKey;

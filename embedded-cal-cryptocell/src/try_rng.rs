@@ -15,7 +15,7 @@
 //! 32 bytes of output are derived from two EHRs; here, conditioned with SHA-256 (a vetted
 //! conditioning function per NIST SP 800-90B 3.1.5.1.1) instead of the runtime's DRBG.
 
-use crate::Nrf5340Cal;
+use crate::CryptoCellCal;
 use nrf_pac::cc_rng::{regs, vals::TrngConfigRoscLen};
 use zeroize::Zeroize;
 
@@ -38,7 +38,7 @@ const EHR_WORDS: usize = 6;
 /// AUTOCORR_ERR and WATCHDOG unmasked.
 const RNG_IMR_FE_MODE: u32 = 0xFFFF_FFEC;
 
-impl Nrf5340Cal {
+impl CryptoCellCal {
     /// (Re)starts the TRNG with the currently selected ring oscillator.
     pub(crate) fn trng_configure(&mut self) {
         let sample_count = SAMPLE_COUNTS[self.trng_rosc];
@@ -149,8 +149,8 @@ impl Nrf5340Cal {
     }
 }
 
-impl rand_core::TryCryptoRng for Nrf5340Cal {}
-impl rand_core::TryRng for Nrf5340Cal {
+impl rand_core::TryCryptoRng for CryptoCellCal {}
+impl rand_core::TryRng for CryptoCellCal {
     type Error = core::convert::Infallible;
 
     fn try_next_u32(&mut self) -> Result<u32, Self::Error> {

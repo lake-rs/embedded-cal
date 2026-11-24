@@ -74,7 +74,7 @@ pub enum PublicKey {
 
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecret {
-    bytes: [u8; <super::Nrf5340Cal as Ec>::MAX_SCALAR_LENGTH],
+    bytes: [u8; <super::CryptoCellCal as Ec>::MAX_SCALAR_LENGTH],
     len: usize,
 }
 
@@ -106,7 +106,7 @@ impl AsRef<[u8]> for SharedSecret {
     }
 }
 
-impl embedded_cal::DhProvider for super::Nrf5340Cal {
+impl embedded_cal::DhProvider for super::CryptoCellCal {
     type Algorithm = DhAlgorithm;
     type VisibleSecretKey = VisibleSecretKey;
     type SecretKey = SecretKey;

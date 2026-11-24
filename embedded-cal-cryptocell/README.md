@@ -3,17 +3,23 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 -->
 
-# `embedded-cal-nrf5340`: Implementation of embedded-cal for nRF5340 hardware
+# `embedded-cal-cryptocell`: Implementation of embedded-cal for Arm TrustZone CryptoCell hardware
 
-This crate drives the Arm TrustZone CryptoCell-312 found in the nRF5340 application core
-directly through its registers (via [`nrf-pac`](https://crates.io/crates/nrf-pac)), without
-Arm's or Nordic's precompiled runtime libraries.
+This crate drives the Arm TrustZone CryptoCell directly through its registers (via
+[`nrf-pac`](https://crates.io/crates/nrf-pac)), without Arm's or Nordic's precompiled runtime
+libraries. The chip is selected with a cargo feature:
+
+| Feature   | Chip    | CryptoCell |
+|-----------|---------|------------|
+| `nrf5340` | nRF5340 | CC312      |
+
+No code path branches on secret data (see the crate documentation for details).
 
 See [the embedded-cal documentation](https://docs.rs/embedded-cal/) for a high-level overview,
 including usage and setup instructions.
 
-The tests in `tests/` run on an nRF5340 DK through `probe-rs`; from this directory, run
-`cargo test`.
+The tests in `tests/` run on the chip's development kit through `probe-rs`; from this
+directory, run `cargo test-nrf5340`.
 
 ## ⚠️ Security note
 

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Implementation of plumbing for nRF5340 (CryptoCell-312).
+//! Implementation of plumbing for Arm TrustZone CryptoCell (CryptoCell-312 and compatible).
 //!
 //! In this module we try out a strategy where all primitives are the same layout but diferent
 //! types, exploring how well code deduplication works: Goal would be that all the conversion
@@ -89,7 +89,7 @@ use super::*;
 use core::marker::PhantomData;
 use embedded_cal::plumbing::ec::*;
 
-impl Ec for Nrf5340Cal {
+impl Ec for CryptoCellCal {
     const MAX_SCALAR_LENGTH: usize = 56;
 
     type PrimitivesP256 = Self;
@@ -111,7 +111,7 @@ pub(crate) trait NrfCurve: Curve {
     const SCALAR_SIZE: usize;
 
     fn multiply_scalar_point(
-        cal: &mut Nrf5340Cal,
+        cal: &mut CryptoCellCal,
         a: &NrfScalar<Self>,
         b: &NrfPoint<Self>,
     ) -> NrfPoint<Self>;
@@ -121,7 +121,7 @@ impl NrfCurve for P256 {
     const SCALAR_SIZE: usize = 32;
 
     fn multiply_scalar_point(
-        cal: &mut Nrf5340Cal,
+        cal: &mut CryptoCellCal,
         a: &NrfScalar<Self>,
         b: &NrfPoint<Self>,
     ) -> NrfPoint<Self> {
@@ -137,7 +137,7 @@ impl NrfCurve for X25519 {
     const SCALAR_SIZE: usize = 32;
 
     fn multiply_scalar_point(
-        cal: &mut Nrf5340Cal,
+        cal: &mut CryptoCellCal,
         a: &NrfScalar<Self>,
         b: &NrfPoint<Self>,
     ) -> NrfPoint<Self> {
@@ -153,7 +153,7 @@ impl NrfCurve for X448 {
     const SCALAR_SIZE: usize = 56;
 
     fn multiply_scalar_point(
-        cal: &mut Nrf5340Cal,
+        cal: &mut CryptoCellCal,
         a: &NrfScalar<Self>,
         b: &NrfPoint<Self>,
     ) -> NrfPoint<Self> {
@@ -165,7 +165,7 @@ impl NrfCurve for X448 {
     }
 }
 
-impl<C: NrfCurve> EcPrimitives<C> for Nrf5340Cal {
+impl<C: NrfCurve> EcPrimitives<C> for CryptoCellCal {
     const HAS_MULTIPLY_SCALAR_POINT: bool = true;
     type Scalar = NrfScalar<C>;
     type Point = NrfPoint<C>;
@@ -217,7 +217,7 @@ impl<C: NrfCurve> EcPrimitives<C> for Nrf5340Cal {
 
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct NrfScalar<C: ?Sized> {
-    data: [u8; Nrf5340Cal::MAX_SCALAR_LENGTH],
+    data: [u8; CryptoCellCal::MAX_SCALAR_LENGTH],
     #[zeroize(skip)]
     phantom: PhantomData<C>,
 }
@@ -231,7 +231,7 @@ pub struct NrfPoint<C: ?Sized> {
 }
 
 // FIXME: While const generics can't do that, let's macro over this rather than repeat all over
-const _: () = assert!(32 <= Nrf5340Cal::MAX_SCALAR_LENGTH);
+const _: () = assert!(32 <= CryptoCellCal::MAX_SCALAR_LENGTH);
 impl From<[u8; 32]> for NrfScalar<P256> {
     fn from(value: [u8; 32]) -> Self {
         let mut data = [0; _];
@@ -252,7 +252,7 @@ impl AsRef<[u8; 32]> for NrfScalar<P256> {
         self.data.first_chunk().expect("const asserted")
     }
 }
-const _: () = assert!(32 <= Nrf5340Cal::MAX_SCALAR_LENGTH);
+const _: () = assert!(32 <= CryptoCellCal::MAX_SCALAR_LENGTH);
 impl From<[u8; 32]> for NrfScalar<X25519> {
     fn from(value: [u8; 32]) -> Self {
         let mut data = [0; _];
@@ -273,7 +273,7 @@ impl AsRef<[u8; 32]> for NrfScalar<X25519> {
         self.data.first_chunk().expect("const asserted")
     }
 }
-const _: () = assert!(56 <= Nrf5340Cal::MAX_SCALAR_LENGTH);
+const _: () = assert!(56 <= CryptoCellCal::MAX_SCALAR_LENGTH);
 impl From<[u8; 56]> for NrfScalar<X448> {
     fn from(value: [u8; 56]) -> Self {
         let mut data = [0; _];

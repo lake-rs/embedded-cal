@@ -11,12 +11,12 @@ struct ImplementSha256Short;
 impl embedded_cal_software_demo::ExtenderConfig for ImplementSha256Short {
     const IMPLEMENT_SHA2SHORT: bool = true;
     const IMPLEMENT_SHA2SHORT_PLUMBING: bool = false;
-    type Base = embedded_cal_nrf5340::Nrf5340Cal;
+    type Base = embedded_cal_cryptocell::CryptoCellCal;
 }
 struct TestState {
     // Having the option to take it and return it is useful until everything is also implemented
     // blanket on &mut T
-    cal: Option<embedded_cal_nrf5340::Nrf5340Cal>,
+    cal: Option<embedded_cal_cryptocell::CryptoCellCal>,
 }
 
 fn with_extender(
@@ -36,13 +36,14 @@ fn with_extender(
 mod tests {
     use super::ImplementSha256Short;
     use embedded_cal::Cal;
-    use embedded_cal_nrf5340::Nrf5340Cal;
+    use embedded_cal_cryptocell::CryptoCellCal;
     use embedded_cal_testvectors as testvectors;
 
     #[init]
     fn init() -> super::TestState {
-        let base =
-            embedded_cal_nrf5340::Nrf5340Cal::new(embedded_cal_nrf5340::Peripherals::secure());
+        let base = embedded_cal_cryptocell::CryptoCellCal::new(
+            embedded_cal_cryptocell::Peripherals::all(),
+        );
 
         super::TestState { cal: Some(base) }
     }
@@ -86,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_dh_ecdh_p256(state: &mut super::TestState) {
-        embedded_cal::test_dh_algorithm_ecdh_p256::<Nrf5340Cal>();
+        embedded_cal::test_dh_algorithm_ecdh_p256::<CryptoCellCal>();
         for v in testvectors::dh::RFC5903_P256 {
             v.test_with(state.cal.as_mut().unwrap().dh());
         }
@@ -147,11 +148,11 @@ mod tests {
 
         // The known-answer vectors only exercise verification; this covers signing. (The CAL is
         // its own SignProvider, so its methods are called directly.)
-        let cal: &mut Nrf5340Cal = state.cal.as_mut().unwrap();
-        let alg = <Nrf5340Cal as SignProvider>::Algorithm::from_cose_number(-7).unwrap();
+        let cal: &mut CryptoCellCal = state.cal.as_mut().unwrap();
+        let alg = <CryptoCellCal as SignProvider>::Algorithm::from_cose_number(-7).unwrap();
         let secret = cal.generate(alg.clone());
         let public = cal.public_key(&secret);
-        let message = b"embedded-cal on nRF5340";
+        let message = b"embedded-cal on CryptoCell";
 
         let signature = SignProvider::sign(cal, &secret, message);
         assert_eq!(cal.export_signature_bytes(&signature).as_ref().len(), 64);

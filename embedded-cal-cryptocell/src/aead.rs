@@ -19,7 +19,7 @@
 // Every DMA transfer starts from a freshly loaded engine state (key, IV or counter), so no state
 // needs to persist inside the engine between transfers.
 
-use crate::{MAX_DMA_CHUNK, Nrf5340Cal};
+use crate::{CryptoCellCal, MAX_DMA_CHUNK};
 use nrf_pac::cc_aes::vals::{DecKey0, ModeKey0, NkKey0, Status};
 use nrf_pac::{cc_ctl, cc_host_rgf};
 use zeroize::Zeroize;
@@ -101,7 +101,7 @@ fn ctr_add(ctr: &mut [u8; BLOCK], n: usize) {
     *ctr = v.to_be_bytes();
 }
 
-impl Nrf5340Cal {
+impl CryptoCellCal {
     /// Selects the AES engine and loads mode, key and IV (CBC-MAC) or counter (CTR).
     fn aes_configure(&mut self, mode: ModeKey0, key: &[u8], iv: &[u8; BLOCK]) {
         self.wait_crypto_idle();
@@ -336,7 +336,7 @@ impl Nrf5340Cal {
     }
 }
 
-impl embedded_cal::AeadProvider for super::Nrf5340Cal {
+impl embedded_cal::AeadProvider for super::CryptoCellCal {
     type Algorithm = AeadAlgorithm;
     type Key = AeadKey;
     type Tag = AeadTag;

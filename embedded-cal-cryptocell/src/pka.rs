@@ -18,7 +18,7 @@
 //! (`PkaInitPka()`, `PkaSetRegsMapTab()`, `PkaSetRegsSizesTab()`, `PKA_EXEC_OPERATION`,
 //! `PKA_HW_LOAD_BLOCK_TO_PKA_MEM`, `PKA_HW_READ_BLOCK_FROM_PKA_MEM`).
 
-use crate::Nrf5340Cal;
+use crate::CryptoCellCal;
 use core::marker::PhantomData;
 use nrf_pac::cc_pka::{CcPka, vals};
 
@@ -57,10 +57,10 @@ pub(crate) struct Pka<'a> {
     regs: CcPka,
     /// Size of each virtual register in 32-bit words.
     reg_words: u32,
-    _cal: PhantomData<&'a mut Nrf5340Cal>,
+    _cal: PhantomData<&'a mut CryptoCellCal>,
 }
 
-impl Nrf5340Cal {
+impl CryptoCellCal {
     /// Initializes the PKA for operations modulo a number of `modulus_bits` bits.
     ///
     /// The modulus itself is set through [`Pka::set_modulus`].

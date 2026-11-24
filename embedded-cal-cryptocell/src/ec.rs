@@ -25,7 +25,7 @@
 //! Curve25519 this matches the tags in the CC312 runtime's domain tables.
 
 use crate::pka::{Pka, cswap};
-use crate::{Nrf5340Cal, ct};
+use crate::{CryptoCellCal, ct};
 use embedded_cal::util::p256::{P, P256_GX_BYTES, P256_GY_BYTES, P256_ORDER};
 use rand_core::Rng as _;
 use zeroize::Zeroize;
@@ -80,7 +80,7 @@ const W_B3: u8 = 3;
 const W_LADDER: [[u8; 3]; 4] = [[4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]];
 /// Temporaries of the addition formula.
 const W_T: [u8; 6] = [16, 17, 18, 19, 20, 21];
-/// Input point of a ladder; reused as output of the final addition in [`Nrf5340Cal::p256_mul_add`].
+/// Input point of a ladder; reused as output of the final addition in [`CryptoCellCal::p256_mul_add`].
 const W_BASE: [u8; 3] = [22, 23, 24];
 /// Holds the first product while the second one is computed.
 const W_HELD: [u8; 3] = [25, 26, 27];
@@ -278,7 +278,7 @@ impl Pka<'_> {
     }
 }
 
-impl Nrf5340Cal {
+impl CryptoCellCal {
     /// P-256 scalar multiplication k * (px, py) with big-endian scalar and coordinates.
     ///
     /// The point must be on the curve with coordinates below p. Returns (0, 0) if the result is
@@ -405,7 +405,7 @@ const SCALAR_B: u8 = 4;
 const SCALAR_C: u8 = 5;
 const SCALAR_R: u8 = 6;
 
-/// Modular arithmetic mod n on the PKA (see [`Nrf5340Cal::p256_scalar_ops`]).
+/// Modular arithmetic mod n on the PKA (see [`CryptoCellCal::p256_scalar_ops`]).
 pub(crate) struct ScalarOps<'a> {
     pka: Pka<'a>,
 }
