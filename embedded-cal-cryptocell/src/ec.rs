@@ -189,7 +189,6 @@ impl Pka<'_> {
 
     /// Converts a projective point to affine big-endian coordinates.
     ///
-    /// Returns `None` for the point at infinity.
     /// Returns (0, 0) for the point at infinity: then Z = 0, so Z^(p-2) = 0. (0, 0) is not on
     /// P-256 (b != 0), so it identifies infinity exactly. Nothing about the (possibly secret)
     /// result is inspected here.

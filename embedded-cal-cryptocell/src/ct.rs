@@ -22,9 +22,24 @@ pub(crate) const P256_2_256_MOD_N_BE: [u8; 32] = [
 ];
 
 /// `0xFF` if all bytes of `a` are zero, else `0x00`.
+///
+/// The accumulator goes through [`black_box`] at every step: otherwise LLVM may turn the OR-fold
+/// into a comparison that exits at the first nonzero byte.
 pub(crate) fn is_zero_mask(a: &[u8]) -> u8 {
-    let acc = black_box(a.iter().fold(0u8, |acc, &b| acc | b)) as u16;
+    let acc = a.iter().fold(0u8, |acc, &b| black_box(acc | b)) as u16;
     // acc = 0 wraps to 0xFFFF; any acc in 1..=255 stays below 0x100.
+    (acc.wrapping_sub(1) >> 8) as u8
+}
+
+/// `0xFF` if `a` and `b` are equal, else `0x00`; they must have the same length.
+///
+/// Built like [`is_zero_mask`], so the time taken does not depend on where the inputs differ.
+pub(crate) fn eq_mask(a: &[u8], b: &[u8]) -> u8 {
+    assert_eq!(a.len(), b.len());
+    let acc = a
+        .iter()
+        .zip(b)
+        .fold(0u8, |acc, (x, y)| black_box(acc | (x ^ y))) as u16;
     (acc.wrapping_sub(1) >> 8) as u8
 }
 

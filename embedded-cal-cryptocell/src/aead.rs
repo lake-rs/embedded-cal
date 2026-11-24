@@ -23,7 +23,7 @@
 // the CryptoCell-312 (nRF5340). Where the DMA cannot read flash (nRF52840), AAD outside RAM is fed
 // through a RAM buffer (`for_dma_chunks`); the message is always in RAM, being processed in place.
 
-use crate::{CryptoCellCal, MAX_DMA_CHUNK};
+use crate::{CryptoCellCal, MAX_DMA_CHUNK, ct};
 use nrf_pac::cc_aes::vals::{DecKey0, ModeKey0, NkKey0, Status};
 use nrf_pac::{cc_ctl, cc_host_rgf};
 use zeroize::Zeroize;
@@ -334,12 +334,8 @@ impl CryptoCellCal {
         let st = self.ccm_mac(key, nonce, ciphertext, &aad);
         let tag = self.ccm_tag(key, &a0, &st);
 
-        // Constant-time comparison
-        let diff = tag
-            .iter()
-            .zip(tag_in)
-            .fold(0u8, |acc, (a, b)| acc | (a ^ b));
-        let mac_ok = diff == 0;
+        // Constant time: only the outcome is public, not where the tags differ.
+        let mac_ok = ct::eq_mask(&tag, tag_in) == 0xFF;
         if !mac_ok {
             // Do not leave unauthenticated plaintext around.
             ciphertext.zeroize();
