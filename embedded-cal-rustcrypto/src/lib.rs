@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
 
+#![no_std]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 mod aead;
 mod dh;
 mod hash;
@@ -37,7 +42,10 @@ impl<Base> RustcryptoCalExtender<Base> {
     fn collect_aad(&mut self, aad: impl embedded_cal::AadGenerator) -> impl AsRef<[u8]> {
         #[cfg(feature = "alloc")]
         {
-            aad.items().flatten().copied().collect::<Vec<_>>()
+            aad.items()
+                .flatten()
+                .copied()
+                .collect::<alloc::vec::Vec<_>>()
         }
 
         #[cfg(not(feature = "alloc"))]

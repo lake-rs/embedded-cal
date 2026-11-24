@@ -17,12 +17,20 @@ This crate provides two things:
 
   ⚠️ Security note: The [`make_rng` function](https://docs.rs/rand/latest/rand/fn.make_rng.html) used in this feature comes with own security notes [through the use of `ThreadRng`](https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html#security).
 
+  This takes its randomness from the operating system through `getrandom`,
+  so on bare metal targets it only builds with a [custom `getrandom` backend](https://docs.rs/getrandom/0.4/#custom-backend).
+
+This crate is `no_std`.
+
 ## Using this crate
 
 This crate is rarely used directly,
 because implementations of embedded-cal on embedded systems generally also provide access to that platform's random number generator,
 and software implementations used on standard systems provide their own constructors for standalone operation that includes a random number generator.
 (The latter are the main motivation for this crate, as standalone functionality is implemented in terms of this crate).
+
+On bare metal targets, where those constructors are generally unavailable,
+`WithRng::new()` can be used directly to provide an RNG to a software implementation.
 
 ## Contributing, license and other metadata
 

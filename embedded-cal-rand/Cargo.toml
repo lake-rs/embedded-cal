@@ -22,6 +22,12 @@ rand = {version = "0.10", optional = true, features = ["std_rng", "sys_rng"], de
 
 [features]
 ## Enables the [`WithRng::new_with_sys()`] constructor.
+##
+## This takes its randomness from the operating system through `getrandom`. On
+## bare metal targets, it only builds if a [custom `getrandom` backend] is
+## provided; without one, pass an existing RNG to `WithRng::new()` instead.
+##
+## [custom `getrandom` backend]: https://docs.rs/getrandom/0.4/#custom-backend
 new_from_sys = ["dep:rand"]
 
 [package.metadata.docs.rs]

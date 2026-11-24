@@ -12,6 +12,16 @@ See [the embedded-cal documentation](https://docs.rs/embedded-cal/) for a high-l
 for a detailed list of which module supports which operations,
 or the [crate's documentation on initialization](https://docs.rs/embedded-cal-rustcrypto/latest/embedded_cal_rustcrypto/type.Standalone.html#method.standalone).
 
+## Use on embedded systems
+
+This crate is `no_std`.
+The `standalone` feature (and thus `Standalone::standalone()`) takes its randomness from the operating system through `getrandom`,
+so on bare metal targets it only builds with a [custom `getrandom` backend](https://docs.rs/getrandom/0.4/#custom-backend).
+
+Without one, pass any infallible cryptographically secure RNG through [embedded-cal-rand](https://docs.rs/embedded-cal-rand/):
+`RustcryptoCalExtender::new_extending(WithRng::new(EmptyCal, rng))`.
+In place of `EmptyCal`, any other `Cal` (such as a hardware back-end) can be extended.
+
 ## ⚠️ Security note
 
 This crate provides cryptographic primitives from crates of which only some have received external audits,
