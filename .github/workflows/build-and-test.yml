@@ -29,10 +29,14 @@ jobs:
       run: RUSTFLAGS="-D warnings" cargo check --tests -p embedded-cal-libcrux --features check-secret-independence 
     - name: run `cargo clippy`
       run: cargo clippy --workspace -- --deny clippy::all
+    - name: run `cargo clippy` on embedded-cal-rustcrypto (alloc)
+      run: cargo clippy -p embedded-cal-rustcrypto --features alloc -- --deny clippy::all
     - name: run `cargo doc`
       run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace
     - name: run `cargo test`
       run: cargo test
+    - name: run `cargo test` on embedded-cal-rustcrypto (alloc)
+      run: cargo test -p embedded-cal-rustcrypto --features alloc
     - name: Run examples with all configurations
       run: |
         cargo run --package embedded-cal-examples --bin demo --features backend-rustcrypto,backend-libcrux,log-standalone
@@ -56,12 +60,25 @@ jobs:
     - name: cargo build STM32WBA55 (lib + tests)
       working-directory: embedded-cal-stm32wba55
       run: cargo build --tests
+
+  check-no-std:
+    name: Check software crates are no_std
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v5
+    - name: Add embedded target
+      run: rustup target add thumbv8m.main-none-eabihf
     - name: Check embedded-cal-rustcrypto is no_std
       run: cargo check -p embedded-cal-rustcrypto --target thumbv8m.main-none-eabihf
     - name: Check embedded-cal-rustcrypto is no_std (alloc)
       run: cargo check -p embedded-cal-rustcrypto --features alloc --target thumbv8m.main-none-eabihf
     - name: Check embedded-cal-rand is no_std
       run: cargo check -p embedded-cal-rand --target thumbv8m.main-none-eabihf
+    - name: Check embedded-cal-libcrux is no_std
+      run: cargo check -p embedded-cal-libcrux --target thumbv8m.main-none-eabihf
 
 #   generate-fstar:
 #     runs-on: ubuntu-latest

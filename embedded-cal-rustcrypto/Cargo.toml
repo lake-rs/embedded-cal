@@ -49,6 +49,12 @@ embedded-cal-testvectors.workspace = true
 alloc = []
 
 ## Enables the `Standalone::standalone()` constructor.
+##
+## This takes its randomness from the operating system through `getrandom`. On
+## bare metal targets, it only builds if a [custom `getrandom` backend] is
+## provided; without one, pass an existing RNG to `embedded_cal_rand::WithRng::new()` instead.
+##
+## [custom `getrandom` backend]: https://docs.rs/getrandom/0.4/#custom-backend
 standalone = ["embedded-cal-rand"]
 
 [package.metadata.docs.rs]
