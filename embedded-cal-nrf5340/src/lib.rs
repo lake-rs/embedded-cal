@@ -24,6 +24,7 @@ mod dh;
 mod dh_plumbing;
 mod ec;
 mod pka;
+mod sign;
 mod try_rng;
 
 use core::sync::atomic::{Ordering, fence};
@@ -99,7 +100,7 @@ impl embedded_cal::Cal for Nrf5340Cal {
     type AeadProvider = Self;
     type HashProvider = EmptyCal;
     type HmacProvider = EmptyCal;
-    type SignProvider = EmptyCal;
+    type SignProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self
@@ -118,7 +119,7 @@ impl embedded_cal::Cal for Nrf5340Cal {
     }
 
     fn sign(&mut self) -> &mut Self::SignProvider {
-        &mut self.empty
+        self
     }
 }
 

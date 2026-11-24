@@ -23,7 +23,7 @@
 
 use crate::Nrf5340Cal;
 use crate::pka::{Pka, cswap};
-use embedded_cal::util::p256::P;
+use embedded_cal::util::p256::{P, P256_GX_BYTES, P256_GY_BYTES, P256_ORDER};
 
 // --- Constants (little-endian 32-bit words) ---
 
@@ -42,6 +42,9 @@ const P256_B3: [u32; 8] = [
 ];
 const P256_P_MINUS_2: [u32; 8] = [
     0xFFFFFFFD, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000, 0x00000001, 0xFFFFFFFF,
+];
+const P256_N_MINUS_2: [u32; 8] = [
+    0xFC63254F, 0xF3B9CAC2, 0xA7179E84, 0xBCE6FAAD, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
 ];
 
 const X25519_P: [u32; 8] = [
@@ -72,8 +75,10 @@ const W_B3: u8 = 3;
 const W_LADDER: [[u8; 3]; 4] = [[4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]];
 /// Temporaries of the addition formula.
 const W_T: [u8; 6] = [16, 17, 18, 19, 20, 21];
-/// Input point of a ladder.
+/// Input point of a ladder; reused as output of the final addition in [`Nrf5340Cal::p256_mul_add`].
 const W_BASE: [u8; 3] = [22, 23, 24];
+/// Holds the first product while the second one is computed.
+const W_HELD: [u8; 3] = [25, 26, 27];
 const W_ZINV: u8 = 28;
 const W_EXP: u8 = 29;
 
@@ -291,6 +296,33 @@ impl Nrf5340Cal {
         pka.p256_affine(r).unwrap_or(([0; 32], [0; 32]))
     }
 
+    /// Computes the affine x-coordinate of u1 * G + u2 * Q (ECDSA verification).
+    ///
+    /// Returns `None` if the sum is the point at infinity.
+    pub(crate) fn p256_mul_add(
+        &mut self,
+        u1: &[u8; 32],
+        u2: &[u8; 32],
+        qx: &[u8; 32],
+        qy: &[u8; 32],
+    ) -> Option<[u8; 32]> {
+        let pka = self.pka(256);
+        pka.p256_setup();
+
+        pka.p256_load_base(&P256_GX_BYTES, &P256_GY_BYTES);
+        let r = pka.p256_ladder(u1);
+        for i in 0..3 {
+            pka.copy(W_HELD[i], r[i]);
+        }
+
+        pka.p256_load_base(qx, qy);
+        let r = pka.p256_ladder(u2);
+        // The base is no longer needed; reuse it as the output.
+        pka.rcb_add(W_HELD, r, W_BASE);
+
+        pka.p256_affine(W_BASE).map(|(x, _)| x)
+    }
+
     /// X25519 (RFC 7748) on a clamped scalar and a u-coordinate with its top bit cleared.
     pub(crate) fn x25519_mul(&mut self, scalar: &[u8; 32], u: &[u8; 32]) -> [u8; 32] {
         let mut u_words = le_words::<8>(u);
@@ -326,6 +358,68 @@ impl Nrf5340Cal {
             &words_le::<14, 56>(&u_words),
             &mut out,
         );
+        out
+    }
+
+    /// Arithmetic modulo the P-256 group order n, as needed by ECDSA.
+    ///
+    /// All inputs are big-endian and must already be reduced mod n.
+    pub(crate) fn p256_scalar_ops(&mut self) -> ScalarOps<'_> {
+        let pka = self.pka(256);
+        pka.set_modulus(&P256_ORDER, &P256_NP);
+        pka.load(SCALAR_EXP, &P256_N_MINUS_2);
+        ScalarOps { pka }
+    }
+}
+
+const SCALAR_EXP: u8 = 2;
+const SCALAR_A: u8 = 3;
+const SCALAR_B: u8 = 4;
+const SCALAR_C: u8 = 5;
+const SCALAR_R: u8 = 6;
+
+/// Modular arithmetic mod n on the PKA (see [`Nrf5340Cal::p256_scalar_ops`]).
+pub(crate) struct ScalarOps<'a> {
+    pka: Pka<'a>,
+}
+
+impl ScalarOps<'_> {
+    /// a^-1 mod n (a ≠ 0), by Fermat exponentiation.
+    pub(crate) fn inv(&self, a: &[u8; 32]) -> [u8; 32] {
+        self.pka.load_be(SCALAR_A, a);
+        self.pka.mod_exp(SCALAR_R, SCALAR_A, SCALAR_EXP);
+        self.result()
+    }
+
+    /// a * b mod n
+    pub(crate) fn mul(&self, a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
+        self.pka.load_be(SCALAR_A, a);
+        self.pka.load_be(SCALAR_B, b);
+        self.pka.mod_mul(SCALAR_R, SCALAR_A, SCALAR_B);
+        self.result()
+    }
+
+    /// a * (b + c * d) mod n — the ECDSA `s = k^-1 (e + r d)` with a = k^-1.
+    pub(crate) fn mul_add_mul(
+        &self,
+        a: &[u8; 32],
+        b: &[u8; 32],
+        c: &[u8; 32],
+        d: &[u8; 32],
+    ) -> [u8; 32] {
+        self.pka.load_be(SCALAR_A, c);
+        self.pka.load_be(SCALAR_B, d);
+        self.pka.mod_mul(SCALAR_C, SCALAR_A, SCALAR_B);
+        self.pka.load_be(SCALAR_A, b);
+        self.pka.mod_add(SCALAR_C, SCALAR_A, SCALAR_C);
+        self.pka.load_be(SCALAR_A, a);
+        self.pka.mod_mul(SCALAR_R, SCALAR_A, SCALAR_C);
+        self.result()
+    }
+
+    fn result(&self) -> [u8; 32] {
+        let mut out = [0u8; 32];
+        self.pka.read_be(SCALAR_R, &mut out);
         out
     }
 }
