@@ -31,7 +31,7 @@ Components of this project are the following crates:
   including the [main `Cal` trait](https://docs.rs/embedded-cal/latest/embedded_cal/trait.Cal.html).
 
 * Hardware implementations for [nRF54L15](https://crates.io/crates/embedded-cal-nrf54l15),
-  [nRF5340](https://crates.io/crates/embedded-cal-cryptocell) (Arm CryptoCell)
+  [nRF5340 and nRF52840](https://crates.io/crates/embedded-cal-cryptocell) (Arm CryptoCell)
   and [STM32WBA55](https://crates.io/crates/embedded-cal-stm32wba55).
   
   Due to the stackable architecture of embedded-cal,
