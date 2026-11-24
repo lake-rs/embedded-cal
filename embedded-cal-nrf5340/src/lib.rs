@@ -19,6 +19,7 @@
 //! * TRNG: raw entropy (health-tested in hardware), conditioned with SHA-256.
 #![no_std]
 
+mod aead;
 mod try_rng;
 
 use core::sync::atomic::{Ordering, fence};
@@ -72,6 +73,7 @@ pub struct Nrf5340Cal {
     // FIXME: No need to enable and take ownership of everything
     // it's possible to have a more granular ownership
     cryptocell: cryptocell::Cryptocell,
+    cc_aes: cc_aes::CcAes,
     cc_ctl: cc_ctl::CcCtl,
     cc_din: cc_din::CcDin,
     cc_dout: cc_dout::CcDout,
@@ -89,7 +91,7 @@ pub struct Nrf5340Cal {
 
 impl embedded_cal::Cal for Nrf5340Cal {
     type DhProvider = EmptyCal;
-    type AeadProvider = EmptyCal;
+    type AeadProvider = Self;
     type HashProvider = EmptyCal;
     type HmacProvider = EmptyCal;
     type SignProvider = EmptyCal;
@@ -99,7 +101,7 @@ impl embedded_cal::Cal for Nrf5340Cal {
     }
 
     fn aead(&mut self) -> &mut Self::AeadProvider {
-        &mut self.empty
+        self
     }
 
     fn hash(&mut self) -> &mut Self::HashProvider {
@@ -142,6 +144,7 @@ impl Nrf5340Cal {
 
         let mut cal = Self {
             cryptocell: p.cryptocell,
+            cc_aes: p.cc_aes,
             cc_ctl: p.cc_ctl,
             cc_din: p.cc_din,
             cc_dout: p.cc_dout,
@@ -218,6 +221,15 @@ impl Nrf5340Cal {
         // Safety: data is a live shared slice of valid length; dma_raw blocks until the hardware
         // is done with it.
         unsafe { self.dma_raw(data.as_ptr(), core::ptr::null_mut(), data.len()) };
+    }
+
+    /// Feeds `data` (1..=[`MAX_DMA_CHUNK`] bytes) through the selected engine and writes the
+    /// output back in place.
+    fn dma_in_place(&mut self, data: &mut [u8]) {
+        assert!((1..=MAX_DMA_CHUNK).contains(&data.len()));
+        // Safety: data is a live exclusive slice of valid length; source and destination are
+        // identical, which is the permitted in-place case.
+        unsafe { self.dma_raw(data.as_ptr(), data.as_mut_ptr(), data.len()) };
     }
 }
 
