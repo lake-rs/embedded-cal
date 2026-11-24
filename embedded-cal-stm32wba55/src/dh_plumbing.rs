@@ -12,6 +12,11 @@ impl Ec for Stm32wba55Cal {
         self
     }
 
+    type PrimitivesP384 = embedded_cal::empty::EmptyCal;
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        &mut self.empty
+    }
+
     type PrimitivesX25519 = embedded_cal::empty::EmptyCal;
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
         &mut self.empty
@@ -50,7 +55,8 @@ impl EcPrimitives<P256> for Stm32wba55Cal {
     }
 
     fn export_scalar_bytes<'s>(&mut self, scalar: &'s Self::Scalar) -> impl AsRef<[u8]> + use<'s> {
-        embedded_cal::util::p256::words_to_bytes(&scalar.0)
+        // The scalar may be a private key, so the exported copy is wiped on drop as well.
+        zeroize::Zeroizing::new(embedded_cal::util::p256::words_to_bytes(&scalar.0))
     }
 
     fn x_coord(&mut self, point: &Self::Point) -> Self::Scalar {
@@ -62,9 +68,17 @@ impl EcPrimitives<P256> for Stm32wba55Cal {
     }
 }
 
-#[derive(Clone)]
-pub struct StmScalar([u32; 8]);
+// Wiped on drop: besides ECDH operands, this holds ECDSA private keys.
+#[derive(Clone, zeroize::Zeroize, zeroize::ZeroizeOnDrop)]
+pub struct StmScalar(pub(crate) [u32; 8]);
+
+// Fails to compile if `StmScalar` stops wiping itself on drop.
+const _: () = {
+    const fn assert_zeroize_on_drop<T: zeroize::ZeroizeOnDrop>() {}
+    assert_zeroize_on_drop::<StmScalar>();
+};
+
 pub struct StmPoint {
-    x: StmScalar,
-    y: StmScalar,
+    pub(crate) x: StmScalar,
+    pub(crate) y: StmScalar,
 }

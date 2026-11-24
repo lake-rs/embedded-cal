@@ -15,6 +15,7 @@ use stm32_metapac::{
 mod aead;
 mod dh;
 mod dh_plumbing;
+mod ecdsa_plumbing;
 mod try_rng;
 
 const WORD_SIZE: usize = 4;

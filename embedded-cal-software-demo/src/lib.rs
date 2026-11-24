@@ -13,6 +13,7 @@ mod hash_plumbing;
 mod hkdf;
 mod hmac;
 mod rng;
+mod sign;
 
 pub trait ExtenderConfig {
     const IMPLEMENT_SHA2SHORT: bool;
@@ -39,7 +40,7 @@ impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
     type AeadProvider = AeadProviderOf<EC::Base>;
     type HashProvider = Self;
     type HmacProvider = Self;
-    type SignProvider = SignProviderOf<EC::Base>;
+    type SignProvider = Self;
 
     fn dh(&mut self) -> &mut Self::DhProvider {
         self.0.dh()
@@ -58,7 +59,7 @@ impl<EC: ExtenderConfig> embedded_cal::Cal for Extender<EC> {
     }
 
     fn sign(&mut self) -> &mut Self::SignProvider {
-        self.0.sign()
+        self
     }
 }
 
@@ -67,11 +68,16 @@ impl<EC: ExtenderConfig> embedded_cal::plumbing::ec::Ec for Extender<EC> {
         <EC::Base as embedded_cal::plumbing::ec::Ec>::MAX_SCALAR_LENGTH;
 
     type PrimitivesP256 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesP256;
+    type PrimitivesP384 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesP384;
     type PrimitivesX25519 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesX25519;
     type PrimitivesX448 = <EC::Base as embedded_cal::plumbing::ec::Ec>::PrimitivesX448;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
         self.0.p256()
+    }
+
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        self.0.p384()
     }
 
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
@@ -84,5 +90,7 @@ impl<EC: ExtenderConfig> embedded_cal::plumbing::ec::Ec for Extender<EC> {
 }
 
 impl<EC: ExtenderConfig> embedded_cal::plumbing::hash::Hash for Extender<EC> {}
+
+impl<EC: ExtenderConfig> embedded_cal::plumbing::ecdsa::Ecdsa for Extender<EC> {}
 
 impl<EC: ExtenderConfig> embedded_cal::plumbing::Plumbing for Extender<EC> {}

@@ -4,4 +4,5 @@
 ./embedded-cal-rustcrypto/src/lib.rs:        fn f(_cal: impl embedded_cal::plumbing::Plumbing) {}
 ./embedded-cal-software-demo/src/lib.rs:impl<EC: ExtenderConfig> embedded_cal::plumbing::Plumbing for Extender<EC> {}
 ./embedded-cal-stm32wba55/src/lib.rs:impl embedded_cal::plumbing::Plumbing for Stm32wba55Cal {}
+./embedded-cal-testvectors/src/ecdsa.rs:impl EcdsaPlumbingVector {
 ./embedded-cal/src/empty.rs:impl plumbing::Plumbing for EmptyCal {}

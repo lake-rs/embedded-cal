@@ -19,16 +19,14 @@ pub const P: [u32; 8] = [
     0xFFFF_FFFF,
 ];
 
-pub const P256_ORDER: [u32; 8] = [
-    0xFC63_2551,
-    0xF3B9_CAC2,
-    0xA717_9E84,
-    0xBCE6_FAAD,
-    0xFFFF_FFFF,
-    0xFFFF_FFFF,
-    0x0000_0000,
-    0xFFFF_FFFF,
+/// The order n of the generator, in big-endian bytes.
+pub const P256_ORDER_BYTES: [u8; 32] = [
+    0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84, 0xf3, 0xb9, 0xca, 0xc2, 0xfc, 0x63, 0x25, 0x51,
 ];
+
+/// [`P256_ORDER_BYTES`] in little-endian word order, for the word-based arithmetic.
+pub const P256_ORDER: [u32; 8] = bytes_to_words(&P256_ORDER_BYTES);
 
 pub const B: [u32; 8] = [
     0x27D2_604B,
@@ -232,4 +230,58 @@ pub fn p256_recover_y(x_bytes: &[u8; 32]) -> Result<[u8; 32], crate::ImportError
     }
 
     Ok(words_to_bytes(&y))
+}
+
+// Recover the y coordinate whose parity is given by `odd`, as needed for the SEC1 compressed
+// form (prefix 0x02 for even y, 0x03 for odd y). Unlike for ECDH, this matters for ECDSA, where
+// the two roots are different public keys.
+pub fn p256_recover_y_with_parity(
+    x_bytes: &[u8; 32],
+    odd: bool,
+) -> Result<[u8; 32], crate::ImportError> {
+    let y = p256_recover_y(x_bytes)?;
+    if (y[31] & 1 == 1) == odd {
+        Ok(y)
+    } else {
+        Ok(words_to_bytes(&sub256(&P, &bytes_to_words(&y))))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recover_y_with_parity_of_generator() {
+        // The generator's y coordinate is odd (it ends in 0xf5).
+        assert_eq!(P256_GY_BYTES[31] & 1, 1);
+        assert_eq!(
+            p256_recover_y_with_parity(&P256_GX_BYTES, true).unwrap(),
+            P256_GY_BYTES
+        );
+
+        let even = p256_recover_y_with_parity(&P256_GX_BYTES, false).unwrap();
+        assert_eq!(even[31] & 1, 0);
+        assert_eq!(
+            words_to_bytes(&sub256(&P, &bytes_to_words(&even))),
+            P256_GY_BYTES
+        );
+    }
+
+    #[test]
+    fn order_words() {
+        assert_eq!(
+            P256_ORDER,
+            [
+                0xFC63_2551,
+                0xF3B9_CAC2,
+                0xA717_9E84,
+                0xBCE6_FAAD,
+                0xFFFF_FFFF,
+                0xFFFF_FFFF,
+                0x0000_0000,
+                0xFFFF_FFFF,
+            ]
+        );
+    }
 }

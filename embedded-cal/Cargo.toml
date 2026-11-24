@@ -17,3 +17,4 @@ version.workspace = true
 [dependencies]
 hax-lib.workspace = true
 rand_core.workspace = true
+zeroize = { version = "1.8.2", default-features = false }

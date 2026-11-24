@@ -88,15 +88,20 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 use super::*;
 use core::marker::PhantomData;
 use embedded_cal::plumbing::ec::*;
+use nrf_pac::cracencore::vals::Selcurve;
 
 impl Ec for Nrf54l15Cal {
     const MAX_SCALAR_LENGTH: usize = 56;
 
     type PrimitivesP256 = Self;
+    type PrimitivesP384 = Self;
     type PrimitivesX25519 = Self;
     type PrimitivesX448 = Self;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
+        self
+    }
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
         self
     }
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
@@ -125,7 +130,25 @@ impl NrfCurve for P256 {
         a: &NrfScalar<Self>,
         b: &NrfPoint<Self>,
     ) -> NrfPoint<Self> {
-        let (x, y) = cal.cracen_p256_mult(&a.into(), &(&b.x).into(), &(&b.y).into());
+        let (x, y) =
+            cal.cracen_weierstrass_mult(Selcurve::P256, a.as_ref(), b.x.as_ref(), b.y.as_ref());
+        NrfPoint {
+            x: x.into(),
+            y: y.into(),
+        }
+    }
+}
+
+impl NrfCurve for P384 {
+    const SCALAR_SIZE: usize = 48;
+
+    fn multiply_scalar_point(
+        cal: &mut Nrf54l15Cal,
+        a: &NrfScalar<Self>,
+        b: &NrfPoint<Self>,
+    ) -> NrfPoint<Self> {
+        let (x, y) =
+            cal.cracen_weierstrass_mult(Selcurve::P384, a.as_ref(), b.x.as_ref(), b.y.as_ref());
         NrfPoint {
             x: x.into(),
             y: y.into(),
@@ -222,12 +245,18 @@ pub struct NrfScalar<C: ?Sized> {
     phantom: PhantomData<C>,
 }
 
+// Fails to compile if `NrfScalar` stops wiping itself on drop; it holds ECDSA private keys.
+const _: () = {
+    const fn assert_zeroize_on_drop<T: ZeroizeOnDrop>() {}
+    assert_zeroize_on_drop::<NrfScalar<P256>>();
+};
+
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct NrfPoint<C: ?Sized> {
     // This doubles as the `u` coordinate for RFC7748 curves.
-    x: NrfScalar<C>,
+    pub(crate) x: NrfScalar<C>,
     // This is not used in RFC7748 curves.
-    y: NrfScalar<C>,
+    pub(crate) y: NrfScalar<C>,
 }
 
 // FIXME: While const generics can't do that, let's macro over this rather than repeat all over
@@ -249,6 +278,22 @@ impl<'a> From<&'a NrfScalar<P256>> for [u8; 32] {
 }
 impl AsRef<[u8; 32]> for NrfScalar<P256> {
     fn as_ref(&self) -> &[u8; 32] {
+        self.data.first_chunk().expect("const asserted")
+    }
+}
+const _: () = assert!(48 <= Nrf54l15Cal::MAX_SCALAR_LENGTH);
+impl From<[u8; 48]> for NrfScalar<P384> {
+    fn from(value: [u8; 48]) -> Self {
+        let mut data = [0; _];
+        *data.first_chunk_mut().expect("const asserted") = value;
+        NrfScalar {
+            data,
+            phantom: PhantomData,
+        }
+    }
+}
+impl AsRef<[u8; 48]> for NrfScalar<P384> {
+    fn as_ref(&self) -> &[u8; 48] {
         self.data.first_chunk().expect("const asserted")
     }
 }

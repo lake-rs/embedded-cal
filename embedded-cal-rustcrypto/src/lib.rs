@@ -121,11 +121,16 @@ impl<Base: embedded_cal::Cal + embedded_cal::plumbing::ec::Ec> embedded_cal::plu
     const MAX_SCALAR_LENGTH: usize = Base::MAX_SCALAR_LENGTH;
 
     type PrimitivesP256 = Base::PrimitivesP256;
+    type PrimitivesP384 = Base::PrimitivesP384;
     type PrimitivesX25519 = Base::PrimitivesX25519;
     type PrimitivesX448 = Base::PrimitivesX448;
 
     fn p256(&mut self) -> &mut Self::PrimitivesP256 {
         self.base.p256()
+    }
+
+    fn p384(&mut self) -> &mut Self::PrimitivesP384 {
+        self.base.p384()
     }
 
     fn x25519(&mut self) -> &mut Self::PrimitivesX25519 {
@@ -135,6 +140,11 @@ impl<Base: embedded_cal::Cal + embedded_cal::plumbing::ec::Ec> embedded_cal::plu
     fn x448(&mut self) -> &mut Self::PrimitivesX448 {
         self.base.x448()
     }
+}
+
+impl<Base: embedded_cal::Cal + embedded_cal::plumbing::ecdsa::Ecdsa>
+    embedded_cal::plumbing::ecdsa::Ecdsa for RustcryptoCalExtender<Base>
+{
 }
 
 impl<Base: embedded_cal::Cal + embedded_cal::plumbing::Plumbing> embedded_cal::plumbing::Plumbing
