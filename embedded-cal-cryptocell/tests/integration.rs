@@ -80,6 +80,63 @@ mod tests {
         testvectors::aead::aes_ccm::test_16_64_128(state.cal.as_mut().unwrap().aead());
     }
 
+    /// AAD around 0xFF00 bytes, where CCM switches from the 2-byte to the 6-byte length encoding
+    /// (RFC 3610 2.2). The AAD is a 256-byte pattern repeated from flash. The expected values were
+    /// computed with pyca/cryptography's AESCCM.
+    #[test]
+    fn test_aead_aesccm_long_aad(state: &mut super::TestState) {
+        use embedded_cal::{AeadAlgorithm as _, AeadProvider};
+
+        static PATTERN: [u8; 256] = {
+            let mut p = [0u8; 256];
+            let mut i = 0;
+            while i < 256 {
+                p[i] = (i as u8).wrapping_mul(7).wrapping_add(3);
+                i += 1;
+            }
+            p
+        };
+        const KEY: [u8; 16] = [
+            0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
+            0x4e, 0x4f,
+        ];
+        const NONCE: [u8; 13] = [
+            0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac,
+        ];
+        const PLAINTEXT: &[u8] = b"long AAD test";
+        const CIPHERTEXT: [u8; 13] = [
+            0x46, 0x41, 0x58, 0x70, 0xee, 0x5a, 0x69, 0x4a, 0x33, 0x8c, 0xc9, 0x95, 0xcd,
+        ];
+        // (AAD length, tag)
+        const CASES: [(usize, [u8; 8]); 3] = [
+            (0xFEFF, [0xfd, 0xb3, 0x5d, 0xed, 0x77, 0x83, 0x21, 0x6d]),
+            (0xFF00, [0xe5, 0xa3, 0xbc, 0x7e, 0x88, 0xac, 0x15, 0x4f]),
+            (0x1_0000, [0x8a, 0x9e, 0xc4, 0xe4, 0x0e, 0xb5, 0x7e, 0x38]),
+        ];
+
+        let cal = state.cal.as_mut().unwrap();
+        let alg = <CryptoCellCal as AeadProvider>::Algorithm::from_cose_number(10).unwrap();
+        let key = cal.load_from_keydata(alg, &KEY);
+        for (aad_len, tag) in CASES {
+            let mut chunks: [&[u8]; 256] = [&[]; 256];
+            for (i, chunk) in chunks.iter_mut().enumerate() {
+                let start = i * PATTERN.len();
+                *chunk = &PATTERN[..aad_len.saturating_sub(start).min(PATTERN.len())];
+            }
+            let aad: &[&[u8]] = &chunks;
+
+            let mut buf = [0u8; 13];
+            buf.copy_from_slice(PLAINTEXT);
+            let out = cal.encrypt_in_place(&key, &NONCE, &mut buf, aad);
+            assert_eq!(buf, CIPHERTEXT, "ciphertext, AAD length {aad_len:#x}");
+            assert_eq!(out.as_ref(), tag, "tag, AAD length {aad_len:#x}");
+
+            cal.decrypt_in_place(&key, &NONCE, &mut buf, &tag, aad)
+                .expect("decryption");
+            assert_eq!(buf, PLAINTEXT, "plaintext, AAD length {aad_len:#x}");
+        }
+    }
+
     #[test]
     fn test_aead_aesccm_16_64_256(state: &mut super::TestState) {
         #[cfg(feature = "nrf5340")]

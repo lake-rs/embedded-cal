@@ -235,8 +235,6 @@ impl CryptoCellCal {
         aad: &impl embedded_cal::AadGenerator,
     ) -> CbcMac {
         let aad_len: usize = aad.items().map(|c| c.len()).sum();
-        // Longer AAD would need the 6-byte length encoding of RFC 3610.
-        assert!(aad_len < 0xFF00, "AAD too long");
 
         let mut st = CbcMac {
             mac: [0; BLOCK],
@@ -246,7 +244,8 @@ impl CryptoCellCal {
         let b0 = embedded_cal::util::aesccm::build_b0(nonce, plaintext.len(), aad_len, TAG_LEN);
         self.cbc_mac_absorb(key, &mut st, &b0);
         if aad_len > 0 {
-            self.cbc_mac_absorb(key, &mut st, &(aad_len as u16).to_be_bytes());
+            let (len_bytes, n) = ccm_aad_length(aad_len);
+            self.cbc_mac_absorb(key, &mut st, &len_bytes[..n]);
             for chunk in aad.items() {
                 self.cbc_mac_absorb(key, &mut st, chunk);
             }
@@ -401,5 +400,23 @@ impl embedded_cal::AeadProvider for super::CryptoCellCal {
         } else {
             Err(embedded_cal::DecryptionFailed)
         }
+    }
+}
+
+/// The encoding of a nonzero AAD length that precedes the AAD in CCM (RFC 3610 2.2); returns the
+/// buffer and the number of bytes used.
+fn ccm_aad_length(len: usize) -> ([u8; 10], usize) {
+    let mut out = [0u8; 10];
+    if len < 0xFF00 {
+        out[..2].copy_from_slice(&(len as u16).to_be_bytes());
+        (out, 2)
+    } else if let Ok(len) = u32::try_from(len) {
+        out[..2].copy_from_slice(&[0xFF, 0xFE]);
+        out[2..6].copy_from_slice(&len.to_be_bytes());
+        (out, 6)
+    } else {
+        out[..2].copy_from_slice(&[0xFF, 0xFF]);
+        out[2..].copy_from_slice(&(len as u64).to_be_bytes());
+        (out, 10)
     }
 }
