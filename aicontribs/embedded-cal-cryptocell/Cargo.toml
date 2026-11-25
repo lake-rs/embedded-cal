@@ -25,15 +25,20 @@ test = false
 nrf5340 = ["_chip", "nrf-pac/nrf5340-app"]
 nrf52840 = ["_chip", "nrf-pac/nrf52840"]
 # Common to all chips; not to be enabled directly.
-_chip = ["dep:embedded-cal", "dep:nrf-pac", "nrf-pac/rt", "dep:rand_core", "dep:zeroize"]
+_chip = ["dep:embedded-cal", "dep:nrf-pac", "dep:rand_core", "dep:zeroize"]
+# Provide the chip's interrupt vector table through nrf-pac. Left to the final
+# binary, as only one crate in the build may provide it.
+rt = ["nrf-pac?/rt"]
 
 [[test]]
 name = "integration"
 harness = false
+required-features = ["rt"]
 
 [[test]]
 name = "libcrux-p256"
 harness = false
+required-features = ["rt"]
 
 [dependencies]
 embedded-cal = { workspace = true, optional = true }

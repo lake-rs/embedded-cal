@@ -5,10 +5,10 @@
 # runners are keyed by target. Use the aliases below, e.g. `cargo test-nrf5340`.
 
 [alias]
-build-nrf5340 = "build --features nrf5340 --target thumbv8m.main-none-eabihf"
-test-nrf5340 = "test --features nrf5340 --target thumbv8m.main-none-eabihf"
-build-nrf52840 = "build --features nrf52840 --target thumbv7em-none-eabihf"
-test-nrf52840 = "test --features nrf52840 --target thumbv7em-none-eabihf"
+build-nrf5340 = "build --features nrf5340,rt --target thumbv8m.main-none-eabihf"
+test-nrf5340 = "test --features nrf5340,rt --target thumbv8m.main-none-eabihf"
+build-nrf52840 = "build --features nrf52840,rt --target thumbv7em-none-eabihf"
+test-nrf52840 = "test --features nrf52840,rt --target thumbv7em-none-eabihf"
 
 [target."thumbv8m.main-none-eabihf"]
 runner = ["probe-rs", "run", "--chip", "nRF5340_xxAA", "--log-format=oneline", "--allow-erase-all", "--verify"]
