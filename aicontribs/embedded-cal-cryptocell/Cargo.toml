@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
+[package]
+name = "embedded-cal-cryptocell"
+description = "Implementation of embedded-cal for Arm TrustZone CryptoCell hardware (nRF5340, nRF52840)"
+documentation = "https://docs.rs/embedded-cal-cryptocell/"
+
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+version.workspace = true
+
+[lib]
+# While the crate is already excluded from the workspace's defaults, setting
+# this also means that when `cargo test` is run in here, cargo reaches into the
+# local .cargo that sets up runners and the `test-<chip>` aliases.
+test = false
+
+[features]
+# Exactly one chip must be selected; without any, the crate is empty (which keeps
+# workspace-wide builds working, as nrf-pac only supports one chip per build).
+nrf5340 = ["_chip", "nrf-pac/nrf5340-app"]
+nrf52840 = ["_chip", "nrf-pac/nrf52840"]
+# Common to all chips; not to be enabled directly.
+_chip = ["dep:embedded-cal", "dep:nrf-pac", "nrf-pac/rt", "dep:rand_core", "dep:zeroize"]
+
+[[test]]
+name = "integration"
+harness = false
+
+[[test]]
+name = "libcrux-p256"
+harness = false
+
+[dependencies]
+embedded-cal = { workspace = true, optional = true }
+nrf-pac = { version = "0.4.0", optional = true }
+rand_core = { workspace = true, optional = true }
+zeroize = { version = "1.8.2", default-features = false, features = ["derive"], optional = true }
+
+[dev-dependencies]
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
+cortex-m-rt = { version = "0.7", features = ["device"] }
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+defmt-test = "0.4"
+embedded-cal-examples.path = "../../embedded-cal-examples"
+embedded-cal-software-demo.path = "../../embedded-cal-software-demo"
+embedded-cal-testvectors.workspace = true
+libcrux-iot-p256 = { version = "0.0.1-alpha.1", features = [
+    "embedded-cal",
+] }
+embedded-alloc = "0.6.0"

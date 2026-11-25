@@ -604,6 +604,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-cal-cryptocell"
+version = "0.2.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "defmt-test",
+ "embedded-alloc",
+ "embedded-cal",
+ "embedded-cal-examples",
+ "embedded-cal-software-demo",
+ "embedded-cal-testvectors",
+ "libcrux-iot-p256",
+ "nrf-pac 0.4.0",
+ "panic-probe",
+ "rand_core",
+ "zeroize",
+]
+
+[[package]]
 name = "embedded-cal-examples"
 version = "0.2.0"
 dependencies = [
@@ -648,7 +669,7 @@ dependencies = [
  "embedded-cal-software-demo",
  "embedded-cal-testvectors",
  "libcrux-iot-p256",
- "nrf-pac",
+ "nrf-pac 0.2.0",
  "panic-probe",
  "rand_core",
  "zeroize",
@@ -1207,6 +1228,16 @@ name = "nrf-pac"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae76c372d1838abeccf1d397688cd4bd90fe3213410c51cb74c6769fdf075067"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+]
+
+[[package]]
+name = "nrf-pac"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83531b9f1e19f493018da9b8b20359e4cedd6d1357553b1ac50f3fa27a0104fa"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",

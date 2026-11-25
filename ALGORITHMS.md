@@ -7,20 +7,22 @@ Currently supported algorithms are:
 
 # AEAD
 
-| Algorithm                                            | Implementation | Notes                        |
-|------------------------------------------------------|----------------|------------------------------|
-| A128GCM (AES-GCM)                                    | [libcrux]        |                              |
-| A256GCM (AES-GCM)                                    | [libcrux]        |                              |
-| AES-128-CCM (16-byte tag, 12-byte nonce per RFC6655) | [libcrux]        |                              |
-| AES-128-CCM (8-byte tag,  12-byte nonce per RFC6655) | [libcrux]        |                              |
-| AES-256-CCM (16-byte tag, 12-byte nonce per RFC6655) | [libcrux]        |                              |
-| AES-256-CCM (8-byte tag,  12-byte nonce per RFC6655) | [libcrux]        |                              |
-| AES-CCM-16-64-128                                    | [nrf54l15]       | limited AAD and message size |
-| AES-CCM-16-64-256                                    | [nrf54l15]       | limited AAD and message size |
-| AES-CCM-16-64-128                                    | [stm32wba55]     |                              |
-| AES-CCM-16-64-256                                    | [stm32wba55]     |                              |
-| AES-CCM-16-64-128                                    | [rustcrypto]     | limited or alloc'ed AAD      |
-| AES-CCM-16-64-256                                    | [rustcrypto]     | limited or alloc'ed AAD      |
+| Algorithm                                            | Implementation | Notes                           |
+|------------------------------------------------------|----------------|---------------------------------|
+| A128GCM (AES-GCM)                                    | [libcrux]      |                                 |
+| A256GCM (AES-GCM)                                    | [libcrux]      |                                 |
+| AES-128-CCM (16-byte tag, 12-byte nonce per RFC6655) | [libcrux]      |                                 |
+| AES-128-CCM (8-byte tag,  12-byte nonce per RFC6655) | [libcrux]      |                                 |
+| AES-256-CCM (16-byte tag, 12-byte nonce per RFC6655) | [libcrux]      |                                 |
+| AES-256-CCM (8-byte tag,  12-byte nonce per RFC6655) | [libcrux]      |                                 |
+| AES-CCM-16-64-128                                    | [nrf54l15]     | limited AAD and message size    |
+| AES-CCM-16-64-256                                    | [nrf54l15]     | limited AAD and message size    |
+| AES-CCM-16-64-128                                    | [cryptocell]   | AI-generated; nRF5340, nRF52840 |
+| AES-CCM-16-64-256                                    | [cryptocell]   | AI-generated; nRF5340           |
+| AES-CCM-16-64-128                                    | [stm32wba55]   |                                 |
+| AES-CCM-16-64-256                                    | [stm32wba55]   |                                 |
+| AES-CCM-16-64-128                                    | [rustcrypto]   | limited or alloc'ed AAD         |
+| AES-CCM-16-64-256                                    | [rustcrypto]   | limited or alloc'ed AAD         |
 
 Limitation in AAD streaming or message size are subject to ongoing work.
 
@@ -34,6 +36,9 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | ECDH on curve P-256 | [nrf54l15] | |
 | ECDH on curve X25519 | [nrf54l15] | |
 | ECDH on curve X448 | [nrf54l15] | |
+| ECDH on curve P-256 | [cryptocell] | AI-generated; nRF5340, nRF52840 |
+| ECDH on curve X25519 | [cryptocell] | AI-generated; nRF5340, nRF52840 |
+| ECDH on curve X448 | [cryptocell] | AI-generated; nRF5340, nRF52840 |
 | ECDH on P-256 | [libcrux] || 
 
 # Signature
@@ -41,6 +46,7 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | Algorithm | Implementation | Notes |
 |-----------|----------------|-------|
 | ECDSA on curve P-256 | [rustcrypto] | |
+| ECDSA on curve P-256 | [cryptocell] | AI-generated; nRF5340, nRF52840 |
 
 # Hash
 
@@ -50,6 +56,7 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 | SHA-256 | [rustcrypto] | |
 | SHA-256 | [software-demo] | optionally providing and using SHA2-short plumbing |
 | SHA2-short | [nrf54l15] | providing plumbing |
+| SHA2-short | [cryptocell] | AI-generated; providing plumbing; nRF5340, nRF52840 |
 | SHA2-short | [stm32wba55] | providing plumbing |
 | SHA3-224 | [libcrux] | |
 | SHA3-256 | [libcrux] | |
@@ -80,10 +87,12 @@ Limitation in AAD streaming or message size are subject to ongoing work.
 |--------------------|-------|
 | [embedded-cal-rand] | mixes in an existing RNG, or (feature-gated) takes the system one |
 | [nrf54l15] | using CRACENCORE peripheral |
+| [cryptocell] | AI-generated; using the CryptoCell TRNG; nRF5340, nRF52840 |
 | [stm32wba55] | using RNG peripheral |
 
 [libcrux]: https://crates.io/crates/embedded-cal-libcrux
 [nrf54l15]: https://crates.io/crates/embedded-cal-nrf54l15
+[cryptocell]: https://crates.io/crates/embedded-cal-cryptocell
 [stm32wba55]: https://crates.io/crates/embedded-cal-stm32wba55
 [rustcrypto]: https://crates.io/crates/embedded-cal-rustcrypto
 [software-demo]: https://crates.io/crates/embedded-cal-software-demo

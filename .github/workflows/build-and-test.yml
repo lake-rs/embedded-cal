@@ -29,6 +29,10 @@ jobs:
       run: RUSTFLAGS="-D warnings" cargo check --tests -p embedded-cal-libcrux --features check-secret-independence 
     - name: run `cargo clippy`
       run: cargo clippy --workspace -- --deny clippy::all
+    - name: run `cargo clippy` on embedded-cal-cryptocell (nRF5340)
+      run: cargo clippy -p embedded-cal-cryptocell --features nrf5340 -- --deny clippy::all
+    - name: run `cargo clippy` on embedded-cal-cryptocell (nRF52840)
+      run: cargo clippy -p embedded-cal-cryptocell --features nrf52840 -- --deny clippy::all
     - name: run `cargo clippy` on embedded-cal-rustcrypto (alloc)
       run: cargo clippy -p embedded-cal-rustcrypto --features alloc -- --deny clippy::all
     - name: run `cargo doc`
@@ -50,13 +54,19 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v5
-    - name: Add embedded target
-      run: rustup target add thumbv8m.main-none-eabihf
+    - name: Add embedded targets
+      run: rustup target add thumbv8m.main-none-eabihf thumbv7em-none-eabihf
     - name: Install flip-link
       run: cargo install flip-link
     - name: cargo build nRF54L15 (lib + tests)
       working-directory: embedded-cal-nrf54l15
       run: cargo build --tests
+    - name: cargo build CryptoCell on nRF5340 (lib + tests)
+      working-directory: aicontribs/embedded-cal-cryptocell
+      run: cargo build-nrf5340 --tests
+    - name: cargo build CryptoCell on nRF52840 (lib + tests)
+      working-directory: aicontribs/embedded-cal-cryptocell
+      run: cargo build-nrf52840 --tests
     - name: cargo build STM32WBA55 (lib + tests)
       working-directory: embedded-cal-stm32wba55
       run: cargo build --tests

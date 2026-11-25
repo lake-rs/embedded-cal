@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: Inria-AIO, Cryspen, and Christian Amsüss
+
+# The chip is selected by a feature, and each supported chip has its own target, so
+# runners are keyed by target. Use the aliases below, e.g. `cargo test-nrf5340`.
+
+[alias]
+build-nrf5340 = "build --features nrf5340 --target thumbv8m.main-none-eabihf"
+test-nrf5340 = "test --features nrf5340 --target thumbv8m.main-none-eabihf"
+build-nrf52840 = "build --features nrf52840 --target thumbv7em-none-eabihf"
+test-nrf52840 = "test --features nrf52840 --target thumbv7em-none-eabihf"
+
+[target."thumbv8m.main-none-eabihf"]
+runner = ["probe-rs", "run", "--chip", "nRF5340_xxAA", "--log-format=oneline", "--allow-erase-all", "--verify"]
+
+[target.thumbv7em-none-eabihf]
+runner = ["probe-rs", "run", "--chip", "nRF52840_xxAA", "--log-format=oneline", "--allow-erase-all", "--verify"]
+
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+rustflags = [
+  "-C", "linker=flip-link",
+  "-C", "link-arg=-Tlink.x",
+  "-C", "link-arg=-Tdefmt.x",
+  # This is needed if your flash or ram addresses are not aligned to 0x10000 in memory.x
+  # See https://github.com/rust-embedded/cortex-m-quickstart/pull/95
+  "-C", "link-arg=--nmagic",
+]
