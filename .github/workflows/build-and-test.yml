@@ -62,10 +62,10 @@ jobs:
       working-directory: embedded-cal-nrf54l15
       run: cargo build --tests
     - name: cargo build CryptoCell on nRF5340 (lib + tests)
-      working-directory: embedded-cal-cryptocell
+      working-directory: aicontribs/embedded-cal-cryptocell
       run: cargo build-nrf5340 --tests
     - name: cargo build CryptoCell on nRF52840 (lib + tests)
-      working-directory: embedded-cal-cryptocell
+      working-directory: aicontribs/embedded-cal-cryptocell
       run: cargo build-nrf52840 --tests
     - name: cargo build STM32WBA55 (lib + tests)
       working-directory: embedded-cal-stm32wba55

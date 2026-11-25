@@ -7,7 +7,7 @@ members = [
     "embedded-cal-rustcrypto",
     "embedded-cal-software-demo",
     "embedded-cal-nrf54l15",
-    "embedded-cal-cryptocell",
+    "aicontribs/embedded-cal-cryptocell",
     "embedded-cal-stm32wba55",
     "embedded-cal-testvectors",
     "embedded-cal-libcrux",
