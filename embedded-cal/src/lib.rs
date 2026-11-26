@@ -231,3 +231,31 @@ pub trait Cal {
     fn hmac(&mut self) -> &mut Self::HmacProvider;
     fn sign(&mut self) -> &mut Self::SignProvider;
 }
+
+impl<C: Cal + ?Sized> Cal for &mut C {
+    type DhProvider = C::DhProvider;
+    type AeadProvider = C::AeadProvider;
+    type HashProvider = C::HashProvider;
+    type HmacProvider = C::HmacProvider;
+    type SignProvider = C::SignProvider;
+
+    fn dh(&mut self) -> &mut Self::DhProvider {
+        (**self).dh()
+    }
+
+    fn aead(&mut self) -> &mut Self::AeadProvider {
+        (**self).aead()
+    }
+
+    fn hash(&mut self) -> &mut Self::HashProvider {
+        (**self).hash()
+    }
+
+    fn hmac(&mut self) -> &mut Self::HmacProvider {
+        (**self).hmac()
+    }
+
+    fn sign(&mut self) -> &mut Self::SignProvider {
+        (**self).sign()
+    }
+}
